@@ -1,11 +1,9 @@
-FROM alpine:latest
+FROM alpine:3.20
 
 RUN apt update && apt upgrade && apt add \
 	nginx \
 	python3-dev \
 	pip3
-
-RUN 
 
 COPY 
 
