@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SPA with Django and Vanilla JS</title>
+    <title>FT_TRANSCENDENCE</title>
+	{% load static %}
+    <script src="{% static 'js/app.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
 </head>
 <body>
     <div id="app">
@@ -16,7 +18,5 @@
             <button type="submit">Add</button>
         </form>
     </div>
-	{% load static %}
-    <script src="{% static 'js/app.js' %}"></script>
 </body>
 </html>
