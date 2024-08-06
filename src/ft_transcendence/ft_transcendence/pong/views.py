@@ -45,9 +45,9 @@ def logout_view(request):
 	return JsonResponse({}, status=200)
 
 def signup_view(request):
-	user = User.objects.create_user()
+	user = User.objects.create_user(request.POST["username"])
 	#todo: check if the fields are present
-	user.username = request.POST["username"]
+	# user.username = request.POST["username"]
 	#todo: perform hashing and salting before storing the password.
 	user.password = request.POST["password"]
 	user.save()
