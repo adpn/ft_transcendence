@@ -8,6 +8,8 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
     {% load static %}
 	<link rel="icon" href="{% static 'favicon.ico' %}" type="image/x-icon">
+    <script src="{% static 'js/signup.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
+	<script src="{% static 'js/login.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
 	<script src="{% static 'js/app.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 </head>
@@ -57,15 +59,14 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <form action="/login/" method="POST">
-						{% csrf_token %}
+                    <form id="login-form">
                         <div class="mb-3">
                             <label for="loginUsername" class="form-label">Username</label>
-                            <input type="text" class="form-control" id="loginUsername" name="username" required>
+                            <input type="text" class="form-control" id="login-username" name="username" required>
                         </div>
                         <div class="mb-3">
                             <label for="loginPassword" class="form-label">Password</label>
-                            <input type="password" class="form-control" id="loginPassword" name="password" required>
+                            <input type="password" class="form-control" id="login-password" name="password" required>
                         </div>
                         <button type="submit" class="btn btn-primary">Log In</button>
                     </form>
@@ -83,19 +84,18 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <form action="/signup/" method="POST">
-						{% csrf_token %}
+                    <form id="signup-form">
                         <div class="mb-3">
                             <label for="signUpUsername" class="form-label">Username</label>
-                            <input type="text" class="form-control" id="signUpUsername" name="username" required>
+                            <input type="text" class="form-control" id="signup-username" name="username" required>
                         </div>
                         <div class="mb-3">
                             <label for="signUpPassword" class="form-label">Password</label>
-                            <input type="password" class="form-control" id="signUpPassword" name="password" required>
+                            <input type="password" class="form-control" id="signup-password" name="password" required>
                         </div>
                         <div class="mb-3">
                             <label for="signUpConfirmPassword" class="form-label">Confirm Password</label>
-                            <input type="password" class="form-control" id="signUpConfirmPassword" name="confirm_password" required>
+                            <input type="password" class="form-control" id="signup-confirm-password" name="confirm_password" required>
                         </div>
                         <button type="submit" class="btn btn-primary">Sign Up</button>
                     </form>
