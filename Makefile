@@ -1,15 +1,27 @@
 all: build up
 
+detached:
+	build upd
+
 build:
-	docker compose -f src/docker-compose.yml build
+	bash srcs/setup.sh
+	docker compose -f srcs/docker-compose.yaml build
 
 up:
-	docker compose -f src/docker-compose.yml up
+	docker compose -f srcs/docker-compose.yaml up
+
+upd:
+	docker compose -f srcs/docker-compose.yaml up -d
 
 down:
-	docker compose -f src/docker-compose.yml down
+	docker compose -f srcs/docker-compose.yaml down
 
-clean: down
+clean:
+	docker compose -f srcs/docker-compose.yaml down
+	docker compose -f srcs/docker-compose.yaml rm -f
+	bash srcs/cleanup.sh
+
+fclean: clean
 	docker system prune -af
 
-.PHONY: all build up down clean
+.PHONY: all build up down clean fclean
