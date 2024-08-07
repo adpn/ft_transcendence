@@ -4,22 +4,22 @@ detached:
 	build upd
 
 build:
-	bash srcs/setup.sh
-	docker compose -f srcs/docker-compose.yaml build
+	# bash src/setup.sh
+	docker compose -f src/docker-compose.yaml build
 
 up:
-	docker compose -f srcs/docker-compose.yaml up
+	docker compose -f src/docker-compose.yaml up
 
 upd:
-	docker compose -f srcs/docker-compose.yaml up -d
+	docker compose -f src/docker-compose.yaml up -d
 
 down:
-	docker compose -f srcs/docker-compose.yaml down
+	docker compose -f src/docker-compose.yaml down
 
 clean:
-	docker compose -f srcs/docker-compose.yaml down
-	docker compose -f srcs/docker-compose.yaml rm -f
-	bash srcs/cleanup.sh
+	docker compose -f src/docker-compose.yaml down
+	docker compose -f src/docker-compose.yaml rm -f
+	# bash src/cleanup.sh
 
 fclean: clean
 	docker system prune -af
