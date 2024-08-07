@@ -1,0 +1,69 @@
+services:
+  authentication:
+    container_name: authentication
+    image:
+      authentication-image
+    build:
+      context: services/auth/
+      dockerfile: Dockerfile
+    environment:
+      - name=value
+    # ports:
+    #   - "443:443"
+    # volumes:
+    #   - wordpress:/var/www/wordpress
+    networks:
+      - transcendence
+    # depends_on:
+    #   - wordpress
+    restart: always
+  
+  website:
+    container_name: website
+    image:
+      website-image
+    build:
+      context: services/website/
+      dockerfile: Dockerfile
+    depends_on:
+      - authentication
+    environment:
+      - name=value
+    ports:
+      - "8000:8000"
+    restart: always
+  
+  # cadvisor:
+  #   container_name: cadvisor
+  #   build:
+  #     context: bonus/cadvisor/
+  #     dockerfile: Dockerfile
+  #   image: cadvisor
+  #   ports:
+  #     - "8080:8080"
+  #   networks:
+  #     - inception
+  #   volumes:
+  #     - /:/rootfs:ro
+  #     - /var/run:/var/run:ro
+  #     - /sys:/sys:ro
+  #     - /var/lib/docker/:/var/lib/docker:ro
+  #   restart: always
+
+# volumes:
+#   wordpress:
+#     driver: local
+#     driver_opts:
+#       type: 'none'
+#       o:  'bind'
+#       device: /home/ychalant/data/wordpress
+#   db:
+#     driver: local
+#     driver_opts:
+#       type: 'none'
+#       o:  'bind'
+#       device: /home/ychalant/data/mariadb
+
+networks:
+  transcendence:
+    driver: bridge
