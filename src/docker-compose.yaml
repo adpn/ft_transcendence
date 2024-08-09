@@ -27,6 +27,8 @@ services:
       dockerfile: Dockerfile
     depends_on:
       - authentication
+    networks:
+      - transcendence
     environment:
       - name=value
     ports:

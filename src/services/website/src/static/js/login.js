@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", function() {
             username: loginUserName.value,
             password: loginPassword.value
         };
-        fetch('/auth/login/', {
+        fetch('/login/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
