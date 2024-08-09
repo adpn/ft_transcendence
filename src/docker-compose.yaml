@@ -7,7 +7,9 @@ services:
       context: services/auth/
       dockerfile: Dockerfile
     environment:
-      - name=value
+      CLIENT_ID : "${CLIENT_ID}"
+      CLIENT_SECRET : "${CLIENT_SECRET}"
+      AUTH_URL : "${AUTH_URL}"
     # ports:
     #   - "443:443"
     # volumes:
