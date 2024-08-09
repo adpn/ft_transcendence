@@ -22,6 +22,10 @@ document.addEventListener("DOMContentLoaded", function() {
 	var	signupPassword = document.getElementById("signup-password");
 	var	signupConfirmPassword = document.getElementById("signup-confirm-password");
 
+	// todo: print message on the
+	// if (signupPassword != signupConfirmPassword)
+	// 	return ;
+
 	signupForm.addEventListener('submit', function(event) {
         event.preventDefault();
 
@@ -38,11 +42,10 @@ document.addEventListener("DOMContentLoaded", function() {
             },
             body: JSON.stringify(credentials)
         })
-        .then(response => response.json())
+        .then(response => response.json());
 		//todo: confirm signup.
         // .then(data => {
-        //     fetchItems(); // Refresh the item list
-        //     itemForm.reset(); // Clear the form
+		// 	console.log(data['status'])
         // });
     })
 });
