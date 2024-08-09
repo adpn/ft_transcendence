@@ -14,5 +14,6 @@ urlpatterns = [
 	# routes to the authentication microservice.
 	path('login/', auth_client, name='login'),
 	path('logout/', auth_client, name='logout'),
-	path('signup/',  auth_client, name='signup')
+	path('signup/',  auth_client, name='signup'),
+	path('auth/', auth_client, name="auth")
 ]
