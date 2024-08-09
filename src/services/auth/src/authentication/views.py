@@ -4,6 +4,10 @@ from django.http import JsonResponse, HttpResponse
 from django.views import View
 from django.db.utils import IntegrityError
 
+from http import client
+from urllib import request, parse
+
+import os
 import json
 
 # Create your views here.
@@ -42,3 +46,36 @@ def signup_view(request):
 	#todo: perform hashing and salting before storing the password.
 	user.password = data["password"]
 	return JsonResponse({'status': 1, 'message' : ''}, status=201)
+
+# def auth42_view(request):
+# 	code = request.get_full_path()[12:]
+# 	client_id = os.environ.get('CLIENT_ID')
+# 	client_secret = os.environ.get('CLIENT_SECRET')
+# 	# auth_url = os.environ.get("AUTH_URL")
+
+# 	# Add fields
+# 	fields = {
+# 		'grant_type': 'authorization_code',
+# 		'client_id': client_id,
+# 		'client_secret': client_secret,
+# 		'code': code
+# 	}
+
+# 	# Convert multipart_data to string
+# 	body = fields
+# 	# Send the request
+# 	connection = client.HTTPConnection("https://api.intra.42.fr/oauth/token")
+# 	connection.request(
+# 		"POST",
+# 		"/oauth/token",
+# 		body
+# 	)
+
+# 	# Get the response
+# 	response = connection.getresponse()
+# 	response_data = response.read()
+
+# 	print(response_data.decode())
+# 	connection.close()
+
+# 	return JsonResponse({"auth42":response_data.decode()}, status=200)
