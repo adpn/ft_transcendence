@@ -4,8 +4,8 @@ from django.http import JsonResponse, HttpResponse
 from django.views import View
 from django.db.utils import IntegrityError
 
-from http import client
-from urllib import request, parse
+import http.client
+from uuid import uuid4
 
 import os
 import json
@@ -47,35 +47,55 @@ def signup_view(request):
 	user.password = data["password"]
 	return JsonResponse({'status': 1, 'message' : ''}, status=201)
 
-# def auth42_view(request):
-# 	code = request.get_full_path()[12:]
-# 	client_id = os.environ.get('CLIENT_ID')
-# 	client_secret = os.environ.get('CLIENT_SECRET')
-# 	# auth_url = os.environ.get("AUTH_URL")
+def auth42_view(request):
+	code = request.get_full_path()[12:]
+	client_id = os.environ.get('CLIENT_ID')
+	client_secret = os.environ.get('CLIENT_SECRET')
+	redirect_uri = os.environ.get("REDIRECT_URI")
 
-# 	# Add fields
-# 	fields = {
-# 		'grant_type': 'authorization_code',
-# 		'client_id': client_id,
-# 		'client_secret': client_secret,
-# 		'code': code
-# 	}
+	auth_url = "api.intra.42.fr"
+	endpoint = "/oauth/token"
 
-# 	# Convert multipart_data to string
-# 	body = fields
-# 	# Send the request
-# 	connection = client.HTTPConnection("https://api.intra.42.fr/oauth/token")
-# 	connection.request(
-# 		"POST",
-# 		"/oauth/token",
-# 		body
-# 	)
+	fields = {
+		'grant_type': 'authorization_code',
+		'client_id': client_id,
+		'client_secret': client_secret,
+		'code': code,
+		'redirect_uri': redirect_uri
+	}
 
-# 	# Get the response
-# 	response = connection.getresponse()
-# 	response_data = response.read()
+	# Generate a boundary string
+	boundary = uuid4().hex
 
-# 	print(response_data.decode())
-# 	connection.close()
+	# Create multipart/form-data body
+	body = ''
+	for key, value in fields.items():
+		body += f'--{boundary}\r\n'
+		body += f'Content-Disposition: form-data; name="{key}"\r\n\r\n'
+		body += f'{value}\r\n'
+	body += f'--{boundary}--\r\n'
 
-# 	return JsonResponse({"auth42":response_data.decode()}, status=200)
+	# Convert the body to bytes
+	body = body.encode('utf-8')
+
+	headers = {
+		'Content-Type': f'multipart/form-data; boundary={boundary}',
+		'Content-Length': str(len(body))
+	}
+
+	# Create a connection and send the POST request
+	connection = http.client.HTTPSConnection(auth_url)
+	connection.request("POST", endpoint, body, headers)
+
+	# Get the response
+	response = connection.getresponse()
+	data = response.read().decode()
+
+	# Close the connection
+	connection.close()
+
+	# Parse the response and return the JSON response
+	# if response.status == 200:
+	return JsonResponse(json.loads(data))
+	# else:
+	# 	return JsonResponse({'error': 'Failed to authenticate'}, status=response.status)
