@@ -113,7 +113,7 @@ def signup_view(user_management):
 	return execute
 
 def auth42_view(request):
-	code = request.get_full_path()[12:]
+	code = request.get_full_path()[19:]
 	client_id = os.environ.get('CLIENT_ID')
 	client_secret = os.environ.get('CLIENT_SECRET')
 	redirect_uri = os.environ.get("REDIRECT_URI")

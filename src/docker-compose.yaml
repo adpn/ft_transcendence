@@ -5,19 +5,16 @@ services:
       user-management-image
     build:
       context: services/user-management/
-      dockerfile: Dockerfile
-    environment:
-      CLIENT_ID : "${CLIENT_ID}"
-      CLIENT_SECRET : "${CLIENT_SECRET}"
-      REDIRECT_URI : "${REDIRECT_URI}"
+    # environment:
+
     # ports:
     #   - "443:443"
     # volumes:
     #   - wordpress:/var/www/wordpress
     networks:
       - transcendence
-    # depends_on:
-    #   - wordpress
+    depends_on:
+      - postgresql
     restart: always
   
   website:
@@ -26,33 +23,34 @@ services:
       website-image
     build:
       context: services/website/
-      dockerfile: Dockerfile
     depends_on:
       - user-management
     networks:
       - transcendence
     environment:
-      - name=value
+      CLIENT_ID : "${CLIENT_ID}"
+      CLIENT_SECRET : "${CLIENT_SECRET}"
+      REDIRECT_URI : "${REDIRECT_URI}"
     ports:
       - "8000:8000"
     restart: always
   
-  # cadvisor:
-  #   container_name: cadvisor
-  #   build:
-  #     context: bonus/cadvisor/
-  #     dockerfile: Dockerfile
-  #   image: cadvisor
-  #   ports:
-  #     - "8080:8080"
-  #   networks:
-  #     - inception
-  #   volumes:
-  #     - /:/rootfs:ro
-  #     - /var/run:/var/run:ro
-  #     - /sys:/sys:ro
-  #     - /var/lib/docker/:/var/lib/docker:ro
-  #   restart: always
+  postgresql:
+    container_name: postgresql
+    image:
+      postgresql-image
+    build:
+      context: services/postgreSQL
+    networks:
+      - transcendence
+    environment:
+      POSTGRES_USER : "${POSTGRES_USER}"
+      POSTGRES_PASSWORD : "${POSTGRES_PASSWORD}"
+      POSTGRES_DB : "${POSTGRES_DB}"
+    restart: always
+    
+
+  
 
 # volumes:
 #   wordpress:
