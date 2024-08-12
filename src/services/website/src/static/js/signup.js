@@ -21,6 +21,11 @@ document.addEventListener("DOMContentLoaded", function() {
 	var	signupUserName = document.getElementById("signup-username");
 	var	signupPassword = document.getElementById("signup-password");
 	var	signupConfirmPassword = document.getElementById("signup-confirm-password");
+	var	closeButton = document.getElementById("signup-close-btn");
+
+	// todo: print message on the
+	// if (signupPassword != signupConfirmPassword)
+	// 	return ;
 
 	signupForm.addEventListener('submit', function(event) {
         event.preventDefault();
@@ -40,9 +45,10 @@ document.addEventListener("DOMContentLoaded", function() {
         })
         .then(response => response.json())
 		//todo: confirm signup.
-        // .then(data => {
-        //     fetchItems(); // Refresh the item list
-        //     itemForm.reset(); // Clear the form
-        // });
+        .then(data => {
+			// todo if succeeded, close dialog box
+			// else display error message
+			console.log(data)
+        });
     })
 });

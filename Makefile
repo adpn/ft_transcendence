@@ -18,10 +18,9 @@ down:
 
 clean:
 	docker compose -f src/docker-compose.yaml down
-	docker compose -f src/docker-compose.yaml rm -f
-	# bash src/cleanup.sh
+	
 
 fclean: clean
 	docker system prune -af
 
-.PHONY: all build up down clean fclean
+.PHONY: all detached build up upd down clean fclean

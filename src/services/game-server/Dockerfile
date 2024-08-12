@@ -1,14 +1,14 @@
-FROM		alpine:3.19
+FROM		alpine:3.20
 
 RUN			apk update && apk upgrade && apk add --no-cache \
 			python3-dev \
 			build-base \
 			py3-pip \
-			jpeg-dev \
-			zlib-dev \
 			py3-django \
-			py3-psycopg-c
+			py3-channels \
+			uvicorn
 
+# RUN			pip install uvicorn
 COPY		src /home/service
 COPY		tools/run_service.sh /bin/run_service.sh
 

@@ -4,25 +4,14 @@ from django.views import View
 from django.contrib.auth.models import User
 
 import json
+
+from http import client
+
 from .serializers import ItemSerializer
 from .models import Item
 
-from .clients import AuthenticationClient
-
-auth_client = AuthenticationClient("authentication:8000")
-
-# Create your views here.
 def index(request):
 	return render(request, 'index.html')
-
-class ViewFactory(object):
-	def __init__(self, view_class, **kwargs) -> None:
-		self._view_class = view_class
-		self._kwargs = kwargs
-
-	def __call__(self, *args, **kwargs):
-		view_instance = self._view_class(**self._kwargs)
-		return view_instance(*args, **kwargs)
 
 class ItemListView(View):
 
@@ -39,26 +28,45 @@ class ItemListView(View):
 		except (KeyError, json.JSONDecodeError):
 			return HttpResponse(status=400)
 
-class SignUpView(View):
-	def __init__(self, **kwargs) -> None:
-		super().__init__(**kwargs)
-		self._auth_client = kwargs['auth_client']
+#relays request to a backend service.
+class ServiceClient(object):
+	def __init__(self, server_address) -> None:
+		self._connection = client.HTTPConnection(server_address)
 	
-	def post(self, request):
-		return self._auth_client.signup(request)
+	def forward(self, path=None):
+		def execute(request):
+			conn = self._connection
+			conn.request(
+				request.method, 
+				path if path else request.get_full_path(), 
+				request.body, 
+				request.headers)
+			response = conn.getresponse()
+			resp = HttpResponse(
+				content=response.read(), 
+				status=response.status, 
+				content_type=response.getheader('Content-Type'))
+			#copy headers
+			for header, value in response.getheaders():
+				resp[header] = value
+			return resp
+		return execute
 
-class LoginView(View):
-	def __init__(self, **kwargs) -> None:
-		super().__init__(**kwargs)
-		self._auth_client = kwargs['auth_client']
-	
-	def post(self, request):
-		return self._auth_client.login(request)
+	def __call__(self, request):
+		#todo: send session ?
+		conn = self._connection
+		conn.request(
+			request.method, 
+			request.get_full_path(), 
+			request.body, 
+			request.headers)
+		response = conn.getresponse()
+		resp = HttpResponse(
+			content=response.read(), 
+			status=response.status, 
+			content_type=response.getheader('Content-Type'))
+		#copy headers
+		for header, value in response.getheaders():
+			resp[header] = value
+		return resp
 
-class LogoutView(View):
-	def __init__(self, **kwargs) -> None:
-		super().__init__(**kwargs)
-		self._auth_client = kwargs['auth_client']
-	
-	def post(self, request):
-		return self._auth_client.logout(request)

@@ -29,6 +29,10 @@
                 <li class="nav-item">
                     <button class="btn btn-primary me-2" onclick="handleGamesClick()">Games</button>
                 </li>
+				<!-- Log in Modal -->
+				<li class="nav-item" id="testDIV">
+					<button class="btn btn-primary me-2" id="test-button">TEST</button>
+				</li>
             </ul>
             <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
                 <li class="nav-item">
@@ -57,7 +61,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="loginModalLabel">Log In</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" id="login-close-btn" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form id="login-form">
@@ -71,7 +75,7 @@
                         </div>
                         <button type="submit" class="btn btn-primary">Log In</button>
                     </form>
-					<a class="btn btn-primary w-100 mt-3" href="https://api.intra.42.fr/oauth/authorize?client_id=u-s4t2ud-da67bd33b552506b9d65c73ab83783a4f4d9c9c73c30db86ee1cb8f544f0f45f&redirect_uri=http%3A%2F%2Flocalhost%3A8000&response_type=code">Log In with 42auth</a>
+					<a class="btn btn-primary w-100 mt-3" href="https://api.intra.42.fr/oauth/authorize?client_id=u-s4t2ud-da67bd33b552506b9d65c73ab83783a4f4d9c9c73c30db86ee1cb8f544f0f45f&redirect_uri=http%3A%2F%2Flocalhost%3A8000%2Fauth%2Fauth42%2F&response_type=code">Log In with 42auth</a>
                 </div>
             </div>
         </div>
@@ -83,20 +87,20 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="signUpModalLabel">Sign Up</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" id="signup-close-btn" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form id="signup-form">
                         <div class="mb-3">
-                            <label for="signUpUsername" class="form-label">Username</label>
+                            <label for="signup-username" class="form-label">Username</label>
                             <input type="text" class="form-control" id="signup-username" name="username" required>
                         </div>
                         <div class="mb-3">
-                            <label for="signUpPassword" class="form-label">Password</label>
+                            <label for="signup-password" class="form-label">Password</label>
                             <input type="password" class="form-control" id="signup-password" name="password" required>
                         </div>
                         <div class="mb-3">
-                            <label for="signUpConfirmPassword" class="form-label">Confirm Password</label>
+                            <label for="signup-confirm-password" class="form-label">Confirm Password</label>
                             <input type="password" class="form-control" id="signup-confirm-password" name="confirm_password" required>
                         </div>
                         <button type="submit" class="btn btn-primary">Sign Up</button>
