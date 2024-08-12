@@ -31,6 +31,8 @@ services:
       CLIENT_ID : "${CLIENT_ID}"
       CLIENT_SECRET : "${CLIENT_SECRET}"
       REDIRECT_URI : "${REDIRECT_URI}"
+      POSTGRES_USER : "${POSTGRES_USER}"
+      POSTGRES_PASSWORD : "${POSTGRES_PASSWORD}"
     ports:
       - "8000:8000"
     restart: always
@@ -46,7 +48,6 @@ services:
     environment:
       POSTGRES_USER : "${POSTGRES_USER}"
       POSTGRES_PASSWORD : "${POSTGRES_PASSWORD}"
-      POSTGRES_DB : "${POSTGRES_DB}"
     restart: always
     
 
