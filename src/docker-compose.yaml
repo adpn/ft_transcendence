@@ -37,6 +37,21 @@ services:
       - "8000:8000"
     restart: always
   
+  game-server:
+    container_name: game-server
+    image:
+      game-server-image
+    build:
+      context: services/game-server/
+      dockerfile: Dockerfile
+    depends_on:
+      - user-management
+    networks:
+      - transcendence
+    environment:
+      - name=value
+    restart: always
+
   # cadvisor:
   #   container_name: cadvisor
   #   build:
