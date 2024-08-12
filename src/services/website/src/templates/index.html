@@ -6,11 +6,13 @@
     <title>ft_transcendance</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" crossorigin="anonymous">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <!-- <script type="importmap"> { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@v0.167.1/build/three.module.js" }} </script> -->
     {% load static %}
 	<link rel="icon" href="{% static 'favicon.ico' %}" type="image/x-icon">
     <script src="{% static 'js/signup.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
 	<script src="{% static 'js/login.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
 	<script src="{% static 'js/app.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
+	<script src="{% static 'js/pong.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 </head>
 <body>
@@ -52,7 +54,6 @@
 			</div>
 		</div>
 	</div>
-	
 
     <!-- Log in Modal -->
     <div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
