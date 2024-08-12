@@ -21,6 +21,7 @@ document.addEventListener("DOMContentLoaded", function() {
 	var	signupUserName = document.getElementById("signup-username");
 	var	signupPassword = document.getElementById("signup-password");
 	var	signupConfirmPassword = document.getElementById("signup-confirm-password");
+	var	closeButton = document.getElementById("signup-close-btn");
 
 	// todo: print message on the
 	// if (signupPassword != signupConfirmPassword)
@@ -34,7 +35,7 @@ document.addEventListener("DOMContentLoaded", function() {
             'username': signupUserName.value,
             'password': signupPassword.value
         };
-        fetch('/signup/', {
+        fetch('/auth/signup/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -42,10 +43,12 @@ document.addEventListener("DOMContentLoaded", function() {
             },
             body: JSON.stringify(credentials)
         })
-        .then(response => response.json());
+        .then(response => response.json())
 		//todo: confirm signup.
-        // .then(data => {
-		// 	console.log(data['status'])
-        // });
+        .then(data => {
+			// todo if succeeded, close dialog box
+			// else display error message
+			console.log(data)
+        });
     })
 });
