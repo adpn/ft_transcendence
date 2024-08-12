@@ -1,10 +1,10 @@
 services:
-  authentication:
-    container_name: authentication
+  user-management:
+    container_name: user-management
     image:
-      authentication-image
+      user-management-image
     build:
-      context: services/auth/
+      context: services/user-management/
       dockerfile: Dockerfile
     environment:
       CLIENT_ID : "${CLIENT_ID}"
@@ -28,7 +28,7 @@ services:
       context: services/website/
       dockerfile: Dockerfile
     depends_on:
-      - authentication
+      - user-management
     networks:
       - transcendence
     environment:

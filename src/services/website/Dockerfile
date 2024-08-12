@@ -8,9 +8,6 @@ RUN			apk update && apk upgrade && apk add --no-cache \
 			zlib-dev \
 			py3-django
 
-
-# RUN			pip3 install django
-
 COPY		src /home/service
 COPY		tools/run_service.sh /bin/run_service.sh
 

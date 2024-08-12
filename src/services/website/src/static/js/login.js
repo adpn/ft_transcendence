@@ -20,28 +20,54 @@ document.addEventListener("DOMContentLoaded", function() {
 	var	loginForm = document.getElementById("login-form");
 	var	loginUserName = document.getElementById("login-username");
 	var	loginPassword = document.getElementById("login-password");
+	var	testButton = document.getElementById("test-button");
 
 	loginForm.addEventListener('submit', function(event) {
         event.preventDefault();
 
 		//todo: compare login confirm with password.
-        const credentials = {
+        const creds = {
             username: loginUserName.value,
             password: loginPassword.value
         };
-        fetch('/login/', {
+
+        fetch('/auth/login/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-				'X-CSRFToken': csrftoken
+				'X-CSRFToken': getCookie('csrftoken')
             },
-            body: JSON.stringify(credentials)
+            body: JSON.stringify(creds),
+			credentials: 'include'
         })
         .then(response => response.json())
 		//todo: confirm login.
-        // .then(data => {
-        //     fetchItems(); // Refresh the item list
-        //     itemForm.reset(); // Clear the form
-        // });
-    })
+        .then(data => {
+			// todo if succeeded, close dialog box
+			// else display error message
+			console.log(data)
+        });
+    });
+
+	testButton.addEventListener('click', function(event) { 
+		event.preventDefault();
+
+		fetch('/auth/protected/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+				'X-CSRFToken': getCookie('csrftoken')
+            },
+			credentials: 'include'
+        })
+        .then(response => response.json())
+		//todo: confirm login.
+        .then(data => {
+			// todo if succeeded, close dialog box
+			// else display error message
+			console.log(data)
+        });
+
+	});
+
 });
