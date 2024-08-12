@@ -6,7 +6,8 @@ RUN			apk update && apk upgrade && apk add --no-cache \
 			py3-pip \
 			jpeg-dev \
 			zlib-dev \
-			py3-django
+			py3-django \
+			py3-psycopg-c
 
 COPY		src /home/service
 COPY		tools/run_service.sh /bin/run_service.sh
