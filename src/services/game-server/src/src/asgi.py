@@ -19,14 +19,12 @@ from channels.routing import ProtocolTypeRouter, URLRouter
 from common.game import GameServer
 from pong.consumers import PongLogic
 
-pong = GameServer(PongLogic())
-
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'src.settings')
 setup()
 application = get_asgi_application()
 
 URL_PATTERNS = [
-	re_path(r'ws/game/pong/(?P<room_name>\w+)/$', pong.as_asgi()),
+	re_path(r'ws/game/pong/(?P<room_name>\w+)/$', GameServer.as_asgi(game_logic=PongLogic())),
 ]
 
 application = ProtocolTypeRouter({

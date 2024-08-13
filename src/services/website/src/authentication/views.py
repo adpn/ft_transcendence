@@ -1,68 +1,18 @@
 from django.shortcuts import render
-from django.contrib.auth import login, logout, models
+from django.contrib.auth import login, logout, get_user_model
 from django.http import JsonResponse, HttpResponse
 from django.db.utils import IntegrityError
+# from django.db import models
 
 import json
 from uuid import uuid4
 from http import client
 import os
 
+User = get_user_model()
 class ProtectedService(object):
 	def __call__(self, request):
 		return JsonResponse({'message': 'Hello!'}, status=200)
-
-# wrapper that checks for othentication.
-class NeedsAuthentication(object):
-	def __init__(self, service_client) -> None:
-		self._service_client = service_client
-	
-	def __call__(self, request):
-		if request.user.is_authenticated:
-			return self._service_client(request)
-		return JsonResponse({}, status=401)
-
-#relays request to a backend service.
-class ServiceClient(object):
-	def __init__(self, server_address) -> None:
-		self._connection = client.HTTPConnection(server_address)
-	
-	def forward(self, path=None):
-		def execute(request):
-			conn = self._connection
-			conn.request(
-				request.method, 
-				path if path else request.get_full_path(), 
-				request.body, 
-				request.headers)
-			response = conn.getresponse()
-			resp = HttpResponse(
-				content=response.read(), 
-				status=response.status, 
-				content_type=response.getheader('Content-Type'))
-			#copy headers
-			for header, value in response.getheaders():
-				resp[header] = value
-			return resp
-		return execute
-
-	def __call__(self, request):
-		#todo: send session ?
-		conn = self._connection
-		conn.request(
-			request.method, 
-			request.get_full_path(), 
-			request.body, 
-			request.headers)
-		response = conn.getresponse()
-		resp = HttpResponse(
-			content=response.read(), 
-			status=response.status, 
-			content_type=response.getheader('Content-Type'))
-		#copy headers
-		for header, value in response.getheaders():
-			resp[header] = value
-		return resp
 
 def login_view(user_management):
 	def execute(request):
@@ -78,7 +28,7 @@ def login_view(user_management):
 			return HttpResponse(status=400)
 		username = data["username"]
 		password = data["password"]
-		user = models.User.objects.filter(username=username).first()
+		user = User.objects.filter(username=username, is_42=False).first()
 		if user is not None and user.check_password(password):
 			login(request, user)
 			#todo: need a login response json -> should contain images
@@ -101,7 +51,7 @@ def signup_view(user_management):
 		except json.decoder.JSONDecodeError:
 			return HttpResponse(status=400)
 		try:
-			user = models.User.objects.create_user(data["username"], password=data["password"])
+			user = User.objects.create_user(data["username"], password=data["password"])
 		except IntegrityError:
 			return JsonResponse({'status': 0, 'message' : 'username already taken'}, status=400)
 		#todo: check if the fields are present
@@ -112,7 +62,7 @@ def signup_view(user_management):
 		return JsonResponse({'status': 1, 'message' : 'successfully signed up'}, status=201)
 	return execute
 
-def auth42_view(request):
+def authenticate_42API(request):
 	code = request.get_full_path()[19:]
 	client_id = os.environ.get('CLIENT_ID')
 	client_secret = os.environ.get('CLIENT_SECRET')
@@ -129,10 +79,7 @@ def auth42_view(request):
 		'redirect_uri': redirect_uri
 	}
 
-	# Generate a boundary string
 	boundary = uuid4().hex
-
-	# Create multipart/form-data body
 	body = ''
 	for key, value in fields.items():
 		body += f'--{boundary}\r\n'
@@ -140,7 +87,6 @@ def auth42_view(request):
 		body += f'{value}\r\n'
 	body += f'--{boundary}--\r\n'
 
-	# Convert the body to bytes
 	body = body.encode('utf-8')
 
 	headers = {
@@ -148,19 +94,44 @@ def auth42_view(request):
 		'Content-Length': str(len(body))
 	}
 
-	# Create a connection and send the POST request
 	connection = client.HTTPSConnection(auth_url)
 	connection.request("POST", endpoint, body, headers)
 
-	# Get the response
 	response = connection.getresponse()
 	data = response.read().decode()
-
-	# Close the connection
 	connection.close()
 
-	# Parse the response and return the JSON response
-	# if response.status == 200:
-	return JsonResponse(json.loads(data))
-	# else:
-	# 	return JsonResponse({'error': 'Failed to authenticate'}, status=response.status)
+	if response.status != 200:
+		return ({'error': 'Failed to authenticate'}, response.status)
+	return (json.loads(data), 200)
+
+def auth42_view(request):
+	auth_response = authenticate_42API(request)
+	if auth_response[1] != 200:
+		return JsonResponse(auth_response[0], auth_response[1])
+	headers = {
+		"Authorization": "Bearer " + auth_response[0]["access_token"]
+	}
+
+	api_url = "api.intra.42.fr"
+	endpoint = "/v2/me"
+
+	connection = client.HTTPSConnection(api_url)
+	connection.request("GET", endpoint, "", headers)
+	response = connection.getresponse()
+	data = response.read().decode()
+	connection.close()
+
+	if response.status != 200:
+		return JsonResponse({'error': 'Failed to authenticate'}, status=response.status)
+
+	MeData = json.loads(data)
+	user = User.objects.filter(username=MeData["login"], is_42=True).first()
+	if user is None:
+		user = User.objects.create_user(MeData["login"], is_42=True)
+		user.is_active = True
+		user.save()
+		# todo: create entry in user management db
+	login(request, user)
+	return JsonResponse({'status': 1, 'message': 'successfully logged-in'}, status=200)
+
