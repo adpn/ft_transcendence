@@ -4,7 +4,7 @@ import abc
 from channels.generic.websocket import AsyncWebsocketConsumer
 
 class GameLogic(abc.ABC):
-	@abc.abstractclassmethod
+	@abc.abstractmethod
 	def update(data):
 		pass
 
