@@ -33,6 +33,7 @@ services:
       REDIRECT_URI : "${REDIRECT_URI}"
       POSTGRES_USER : "${POSTGRES_USER}"
       POSTGRES_PASSWORD : "${POSTGRES_PASSWORD}"
+      SESSION_SERVER : "${SESSION_SERVER}"
     ports:
       - "8000:8000"
     restart: always
