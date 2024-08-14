@@ -16,9 +16,13 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from common import clients
+
+games = clients.ServiceClient('game-server:8000')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
 	path('', include("website.urls")),
-	path('auth/', include('authentication.urls'))
+	path('auth/', include('authentication.urls')),
+	path('games/', games)
 ]
