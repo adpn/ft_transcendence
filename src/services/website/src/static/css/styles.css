@@ -16,8 +16,8 @@ html, body {
     height: 100%;
 }
 
-.alert-banner {
-    background-color: #f44336;
+.error-banner {
+    background-color: #be2424;
     color: white;
     text-align: center;
     padding: 15px;
@@ -25,3 +25,17 @@ html, body {
     font-weight: bold;
 }
 
+.success-banner {
+    background-color: #319730;
+    color: white;
+    text-align: center;
+    padding: 15px;
+    margin-bottom: 15px;
+    font-weight: bold;
+    opacity: 1;
+    transition: opacity 0.5s ease-out;
+}
+
+.fade-out {
+    opacity: 0;
+}
