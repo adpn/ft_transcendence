@@ -1,4 +1,5 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
+from django.contrib import messages
 from django.contrib.auth import login, logout, get_user_model
 from django.http import JsonResponse, HttpResponse
 from django.db.utils import IntegrityError
@@ -115,75 +116,87 @@ def signup_view(user_management):
 	return execute
 
 def authenticate_42API(request):
-	code = request.get_full_path()[19:]
-	client_id = os.environ.get('CLIENT_ID')
-	client_secret = os.environ.get('CLIENT_SECRET')
-	redirect_uri = os.environ.get("REDIRECT_URI")
+    path = request.get_full_path()
+    if "error" in path:
+        return None, 'Failed to authenticate'
+    
+    code = path[19:]
+    client_id = os.environ.get('CLIENT_ID')
+    client_secret = os.environ.get('CLIENT_SECRET')
+    redirect_uri = os.environ.get("REDIRECT_URI")
 
-	auth_url = "api.intra.42.fr"
-	endpoint = "/oauth/token"
+    auth_url = "api.intra.42.fr"
+    endpoint = "/oauth/token"
 
-	fields = {
-		'grant_type': 'authorization_code',
-		'client_id': client_id,
-		'client_secret': client_secret,
-		'code': code,
-		'redirect_uri': redirect_uri
-	}
+    fields = {
+        'grant_type': 'authorization_code',
+        'client_id': client_id,
+        'client_secret': client_secret,
+        'code': code,
+        'redirect_uri': redirect_uri
+    }
 
-	boundary = uuid4().hex
-	body = ''
-	for key, value in fields.items():
-		body += f'--{boundary}\r\n'
-		body += f'Content-Disposition: form-data; name="{key}"\r\n\r\n'
-		body += f'{value}\r\n'
-	body += f'--{boundary}--\r\n'
+    boundary = uuid4().hex
+    body = ''
+    for key, value in fields.items():
+        body += f'--{boundary}\r\n'
+        body += f'Content-Disposition: form-data; name="{key}"\r\n\r\n'
+        body += f'{value}\r\n'
+    body += f'--{boundary}--\r\n'
 
-	body = body.encode('utf-8')
+    body = body.encode('utf-8')
 
-	headers = {
-		'Content-Type': f'multipart/form-data; boundary={boundary}',
-		'Content-Length': str(len(body))
-	}
+    headers = {
+        'Content-Type': f'multipart/form-data; boundary={boundary}',
+        'Content-Length': str(len(body))
+    }
 
-	connection = client.HTTPSConnection(auth_url)
-	connection.request("POST", endpoint, body, headers)
+    connection = client.HTTPSConnection(auth_url)
+    connection.request("POST", endpoint, body, headers)
 
-	response = connection.getresponse()
-	data = response.read().decode()
-	connection.close()
+    response = connection.getresponse()
+    data = response.read().decode()
+    connection.close()
 
-	if response.status != 200:
-		return ({'error': 'Failed to authenticate'}, response.status)
-	return (json.loads(data), 200)
+    if response.status != 200:
+        return None, 'Failed to authenticate'
+    return json.loads(data), None
 
 def auth42_view(request):
-	auth_response = authenticate_42API(request)
-	if auth_response[1] != 200:
-		return JsonResponse(auth_response[0], auth_response[1])
-	headers = {
-		"Authorization": "Bearer " + auth_response[0]["access_token"]
-	}
+    if request.user.is_authenticated:
+        return redirect('/')
+    
+    auth_response, error_message = authenticate_42API(request)
+    
+    if error_message:
+        messages.error(request, error_message)
+        return redirect('/')
+    
+    headers = {
+        "Authorization": "Bearer " + auth_response["access_token"]
+    }
 
-	api_url = "api.intra.42.fr"
-	endpoint = "/v2/me"
+    api_url = "api.intra.42.fr"
+    endpoint = "/v2/me"
 
-	connection = client.HTTPSConnection(api_url)
-	connection.request("GET", endpoint, "", headers)
-	response = connection.getresponse()
-	data = response.read().decode()
-	connection.close()
+    connection = client.HTTPSConnection(api_url)
+    connection.request("GET", endpoint, "", headers)
+    api_response = connection.getresponse()
+    data = api_response.read().decode()
+    connection.close()
 
-	if response.status != 200:
-		return JsonResponse({'error': 'Failed to authenticate'}, status=response.status)
+    if api_response.status != 200:
+        messages.error(request, 'Failed to retrieve user data')
+        return redirect('/')
 
-	MeData = json.loads(data)
-	user = User.objects.filter(username=MeData["login"], is_42=True).first()
-	if user is None:
-		user = User.objects.create_user(MeData["login"], is_42=True)
-		user.is_active = True
-		user.save()
-		# todo: create entry in user management db
-	login(request, user)
-	return JsonResponse({'status': 1, 'message': 'successfully logged-in'}, status=200)
+    MeData = json.loads(data)
+    user = User.objects.filter(username=MeData["login"], is_42=True).first()
+    if user is None:
+        user = User.objects.create_user(MeData["login"], is_42=True)
+        user.is_active = True
+        user.save()
+        # todo: create entry in user management db
+
+    login(request, user)
+    return redirect('/')
 
