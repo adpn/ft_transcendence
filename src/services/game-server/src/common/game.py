@@ -102,10 +102,6 @@ class GameLogic(abc.ABC):
 	@abc.abstractmethod
 	def update(data):
 		pass
-			
-
-GAME_SESSIONS = {}
-LOCK = asyncio.Lock()
 
 class GameConsumer(AsyncWebsocketConsumer):
 	def __init__(self, game_server, *args, **kwargs):
@@ -121,9 +117,18 @@ class GameConsumer(AsyncWebsocketConsumer):
 					'message': data
 				}
 			)
+	
+	async def get_session_key(self):
+		return self.scope['session'].session_key
 
 	async def connect(self):
 		self.game_room = self.scope['url_route']['kwargs']['room_name']
+		# hope this works
+		session_key = await self.get_session_key()
+		#reject any connection request that was not authenticated.
+		if not session_key:
+			await self.close()
+
 		# todo: need a game logic factory
 		# create new game session if none exists.
 		async with self._game_server as server:
@@ -140,7 +145,6 @@ class GameConsumer(AsyncWebsocketConsumer):
 				})
 				# keep a reference to the game session.
 				self._game_session = room
-				# todo: 
 				await self.accept()
 				# start game loop for the session.
 				asyncio.create_task(self._game_session.start(self.state_callback))
@@ -152,7 +156,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 					'message': {'status' : 'waiting'}
 				})
 				await self.accept()
-			# refuse connection if the fame is full
+			# refuse connection if the game is full
 			elif room.num_players > self._game_settings.min_players:
 				await self.channel_layer.group_send(
 				self.game_room,

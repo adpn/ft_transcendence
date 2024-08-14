@@ -5,14 +5,14 @@ from http import client
 from os import environ
 import json
 
-class SessionStoreClient(SessionBase):
+class SessionStore(SessionBase):
 	def __init__(self, session_key=None) -> None:
 		super().__init__(session_key)
 		self._server_url = environ.get('SESSION_SERVER')
 
-	def _request(self, method, url, body=None, headers=None):
+	def _request(self, method, url, body=None, headers={}):
+		conn = client.HTTPConnection(self._server_url)
 		try:
-			conn = client.HTTPConnection(self._server_url)
 			conn.request(method, url, body, headers)
 			response = conn.getresponse()
 			return response.status, response.read().decode()
@@ -21,7 +21,7 @@ class SessionStoreClient(SessionBase):
 
 	def load(self):
 		if self._session_key:
-			url = f"{self._server_url}/{self._session_key}/"
+			url = f"/session/{self._session_key}/"
 			status, response_body = self._request("GET", url)
 			if status == 200:
 				session_data = json.loads(response_body).get('session_data', {})
@@ -30,7 +30,7 @@ class SessionStoreClient(SessionBase):
 		return {}
 
 	def create(self):
-		status, response_body = self._request("POST", self._server_url)
+		status, response_body = self._request("POST", '/session/')
 		if status == 200:
 			self._session_key = json.loads(response_body).get('session_id')
 			self._session_cache = {}
@@ -42,7 +42,7 @@ class SessionStoreClient(SessionBase):
 			self.create()
 		data = json.dumps(self._session_cache)
 		headers = {'Content-Type': 'application/json'}
-		url = f"{self._server_url}/{self._session_key}/"
+		url = f"/session/{self._session_key}/"
 		status, _ = self._request("PUT", url, body=data, headers=headers)
 		if status != 200:
 			raise CreateError()
@@ -50,5 +50,5 @@ class SessionStoreClient(SessionBase):
 	def delete(self, session_key=None):
 		session_key = session_key or self._session_key
 		if session_key:
-			url = f"{self._server_url}/{session_key}/"
+			url = f"/session/{session_key}/"
 			self._request("DELETE", url)

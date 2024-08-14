@@ -24,6 +24,7 @@ services:
     build:
       context: services/website/
     depends_on:
+      - session-manager
       - user-management
     networks:
       - transcendence
