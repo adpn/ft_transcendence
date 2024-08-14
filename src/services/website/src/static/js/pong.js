@@ -2,12 +2,15 @@
 
 // this stuff is relative to a canvas of 1000,1000
 var game_data = {
-	ball_pos: [500,500],
+	ball_posx: 500,
+	ball_posy: 500,
 	ball_size: 10,
 	racket_left_pos: 400,
 	racket_left_size: 200,
 	racket_right_pos: 400,
-	racket_right_size: 200
+	racket_right_size: 200,
+	score_left: 1,
+	score_right: 0
 }
 
 var game_input = {
@@ -94,33 +97,13 @@ document.addEventListener("DOMContentLoaded", function() {
 	}
 
 	function gameTick() {
-		process_input();
+		update();
 		clearCanvas();
 		drawFrame();
 	}
 
-	function process_input() {
+	function update() {
 		// replace this function with communication with the server
-		if (game_input.right_up) {
-			game_data.racket_right_pos -= 10;
-			if (game_data.racket_right_pos < 0)
-				game_data.racket_right_pos = 0;
-		}
-		if (game_input.right_down) {
-			game_data.racket_right_pos += 10;
-			if (game_data.racket_right_pos + game_data.racket_right_size > 1000)
-				game_data.racket_right_pos = 1000 - game_data.racket_right_size;
-		}
-		if (game_input.left_up) {
-			game_data.racket_left_pos -= 10;
-			if (game_data.racket_left_pos < 0)
-				game_data.racket_left_pos = 0;
-		}
-		if (game_input.left_down) {
-			game_data.racket_left_pos += 10;
-			if (game_data.racket_left_pos + game_data.racket_left_size > 1000)
-				game_data.racket_left_pos = 1000 - game_data.racket_left_size;
-		}
 	}
 
 	function clearCanvas() {
@@ -132,9 +115,17 @@ document.addEventListener("DOMContentLoaded", function() {
 
 	function drawFrame() {
 		ctx.fillStyle = "white";
-		ctx.fillRect(makeXCord(game_data.ball_pos[0]) - makeXCord(game_data.ball_size / 2), makeYCord(game_data.ball_pos[1]) - makeYCord(game_data.ball_size / 2),
+		// ball
+		ctx.fillRect(makeXCord(game_data.ball_posx) - makeXCord(game_data.ball_size / 2), makeYCord(game_data.ball_posy) - makeYCord(game_data.ball_size / 2),
 				makeXCord(game_data.ball_size), makeXCord(game_data.ball_size));
+		// rackets
 		ctx.fillRect(makeXCord(5), makeYCord(game_data.racket_left_pos), makeXCord(10), makeYCord(game_data.racket_left_size));
 		ctx.fillRect(canvas.width - makeXCord(15), makeYCord(game_data.racket_right_pos), makeXCord(10), makeYCord(game_data.racket_right_size));
+		// scoreboard
+		ctx.font = makeXCord(30) + "px arial";
+		ctx.textBaseline = "top";
+		ctx.textAlign = "center";
+		ctx.fillText(game_data.score_left, makeXCord(480), makeXCord(10));
+		ctx.fillText(game_data.score_right, makeXCord(520), makeXCord(10));
 	}
 });

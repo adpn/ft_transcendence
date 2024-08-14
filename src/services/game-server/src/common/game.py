@@ -99,7 +99,7 @@ def create_game(request):
 		'status': 'waiting'}, status=200)
 
 class GameLogic(abc.ABC):
-	@abc.abstractclassmethod
+	@abc.abstractmethod
 	def update(data):
 		pass
 			
