@@ -53,21 +53,6 @@ services:
   #     - name=value
   #   restart: always
 
-  session-manager:
-    container_name: session-manager
-    image:
-      session-manager-image
-    build:
-      context: services/session-manager/
-      dockerfile: Dockerfile
-    depends_on:
-      - user-management
-    networks:
-      - transcendence
-    environment:
-      SESSION_SERVER : "${SESSION_SERVER}"
-    restart: always
-
   postgresql:
     container_name: postgresql
     image:
