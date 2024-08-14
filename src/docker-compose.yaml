@@ -33,23 +33,39 @@ services:
       REDIRECT_URI : "${REDIRECT_URI}"
       POSTGRES_USER : "${POSTGRES_USER}"
       POSTGRES_PASSWORD : "${POSTGRES_PASSWORD}"
+      SESSION_SERVER : "${SESSION_SERVER}"
     ports:
       - "8000:8000"
     restart: always
   
-  game-server:
-    container_name: game-server
+  # game-server:
+  #   container_name: game-server
+  #   image:
+  #     game-server-image
+  #   build:
+  #     context: services/game-server/
+  #     dockerfile: Dockerfile
+  #   depends_on:
+  #     - user-management
+  #   networks:
+  #     - transcendence
+  #   environment:
+  #     - name=value
+  #   restart: always
+
+  session-manager:
+    container_name: session-manager
     image:
-      game-server-image
+      session-manager-image
     build:
-      context: services/game-server/
+      context: services/session-manager/
       dockerfile: Dockerfile
     depends_on:
       - user-management
     networks:
       - transcendence
     environment:
-      - name=value
+      SESSION_SERVER : "${SESSION_SERVER}"
     restart: always
 
   postgresql:
