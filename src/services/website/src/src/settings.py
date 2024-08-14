@@ -28,7 +28,7 @@ SECRET_KEY = 'django-insecure-&ch=0_il%a$0o5kc_irh_^*wxm07(m5^w(&9y86d&$p99*uyt@
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = [os.environ.get('SESSION_SERVER'), 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 # Application definition
 
@@ -42,7 +42,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 ]
-
+from django.contrib.auth.middleware import AuthenticationMiddleware
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
