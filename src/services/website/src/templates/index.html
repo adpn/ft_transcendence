@@ -14,25 +14,26 @@
     {% comment %} <script src="{% static 'js/app.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script> {% endcomment %}
 	<script src="{% static 'js/pong.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
     <script src="{% static 'js/logout.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
+    <script src="{% static 'js/router.js' %}"></script>
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <a class="navbar-brand" href="#">ft_transcendance</a>
+        <a class="navbar-brand" href="#" data-link="/">ft_transcendance</a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarTogglerDemo02" aria-controls="navbarTogglerDemo02" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarTogglerDemo02">
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                 <li class="nav-item">
-                    <button class="btn btn-primary me-2" onclick="handleHomeClick()">Home</button>
+                    <a href="/" class="btn btn-primary me-2" data-link>Home</a>
                 </li>
                 <li class="nav-item">
-                    <button class="btn btn-primary me-2" onclick="handleGamesClick()">Games</button>
+                    <a href="/games" class="btn btn-primary me-2" data-link>Games</a>
                 </li>
-				<li class="nav-item" id="testDIV">
-                    <button class="btn btn-primary me-2" id="test-button">TEST</button>
-				</li>
+                <li class="nav-item">
+                    <a href="/profile" class="btn btn-primary me-2" data-link>Profile</a>
+                </li>
             </ul>
             <div id="profile-menu">
                 <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
@@ -57,15 +58,7 @@
         {% endif %}
     </div>    
 
-	<div class="container mt-4">
-		<div class="row">
-			<div class="col text-center">
-				<div class="canvas-container">
-					<canvas id="gameCanvas" class="w-100 border"></canvas>
-				</div>
-			</div>
-		</div>
-	</div>
+	<div id="app" class="container mt-4"></div>
 
     <!-- Log in Modal -->
     <div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">

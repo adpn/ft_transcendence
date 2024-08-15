@@ -105,8 +105,8 @@ document.addEventListener("DOMContentLoaded", function() {
                     <img src="${user.profile_picture}" alt="${user.username}" class="rounded-circle" width="30" height="30">
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
-                    <li><a class="dropdown-item" href="/profile/">Profile</a></li>
-                    <li><a class="dropdown-item" href="/settings/">Settings</a></li>
+                    <li><a href="/profile" class="dropdown-item" data-link>Profile</a></li>
+                    <li><a href="/settings" class="dropdown-item" data-link>Settings</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item" onclick="handleLogout()">Logout</a></li>
                 </ul>
