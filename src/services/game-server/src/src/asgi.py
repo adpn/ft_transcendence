@@ -16,7 +16,7 @@ from django.urls import re_path
 from channels.auth import AuthMiddlewareStack
 from channels.routing import ProtocolTypeRouter, URLRouter
 
-from common.game import GameServer
+from common.game import GameConsumer
 from pong.consumers import PongLogic
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'src.settings')
@@ -24,7 +24,7 @@ setup()
 application = get_asgi_application()
 
 URL_PATTERNS = [
-	re_path(r'ws/game/pong/(?P<room_name>\w+)/$', GameServer.as_asgi(game_logic=PongLogic())),
+	re_path(r'ws/game/pong/(?P<room_name>\w+)/$', GameConsumer.as_asgi(game_logic=PongLogic())),
 ]
 
 application = ProtocolTypeRouter({

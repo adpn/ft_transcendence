@@ -21,11 +21,6 @@ document.addEventListener("DOMContentLoaded", function() {
 	var	signupUserName = document.getElementById("signup-username");
 	var	signupPassword = document.getElementById("signup-password");
 	var	signupConfirmPassword = document.getElementById("signup-confirm-password");
-	var	closeButton = document.getElementById("signup-close-btn");
-
-	// todo: print message on the
-	// if (signupPassword != signupConfirmPassword)
-	// 	return ;
 
 	signupForm.addEventListener('submit', function(event) {
         event.preventDefault();
@@ -33,7 +28,8 @@ document.addEventListener("DOMContentLoaded", function() {
 		//todo: compare signup confirm with password.
         const credentials = {
             'username': signupUserName.value,
-            'password': signupPassword.value
+            'password': signupPassword.value,
+            'confirm_password': signupConfirmPassword.value
         };
         fetch('/auth/signup/', {
             method: 'POST',
@@ -44,11 +40,64 @@ document.addEventListener("DOMContentLoaded", function() {
             body: JSON.stringify(credentials)
         })
         .then(response => response.json())
-		//todo: confirm signup.
         .then(data => {
-			// todo if succeeded, close dialog box
-			// else display error message
 			console.log(data)
+            if (data.status === 0) {
+                updateAlertPlaceholderError(data.message);
+            } else {
+                successAlertPlaceholder();
+                replaceLoginButtons(data.user);
+            }
+            const signUpModalElement = document.getElementById('signUpModal');
+            const signUpModal = bootstrap.Modal.getInstance(signUpModalElement);
+            if (signUpModal) {
+                signUpModal.hide();
+            }
+            signupForm.reset();
         });
-    })
+    });
+
+    function updateAlertPlaceholderError(message) {
+        var alertPlaceholder = document.getElementById('alert-placeholder');
+        alertPlaceholder.innerHTML = `
+            <div class="error-banner" role="alert">
+                ${message}
+            </div>
+        `;
+    }
+
+    function successAlertPlaceholder() {
+        var alertPlaceholder = document.getElementById('alert-placeholder');
+        alertPlaceholder.innerHTML = `
+            <div class="success-banner" id="success-alert" role="alert">
+               Account successfully created ! Welcome !
+            </div>
+    `;
+
+    setTimeout(() => {
+        var successAlert = document.getElementById('success-alert');
+        successAlert.classList.add('fade-out');
+        successAlert.addEventListener('transitionend', () => {
+            successAlert.remove();
+        });
+    }, 3500);
+    }
+
+    function replaceLoginButtons(user) {
+        var profileMenu = document.getElementById('profile-menu');
+        profileMenu.innerHTML = `
+            <div class="dropdown">
+                <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="profileDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <span class="ms-2">${user.username}</span>
+                    <img src="${user.profile_picture}" alt="${user.username}" class="rounded-circle" width="30" height="30">
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
+                    <li><a class="dropdown-item" href="/profile/">Profile</a></li>
+                    <li><a class="dropdown-item" href="/settings/">Settings</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li class="dropdown-item" onclick="handleLogout()">Logout</li>
+                </ul>
+            </div>
+        `;
+    }
 });

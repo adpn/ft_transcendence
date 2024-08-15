@@ -11,9 +11,9 @@
 	<link rel="icon" href="{% static 'favicon.ico' %}" type="image/x-icon">
     <script src="{% static 'js/signup.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
 	<script src="{% static 'js/login.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
-	<script src="{% static 'js/app.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
+    {% comment %} <script src="{% static 'js/app.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script> {% endcomment %}
 	<script src="{% static 'js/pong.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
-    <script src="{% static 'js/42auth.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
+    <script src="{% static 'js/logout.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 </head>
 <body>
@@ -30,21 +30,32 @@
                 <li class="nav-item">
                     <button class="btn btn-primary me-2" onclick="handleGamesClick()">Games</button>
                 </li>
-				<!-- Log in Modal -->
 				<li class="nav-item" id="testDIV">
-					<button class="btn btn-primary me-2" id="test-button">TEST</button>
+                    <button class="btn btn-primary me-2" id="test-button">TEST</button>
 				</li>
             </ul>
-            <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
-                <li class="nav-item">
-                    <button class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#loginModal">Log in</button>
-                </li>
-                <li class="nav-item">
-                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#signUpModal">Sign up</button>
-                </li>
-            </ul>
+            <div id="profile-menu">
+                <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <button class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#loginModal">Log in</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#signUpModal">Sign up</button>
+                    </li>
+                </ul>
+            </div>
         </div>
     </nav>
+
+    <div id="alert-placeholder">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert-banner" role="alert">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    </div>    
 
 	<div class="container mt-4">
 		<div class="row">
@@ -76,7 +87,7 @@
                         </div>
                         <button type="submit" class="btn btn-primary">Log In</button>
                     </form>
-					<button id="login-42auth" class="btn btn-primary w-100 mt-3">Log In with 42auth</button>
+					<a class="btn btn-primary w-100 mt-3" href="https://api.intra.42.fr/oauth/authorize?client_id=u-s4t2ud-da67bd33b552506b9d65c73ab83783a4f4d9c9c73c30db86ee1cb8f544f0f45f&redirect_uri=http%3A%2F%2Flocalhost%3A8000%2Fauth%2Fauth42%2F&response_type=code">Log In with 42auth</a>
                 </div>
             </div>
         </div>

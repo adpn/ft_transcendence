@@ -15,17 +15,16 @@ function getCookie(name) {
 }
 
 document.addEventListener("DOMContentLoaded", function() {
-	var csrftoken = getCookie('csrftoken');
+    var csrftoken = getCookie('csrftoken');
 
-	var	loginForm = document.getElementById("login-form");
-	var	loginUserName = document.getElementById("login-username");
-	var	loginPassword = document.getElementById("login-password");
-	var	testButton = document.getElementById("test-button");
+    var loginForm = document.getElementById("login-form");
+    var loginUserName = document.getElementById("login-username");
+    var loginPassword = document.getElementById("login-password");
+    var testButton = document.getElementById("test-button");
 
-	loginForm.addEventListener('submit', function(event) {
+    loginForm.addEventListener('submit', function(event) {
         event.preventDefault();
 
-		//todo: compare login confirm with password.
         const creds = {
             username: loginUserName.value,
             password: loginPassword.value
@@ -35,39 +34,91 @@ document.addEventListener("DOMContentLoaded", function() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-				'X-CSRFToken': getCookie('csrftoken')
+                'X-CSRFToken': getCookie('csrftoken')
             },
             body: JSON.stringify(creds),
-			credentials: 'include'
+            credentials: 'include'
         })
         .then(response => response.json())
-		//todo: confirm login.
         .then(data => {
-			// todo if succeeded, close dialog box
-			// else display error message
-			console.log(data)
+            if (data.status === 0) {
+                updateAlertPlaceholderError(data.message);
+            } else if (data.status === 1) {
+                successAlertPlaceholder();
+                replaceLoginButtons(data.user);
+            }
+            const loginModalElement = document.getElementById('loginModal');
+            const loginModal = bootstrap.Modal.getInstance(loginModalElement);
+            if (loginModal) {
+                loginModal.hide();
+            }
+            loginForm.reset();
         });
     });
 
-	testButton.addEventListener('click', function(event) { 
-		event.preventDefault();
+    function updateAlertPlaceholderError(message) {
+        var alertPlaceholder = document.getElementById('alert-placeholder');
+        alertPlaceholder.innerHTML = `
+            <div class="error-banner" role="alert">
+                ${message}
+            </div>
+        `;
+    }
 
-		fetch('/auth/protected/', {
+    function successAlertPlaceholder() {
+        var alertPlaceholder = document.getElementById('alert-placeholder');
+        alertPlaceholder.innerHTML = `
+            <div class="success-banner" id="success-alert"  role="alert">
+               Welcome !
+            </div>
+    `;
+
+    setTimeout(() => {
+        var successAlert = document.getElementById('success-alert');
+        successAlert.classList.add('fade-out');
+        successAlert.addEventListener('transitionend', () => {
+            successAlert.remove();
+        });
+    }, 3500);
+    }
+
+    function replaceLoginButtons(user) {
+        var profileMenu = document.getElementById('profile-menu');
+        profileMenu.innerHTML = `
+            <div class="dropdown">
+                <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="profileDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <span class="ms-2">${user.username}</span>
+                    <img src="${user.profile_picture}" alt="${user.username}" class="rounded-circle" width="30" height="30">
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
+                    <li><a class="dropdown-item" href="/profile/">Profile</a></li>
+                    <li><a class="dropdown-item" href="/settings/">Settings</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" onclick="handleLogout()">Logout</a></li>
+                </ul>
+            </div>
+        `;
+    }
+
+    testButton.addEventListener('click', function(event) { 
+        event.preventDefault();
+    
+        fetch('/auth/protected/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-				'X-CSRFToken': getCookie('csrftoken')
+                'X-CSRFToken': getCookie('csrftoken')
             },
-			credentials: 'include'
+            credentials: 'include'
         })
         .then(response => response.json())
-		//todo: confirm login.
+        //todo: confirm login.
         .then(data => {
-			// todo if succeeded, close dialog box
-			// else display error message
-			console.log(data)
+            // todo if succeeded, close dialog box
+            // else display error message
+            console.log(data)
         });
-
-	});
+    
+    });
 
 });
