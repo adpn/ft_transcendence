@@ -9,7 +9,7 @@ var game_data = {
 	racket_left_size: 200,
 	racket_right_pos: 400,
 	racket_right_size: 200,
-	score_left: 1,
+	score_left: 0,
 	score_right: 0
 }
 
@@ -20,9 +20,14 @@ var game_input = {
 	right_down: false
 }
 
+var is_focus = false
+
 
 document.addEventListener("DOMContentLoaded", function() {
 	const canvas = document.getElementById("gameCanvas");
+	canvas.setAttribute("tabindex", "-1");
+	canvas.addEventListener("focus", function () { is_focus = true; })
+	canvas.addEventListener("blur", function () { is_focus = false; })
 	const ctx = canvas.getContext("2d");
 	window.addEventListener("load", gameStart, false);
 	window.addEventListener("resize", resizeCanvas, false);
@@ -31,7 +36,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
 	// would need to differentiate between local and network-play for input
 	function takeInputDown(e) {
-		if (e.defaultPrevented) {
+		if (!is_focus || e.defaultPrevented) {
 			return ;
 		}
 		switch (e.key) {
@@ -55,7 +60,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
 	// would need to differentiate between local and network-play for input
 	function takeInputUp(e) {
-		if (e.defaultPrevented) {
+		if (!is_focus || e.defaultPrevented) {
 			return ;
 		}
 		switch (e.key) {
