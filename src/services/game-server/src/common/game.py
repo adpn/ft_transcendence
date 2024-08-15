@@ -13,7 +13,7 @@ import uuid
 class Player:
 	def __init__(self, player_id) -> None:
 		self.player_id = player_id
-	
+
 class GameRoom:
 	def __init__(self, room_name) -> None:
 		self._num_players = 0
@@ -22,16 +22,16 @@ class GameRoom:
 
 	def num_players(self):
 		return self._num_players
-	
+
 	@property
 	def room_id(self):
 		return self._room_name
-	
+
 	def add_player(self, player_id):
 		self._num_players += 1
 		self._players[player_id] = Player(player_id)
 		return self._room_name
-	
+
 	def __contains__(self, value):
 		return value in self._players
 
@@ -75,7 +75,7 @@ class GameServer(object):
 
 def create_game(request):
 	player_id = request.session.get('player_id')
-	
+
 	# create new player
 	if not player_id:
 		player_id = str(uuid.uuid4())
@@ -88,14 +88,14 @@ def create_game(request):
 			# remove the game room
 			games_rooms.remove(game_room)
 			return JsonResponse({'game-room-id': game_room.add_player(player_id), 'status': 'ready'}, status=200)
-	
+
 	# create new game room if no game room was found.
 	room = GameRoom(str(uuid.uuid4()))
 	room.add_player(player_id)
 	games_rooms.append(room)
 	return JsonResponse({
-		'game-room-id': room.add_player(player_id), 
-		'player-id': player_id, 
+		'game-room-id': room.add_player(player_id),
+		'player-id': player_id,
 		'status': 'waiting'}, status=200)
 
 class GameLogic(abc.ABC):
@@ -117,7 +117,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 					'message': data
 				}
 			)
-	
+
 	async def get_session_key(self):
 		return self.scope['session'].session_key
 
@@ -196,6 +196,6 @@ class GameConsumer(AsyncWebsocketConsumer):
 
 	async def game_state(self, event):
 		await self.send(text_data=json.dumps(event['message']))
-	
+
 	async def game_status(self, event):
 		await self.send(text_data=json.dumps(event['message']))

@@ -100,9 +100,9 @@ document.addEventListener("DOMContentLoaded", function() {
         `;
     }
 
-    testButton.addEventListener('click', function(event) { 
+    testButton.addEventListener('click', function(event) {
         event.preventDefault();
-    
+
         fetch('/auth/protected/', {
             method: 'POST',
             headers: {
@@ -118,7 +118,7 @@ document.addEventListener("DOMContentLoaded", function() {
             // else display error message
             console.log(data)
         });
-    
+
     });
 
 });
