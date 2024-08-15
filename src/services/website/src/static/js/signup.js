@@ -88,7 +88,7 @@ document.addEventListener("DOMContentLoaded", function() {
         profileMenu.innerHTML = `
             <div class="dropdown">
                 <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="profileDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    <span class="ms-2">${user.username}</span>
+                    <span class="ms-2 me-2 text-white">${user.username}</span>
                     <img src="${user.profile_picture}" alt="${user.username}" class="rounded-circle" width="30" height="30">
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
