@@ -11,12 +11,18 @@ from http import client
 import os
 
 User = get_user_model()
+
 class ProtectedService(object):
 	def __call__(self, request):
 		return JsonResponse({'message': 'Hello!'}, status=200)
 
 def login_view(user_management):
 	def execute(request):
+		if request.method == 'GET' and request.user.is_authenticated:
+			return JsonResponse({'status': 1, 'message': 'logged-in', 'user': {'username': 'bert', 'profile_picture': 'https://cdn.intra.42.fr/users/7877e411d4514ebf416307e7b17ae1a1/bvercaem.jpg'}}, status=200)
+		elif request.method == 'GET':
+			return JsonResponse({'status': 0, 'message': 'User not connected'}, status=200)
+
 		if request.user.is_authenticated:
 			return JsonResponse({'status': 2, 'message': 'already logged in'}, status=200)
 		# additional authentication from backend
@@ -65,7 +71,7 @@ def signup_view(user_management):
 		user.is_active = True
 		user.save()
 		login(request, user)
-		return JsonResponse({'status': 1, 'message' : 'successfully signed up',  'user': {'username': 'bert', 'profile_picture': 'https://cdn.intra.42.fr/users/7877e411d4514ebf416307e7b17ae1a1/bvercaem.jpg' }}, status=200)
+		return JsonResponse({'status': 1, 'message' : 'successfully signed up',  'user': {'username': 'bert', 'profile_picture': 'https://cdn.intra.42.fr/users/7877e411d4514ebf416307e7b17ae1a1/bvercaem.jpg' }}, status=201)
 	return execute
 
 def authenticate_42API(request):
