@@ -94,7 +94,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     <li><a class="dropdown-item" href="/profile/">Profile</a></li>
                     <li><a class="dropdown-item" href="/settings/">Settings</a></li>
                     <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item" href="" onclick="handleLogout()">Logout</a></li>
+                    <li><a class="dropdown-item" onclick="handleLogout()">Logout</a></li>
                 </ul>
             </div>
         `;
