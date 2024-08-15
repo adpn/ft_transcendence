@@ -4,36 +4,16 @@ import asyncio
 import queue
 
 from channels.generic.websocket import AsyncWebsocketConsumer
-from django.contrib.sessions.middleware import SessionMiddleware
-
+from django.conf import settings
 from django.http import JsonResponse
 
+from importlib import import_module
 import uuid
 
 class Player:
 	def __init__(self, player_id) -> None:
 		self.player_id = player_id
-	
-class GameRoom:
-	def __init__(self, room_name) -> None:
-		self._num_players = 0
-		self._room_name = room_name
-		self._players = {}
 
-	def num_players(self):
-		return self._num_players
-	
-	@property
-	def room_id(self):
-		return self._room_name
-	
-	def add_player(self, player_id):
-		self._num_players += 1
-		self._players[player_id] = Player(player_id)
-		return self._room_name
-	
-	def __contains__(self, value):
-		return value in self._players
 
 class GameSession(object):
 	def __init__(self, players, game_logic):
@@ -55,15 +35,17 @@ class GameServer(object):
 		self._rooms = []
 		self._lock = asyncio.Lock()
 		self._game_factory = game_factory
-
-	def create_game_room(request):
-		pass
+		engine = import_module(settings.SESSION_ENGINE)
+		self.SessionStore = engine.SessionStore
 
 	def get_game_session(self, room):
 		if room not in self._self._game_sessions:
 			self._game_sessions[room] = GameSession(self._game_factory.create_game()) # create new game logic for the game room.
 		session = self._game_sessions[room]
 		return session
+	
+	async def check_room(self, room_id):
+		return self.SessionStore(room_id).exists(room_id)
 
 	async def __aenter__(self):
 		await self._lock.acquire()
@@ -71,32 +53,6 @@ class GameServer(object):
 
 	async def __aexit__(self):
 		self._lock.release()
-
-
-def create_game(request):
-	player_id = request.session.get('player_id')
-	
-	# create new player
-	if not player_id:
-		player_id = str(uuid.uuid4())
-		request.session['player_id'] = player_id
-
-	# find a game room
-	for game_room in games_rooms:
-		player_id = request.session['player_id']
-		if game_room.num_players == 1 and player_id not in game_room:
-			# remove the game room
-			games_rooms.remove(game_room)
-			return JsonResponse({'game-room-id': game_room.add_player(player_id), 'status': 'ready'}, status=200)
-	
-	# create new game room if no game room was found.
-	room = GameRoom(str(uuid.uuid4()))
-	room.add_player(player_id)
-	games_rooms.append(room)
-	return JsonResponse({
-		'game-room-id': room.add_player(player_id), 
-		'player-id': player_id, 
-		'status': 'waiting'}, status=200)
 
 class GameLogic(abc.ABC):
 	@abc.abstractmethod
@@ -117,16 +73,12 @@ class GameConsumer(AsyncWebsocketConsumer):
 					'message': data
 				}
 			)
-	
-	async def get_session_key(self):
-		return self.scope['session'].session_key
 
 	async def connect(self):
 		self.game_room = self.scope['url_route']['kwargs']['room_name']
-		# hope this works
-		session_key = await self.get_session_key()
-		#reject any connection request that was not authenticated.
-		if not session_key:
+
+		#reject any invalid room_name.
+		if not await self._game_server.check_room(self.game_room):
 			await self.close()
 
 		# todo: need a game logic factory
@@ -169,6 +121,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 				await self.close()
 
 	async def disconnect(self, close_code):
+		# todo: remove game room from session store.
 		self.game_room = self.scope['url_route']['kwargs']['room_name']
 		if not self._game_session:
 			await self.channel_layer.group_discard(self.game_room, self.channel_name)

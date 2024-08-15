@@ -39,20 +39,21 @@ services:
       - "8000:8000"
     restart: always
   
-  # game-server:
-  #   container_name: game-server
-  #   image:
-  #     game-server-image
-  #   build:
-  #     context: services/game-server/
-  #     dockerfile: Dockerfile
-  #   depends_on:
-  #     - user-management
-  #   networks:
-  #     - transcendence
-  #   environment:
-  #     - name=value
-  #   restart: always
+  game-server:
+    container_name: game-server
+    image:
+      game-server-image
+    build:
+      context: services/game-server/
+      dockerfile: Dockerfile
+    depends_on:
+      - user-management
+      - session-manager
+    ports:
+      - "8001:8001"
+    networks:
+      - transcendence
+    restart: always
 
   session-manager:
     container_name: session-manager
@@ -81,9 +82,6 @@ services:
       POSTGRES_USER : "${POSTGRES_USER}"
       POSTGRES_PASSWORD : "${POSTGRES_PASSWORD}"
     restart: always
-    
-
-  
 
 # volumes:
 #   wordpress:
