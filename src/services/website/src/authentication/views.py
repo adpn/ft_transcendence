@@ -39,6 +39,8 @@ def login_view(user_management):
 	return execute
 
 def logout_view(request):
+	if not request.user.is_authenticated:
+		return JsonResponse({'status': 0, 'message': 'not logged in'}, status=401)
 	logout(request)
 	return JsonResponse({'status' : 1}, status=200)
 
@@ -63,7 +65,8 @@ def signup_view(user_management):
 		#user.password = data["password"]
 		user.is_active = True
 		user.save()
-		return JsonResponse({'status': 1, 'message' : 'successfully signed up'}, status=201)
+		login(request, user)
+		return JsonResponse({'status': 1, 'message' : 'successfully signed up',  'user': {'username': 'bert', 'profile_picture': 'https://cdn.intra.42.fr/users/7877e411d4514ebf416307e7b17ae1a1/bvercaem.jpg' }}, status=200)
 	return execute
 
 def authenticate_42API(request):
