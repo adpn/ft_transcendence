@@ -11,6 +11,7 @@ from http import client
 import os
 
 User = get_user_model()
+
 class ProtectedService(object):
 	def __call__(self, request):
 		return JsonResponse({'message': 'Hello!'}, status=200)
