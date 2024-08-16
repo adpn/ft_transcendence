@@ -11,6 +11,7 @@ from http import client
 import os
 import random
 import string
+from common import auth_client
 
 User = get_user_model()
 

@@ -5,6 +5,8 @@ from http import client
 from os import environ
 import json
 
+#TODO: implement getters and setters that send data to the backend.
+
 class SessionStore(SessionBase):
 	def __init__(self, session_key=None) -> None:
 		super().__init__(session_key)

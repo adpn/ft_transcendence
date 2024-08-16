@@ -1,4 +1,23 @@
 services:
+  nginx: proxy-server
+    container_name: proxy-server
+    image:
+      proxy-server
+    build:
+      context: requirements/proxy-server/
+      dockerfile: Dockerfile
+    # environment:
+    #   - name=value
+    ports:
+      - "443:443"
+    # volumes:
+    #   - wordpress:/var/www/wordpress
+    networks:
+      - transcendence
+    # depends_on:
+    #   - wordpress
+    restart: always
+  
   user-management:
     container_name: user-management
     image:
