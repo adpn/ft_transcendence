@@ -36,6 +36,7 @@ def login_view(user_management):
 		username = data["username"]
 		password = data["password"]
 		user = User.objects.filter(username=username, is_42=False).first()
+		#user = auth_client.authenticate()
 		if user is not None and user.check_password(password):
 			login(request, user)
 			#todo: need a login response json -> should contain images
