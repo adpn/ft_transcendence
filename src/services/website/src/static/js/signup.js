@@ -41,7 +41,7 @@ document.addEventListener("DOMContentLoaded", function() {
         })
         .then(response => response.json())
         .then(data => {
-			console.log(data)
+			// console.log(data)
             if (data.status === 0) {
                 updateAlertPlaceholderError(data.message);
             } else {
