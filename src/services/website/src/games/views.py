@@ -8,8 +8,9 @@ from django.conf import settings
 
 # temporary implementation of matchmaking
 
-GAME_ROOMS = []
 engine = import_module(settings.SESSION_ENGINE)
+
+GAME_ROOMS = []
 
 class GameRoom:
 	def __init__(self, room_name) -> None:

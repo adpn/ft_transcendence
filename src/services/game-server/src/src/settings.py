@@ -74,9 +74,10 @@ TEMPLATES = [
 WSGI_APPLICATION = 'src.wsgi.application'
 ASGI_APPLICATION = 'src.asgi.application'
 
+# For development. Use Redis in production.
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',  # For development. Use Redis in production.
+        'BACKEND': 'channels.layers.InMemoryChannelLayer', 
     },
 }
 
