@@ -2,13 +2,15 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth import login, logout, get_user_model
 from django.http import JsonResponse, HttpResponse
-from django.db.utils import IntegrityError
+from django.db.utils import IntegrityError, DataError
 # from django.db import models
 
 import json
 from uuid import uuid4
 from http import client
 import os
+import random
+import string
 
 User = get_user_model()
 
@@ -35,8 +37,9 @@ def login_view(user_management):
 			return JsonResponse({'status': 0, 'message': 'Couldn\'t read input'}, status=500)
 		username = data["username"]
 		password = data["password"]
-		user = User.objects.filter(username=username, is_42=False).first()
-		#user = auth_client.authenticate()
+		user = User.objects.filter(username=username).first()
+		if user is not None and user.username42 is not None:
+			return JsonResponse({'status': 0, 'message': 'You should login through 42auth'}, status=401)
 		if user is not None and user.check_password(password):
 			login(request, user)
 			#todo: need a login response json -> should contain images
@@ -65,13 +68,23 @@ def signup_view(user_management):
 		try:
 			user = User.objects.create_user(data["username"], password=data["password"])
 		except IntegrityError:
-			return JsonResponse({'status': 0, 'message' : 'Username already taken'}, status=400)
+			return JsonResponse({'status': 0, 'message': "Username already taken"}, status=400)
+		except DataError:
+			return JsonResponse({'status': 0, 'message': "Username too long"}, status=400)
+		except Exception:
+			return JsonResponse({'status': 0, 'message': 'An unexpected error occurred'}, status=500)
 		#todo: check if the fields are present
 		#todo: perform hashing and salting before storing the password.
 		#user.password = data["password"]
 		user.is_active = True
 		user.save()
 		login(request, user)
+
+		# send a post request to user-management to create a user
+		# response = user_management.post("/create-user/", data={"id": user.id}, content_type="application/json")
+		# if response.status_code != 201:
+		# 	return JsonResponse({'status': 0, 'message' : 'USER MANAGEMENT TEST'}, status=400)
+	
 		return JsonResponse({'status': 1, 'message' : 'successfully signed up',  'user': {'username': 'bert', 'profile_picture': 'https://cdn.intra.42.fr/users/7877e411d4514ebf416307e7b17ae1a1/bvercaem.jpg' }}, status=201)
 	return execute
 
@@ -122,6 +135,11 @@ def authenticate_42API(request):
 		return None, 'Failed to authenticate'
 	return json.loads(data), None
 
+def generate_username():
+	words = ["alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf"]
+	username = random.choice(words) + "".join(random.choices(string.digits, k=4))
+	return username
+
 def auth42_view(request):
 	if request.user.is_authenticated:
 		return redirect('/')
@@ -150,9 +168,13 @@ def auth42_view(request):
 		return redirect('/')
 
 	MeData = json.loads(data)
-	user = User.objects.filter(username=MeData["login"], is_42=True).first()
+	user = User.objects.filter(username42=MeData["login"]).first()
 	if user is None:
-		user = User.objects.create_user(MeData["login"], is_42=True)
+		# generate a username, that the user will change later
+		username = generate_username()
+		while User.objects.filter(username=username).exists():
+			username = generate_username()
+		user = User.objects.create_user(username=username, username42=MeData["login"])
 		user.is_active = True
 		user.save()
 		# todo: create entry in user management db
