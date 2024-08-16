@@ -21,7 +21,7 @@ var game_input = {
 }
 
 var is_focus = false
-
+var is_gaming = false
 
 document.addEventListener("DOMContentLoaded", function() {
 	const canvas = document.getElementById("gameCanvas");
@@ -29,10 +29,27 @@ document.addEventListener("DOMContentLoaded", function() {
 	canvas.addEventListener("focus", function () { is_focus = true; })
 	canvas.addEventListener("blur", function () { is_focus = false; })
 	const ctx = canvas.getContext("2d");
-	window.addEventListener("load", gameStart, false);
+	window.addEventListener("load", resizeCanvas, false);
 	window.addEventListener("resize", resizeCanvas, false);
 	window.addEventListener("keydown", takeInputDown, true);
 	window.addEventListener("keyup", takeInputUp, true);
+
+	window.addEventListener("load", connectGameRoom);
+	function connectGameRoom() {
+		fetch("/games/create_game", {
+			method: "GET",
+			headers: {
+				"X-CSRFToken": getCookie("csrftoken")
+			},
+			credentials: "include"
+		})
+		.then(response => response.json())
+        .then(data => {
+			const socket = new WebSocket("ws://localhost:8001/ws/game/pong/" + data.game_room_id); // ws for now to do testing, wss later.
+			socket.addEventListener("open", gameStart);
+			socket.addEventListener("message", update);
+		})
+	}
 
 	// would need to differentiate between local and network-play for input
 	function takeInputDown(e) {
@@ -86,7 +103,10 @@ document.addEventListener("DOMContentLoaded", function() {
 		canvas.width = canvas.scrollWidth;
 		canvas.height = canvas.scrollHeight;
 		clearCanvas();
-		drawFrame();
+		if (is_gaming)
+			drawFrame();
+		else
+			drawConnecting();
 	}
 
 	function makeXCord(number) {
@@ -97,18 +117,33 @@ document.addEventListener("DOMContentLoaded", function() {
 	}
 
 	function gameStart() {
+		is_gaming = true;
 		resizeCanvas();
 		setInterval(gameTick, 20);
 	}
 
 	function gameTick() {
-		update();
+		submit();
 		clearCanvas();
 		drawFrame();
 	}
 
-	function update() {
-		// replace this function with communication with the server
+	function submit() {
+		socket.send(game_input);
+	}
+
+	function update(event) {
+		received_data = JSON.parse(event.data);
+		console.log(received_data);								// TESTING
+		game_data.ball_posx = received_data["ball_posx"];
+		game_data.ball_posy = received_data["ball_posy"];
+		game_data.ball_size = received_data["ball_size"];
+		game_data.racket_left_pos = received_data["racket_left_pos"];
+		game_data.racket_left_size = received_data["racket_left_size"];
+		game_data.racket_right_pos = received_data["racket_right_pos"];
+		game_data.racket_right_size = received_data["racket_right_size"];
+		game_data.score_left = received_data["score_left"];
+		game_data.score_right = received_data["score_right"];
 	}
 
 	function clearCanvas() {
@@ -130,7 +165,19 @@ document.addEventListener("DOMContentLoaded", function() {
 		ctx.font = makeXCord(30) + "px arial";
 		ctx.textBaseline = "top";
 		ctx.textAlign = "center";
-		ctx.fillText(game_data.score_left, makeXCord(480), makeXCord(10));
-		ctx.fillText(game_data.score_right, makeXCord(520), makeXCord(10));
+		ctx.fillText(game_data.score_left, makeXCord(480), makeYCord(15));
+		ctx.fillText(game_data.score_right, makeXCord(520), makeYCord(15));
+	}
+
+	function drawConnecting() {
+		ctx.fillStyle = "white";
+		// rackets
+		ctx.fillRect(makeXCord(5), makeYCord(game_data.racket_left_pos), makeXCord(10), makeYCord(game_data.racket_left_size));
+		ctx.fillRect(canvas.width - makeXCord(15), makeYCord(game_data.racket_right_pos), makeXCord(10), makeYCord(game_data.racket_right_size));
+		// message
+		ctx.font = makeXCord(30) + "px arial";
+		ctx.textBaseline = "middle";
+		ctx.textAlign = "center";
+		ctx.fillText("connecting...", makeXCord(500), makeYCord(500));
 	}
 });

@@ -11,7 +11,7 @@ import os
 
 from django import setup
 from django.core.asgi import get_asgi_application
-from django.urls import re_path
+from django.urls import path
 
 from channels.auth import AuthMiddlewareStack
 from channels.routing import ProtocolTypeRouter, URLRouter
@@ -24,13 +24,12 @@ setup()
 application = get_asgi_application()
 
 URL_PATTERNS = [
-	re_path(r'ws/game/pong/(?P<room_name>\w+)/$', GameConsumer.as_asgi(game_logic=PongLogic())),
+	path("ws/game/pong/<str:room_name>", GameConsumer.as_asgi(game_logic=PongLogic())),
 ]
 
 application = ProtocolTypeRouter({
-    'websocket': AuthMiddlewareStack(
+    'websocket':
         URLRouter(
             URL_PATTERNS
         )
-    ),
 })

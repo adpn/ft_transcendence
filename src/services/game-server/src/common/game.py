@@ -105,7 +105,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 				self.game_room,
 				{
 					'type': 'game_status',
-					'message': {'status' : 'waiting'}
+					'message': 'waiting'
 				})
 				await self.accept()
 			# refuse connection if the game is full
@@ -114,7 +114,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 				self.game_room,
 				{
 					'type': 'game_status',
-					'message': {'status' : 'full'}
+					'message': 'full'
 				})
 				# close connection
 				await self.accept()

@@ -1,12 +1,6 @@
-FROM		alpine:3.20
+FROM		python:3.11
 
-RUN			apk update && apk upgrade && apk add --no-cache \
-			python3-dev \
-			build-base \
-			py3-pip \
-			py3-django \
-			py3-channels \
-			uvicorn
+RUN	pip install django channels uvicorn[standard]
 
 # RUN			pip install uvicorn
 COPY		src /home/service
