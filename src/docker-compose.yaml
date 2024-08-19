@@ -6,25 +6,25 @@ services:
     build:
       context: services/proxy-server/
     # environment:
-    #   - name=value
-    ports:
-      - "443:443"
+
+    # ports:
+    #   - "443:443"
     # volumes:
     #   - wordpress:/var/www/wordpress
     networks:
       - transcendence
-    # depends_on:
-    #   - wordpress
+    depends_on:
+      - postgresql
     restart: always
   
-  user-management:
-    container_name: user-management
+  users:
+    container_name: users
     image:
-      user-management-image
+      users-image
     build:
-      context: services/user-management/
-    # environment:
-
+      context: services/users/
+    environment:
+      AUTH_URL: "${AUTH_URL}"
     # ports:
     #   - "443:443"
     # volumes:
@@ -53,6 +53,7 @@ services:
       POSTGRES_USER : "${POSTGRES_USER}"
       POSTGRES_PASSWORD : "${POSTGRES_PASSWORD}"
       SESSION_SERVER : "${SESSION_SERVER}"
+      AUTH_URL: "${AUTH_URL}"
     ports:
       - "8000:8000"
     restart: always
