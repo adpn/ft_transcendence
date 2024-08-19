@@ -13,7 +13,7 @@ import random
 import string
 from common import auth_client
 
-User = get_user_model()
+# User = get_user_model()
 
 class ProtectedService(object):
 	def __call__(self, request):
@@ -38,7 +38,9 @@ def login_view(user_management):
 			return JsonResponse({'status': 0, 'message': 'Couldn\'t read input'}, status=500)
 		username = data["username"]
 		password = data["password"]
-		user = User.objects.filter(username=username).first()
+		# user = User.objects.filter(username=username).first()
+		# todo: need to implement this...
+		user = auth_client.get_user(username)
 		if user is not None and user.username42 is not None:
 			return JsonResponse({'status': 0, 'message': 'You should login through 42auth'}, status=401)
 		if user is not None and user.check_password(password):
@@ -56,37 +58,44 @@ def logout_view(request):
 
 def signup_view(user_management):
 	def execute(request):
+		# client = auth_client.AuthenticationClient()
+		user = auth_client.create_user(request)
+		if not user:
+			return JsonResponse({'status': 0, 'message': "Username already taken"}, status=400)
+		request.user = user
+		return JsonResponse({'status': 1, 'message': "User created"}, status=201)
+		
 		# also create user in user-management.
 		# response = user_management.forward('/signup/')(request)
 		# if response.status_code != 200:
 		# 	return JsonResponse({'status': 0, 'message' : 'username already taken'}, status=400)
-		try:
-			data = json.loads(request.body)
-		except json.decoder.JSONDecodeError:
-			return JsonResponse({'status': 0, 'message': 'Couldn\'t read input'}, status=500)
-		if (data["password"] != data["confirm_password"]):
-			return JsonResponse({'status': 0, 'message' : 'Passwords do not match'}, status=400)
-		try:
-			user = User.objects.create_user(data["username"], password=data["password"])
-		except IntegrityError:
-			return JsonResponse({'status': 0, 'message': "Username already taken"}, status=400)
-		except DataError:
-			return JsonResponse({'status': 0, 'message': "Username too long"}, status=400)
-		except Exception:
-			return JsonResponse({'status': 0, 'message': 'An unexpected error occurred'}, status=500)
-		#todo: check if the fields are present
-		#todo: perform hashing and salting before storing the password.
-		#user.password = data["password"]
-		user.is_active = True
-		user.save()
-		login(request, user)
+		# try:
+		# 	data = json.loads(request.body)
+		# except json.decoder.JSONDecodeError:
+		# 	return JsonResponse({'status': 0, 'message': 'Couldn\'t read input'}, status=500)
+		# if (data["password"] != data["confirm_password"]):
+		# 	return JsonResponse({'status': 0, 'message' : 'Passwords do not match'}, status=400)
+		# try:
+		# 	user = User.objects.create_user(data["username"], password=data["password"])
+		# except IntegrityError:
+		# 	return JsonResponse({'status': 0, 'message': "Username already taken"}, status=400)
+		# except DataError:
+		# 	return JsonResponse({'status': 0, 'message': "Username too long"}, status=400)
+		# except Exception:
+		# 	return JsonResponse({'status': 0, 'message': 'An unexpected error occurred'}, status=500)
+		# #todo: check if the fields are present
+		# #todo: perform hashing and salting before storing the password.
+		# #user.password = data["password"]
+		# user.is_active = True
+		# user.save()
+		# login(request, user)
 
-		# send a post request to user-management to create a user
-		# response = user_management.post("/create-user/", data={"id": user.id}, content_type="application/json")
-		# if response.status_code != 201:
-		# 	return JsonResponse({'status': 0, 'message' : 'USER MANAGEMENT TEST'}, status=400)
+		# # send a post request to user-management to create a user
+		# # response = user_management.post("/create-user/", data={"id": user.id}, content_type="application/json")
+		# # if response.status_code != 201:
+		# # 	return JsonResponse({'status': 0, 'message' : 'USER MANAGEMENT TEST'}, status=400)
 	
-		return JsonResponse({'status': 1, 'message' : 'successfully signed up',  'user': {'username': 'bert', 'profile_picture': 'https://cdn.intra.42.fr/users/7877e411d4514ebf416307e7b17ae1a1/bvercaem.jpg' }}, status=201)
+		# return JsonResponse({'status': 1, 'message' : 'successfully signed up',  'user': {'username': 'bert', 'profile_picture': 'https://cdn.intra.42.fr/users/7877e411d4514ebf416307e7b17ae1a1/bvercaem.jpg' }}, status=201)
 	return execute
 
 def authenticate_42API(request):
@@ -169,17 +178,17 @@ def auth42_view(request):
 		return redirect('/')
 
 	MeData = json.loads(data)
-	user = User.objects.filter(username42=MeData["login"]).first()
-	if user is None:
-		# generate a username, that the user will change later
-		username = generate_username()
-		while User.objects.filter(username=username).exists():
-			username = generate_username()
-		user = User.objects.create_user(username=username, username42=MeData["login"])
-		user.is_active = True
-		user.save()
-		# todo: create entry in user management db
+	# user = User.objects.filter(username42=MeData["login"]).first()
+	# if user is None:
+	# 	# generate a username, that the user will change later
+	# 	username = generate_username()
+	# 	while User.objects.filter(username=username).exists():
+	# 		username = generate_username()
+	# 	user = User.objects.create_user(username=username, username42=MeData["login"])
+	# 	user.is_active = True
+	# 	user.save()
+	# 	# todo: create entry in user management db
 
-	login(request, user)
+	# login(request, user)
 	return redirect('/')
 

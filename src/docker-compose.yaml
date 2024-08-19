@@ -1,22 +1,22 @@
 services:
-  nginx: proxy-server
-    container_name: proxy-server
-    image:
-      proxy-server
-    build:
-      context: requirements/proxy-server/
-      dockerfile: Dockerfile
-    # environment:
-    #   - name=value
-    ports:
-      - "443:443"
-    # volumes:
-    #   - wordpress:/var/www/wordpress
-    networks:
-      - transcendence
-    # depends_on:
-    #   - wordpress
-    restart: always
+  # nginx: proxy-server
+  #   container_name: proxy-server
+  #   image:
+  #     proxy-server
+  #   build:
+  #     context: requirements/proxy-server/
+  #     dockerfile: Dockerfile
+  #   # environment:
+  #   #   - name=value
+  #   ports:
+  #     - "443:443"
+  #   # volumes:
+  #   #   - wordpress:/var/www/wordpress
+  #   networks:
+  #     - transcendence
+  #   # depends_on:
+  #   #   - wordpress
+  #   restart: always
   
   user-management:
     container_name: user-management
@@ -26,6 +26,24 @@ services:
       context: services/user-management/
     # environment:
 
+    # ports:
+    #   - "443:443"
+    # volumes:
+    #   - wordpress:/var/www/wordpress
+    networks:
+      - transcendence
+    depends_on:
+      - postgresql
+    restart: always
+  
+  users:
+    container_name: users
+    image:
+      users-image
+    build:
+      context: services/users/
+    environment:
+      AUTH_URL: "${AUTH_URL}"
     # ports:
     #   - "443:443"
     # volumes:
@@ -54,6 +72,7 @@ services:
       POSTGRES_USER : "${POSTGRES_USER}"
       POSTGRES_PASSWORD : "${POSTGRES_PASSWORD}"
       SESSION_SERVER : "${SESSION_SERVER}"
+      AUTH_URL: "${AUTH_URL}"
     ports:
       - "8000:8000"
     restart: always
