@@ -26,4 +26,5 @@ while ! nc -z website 8000; do
 	fi
 done
 
-nginx -g daemon off
+echo "Launching nginx..."
+nginx -g "daemon off;"

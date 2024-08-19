@@ -1,5 +1,5 @@
 services:
-  nginx:
+  proxy-server:
     container_name: proxy-server
     image:
       proxy-server-image
@@ -43,7 +43,6 @@ services:
       context: services/website/
     depends_on:
       - session-manager
-      - user-management
     networks:
       - transcendence
     environment:
@@ -66,7 +65,6 @@ services:
       context: services/game-server/
       dockerfile: Dockerfile
     depends_on:
-      - user-management
       - session-manager
     ports:
       - "8001:8001"
@@ -81,8 +79,8 @@ services:
     build:
       context: services/session-manager/
       dockerfile: Dockerfile
-    depends_on:
-      - user-management
+    # depends_on:
+    #   - user-management
     networks:
       - transcendence
     environment:

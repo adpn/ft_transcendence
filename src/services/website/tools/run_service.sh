@@ -17,7 +17,7 @@ done
 retries=0
 
 echo "Waiting for authentication service to be ready..."
-while ! nc -z user-management 8000; do
+while ! nc -z users 8000; do
 	retries=$((retries + 1))
 	sleep 1
 	if [ $retries -ge $MAX_RETRIES ]; then
