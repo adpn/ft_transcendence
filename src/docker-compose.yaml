@@ -1,11 +1,10 @@
 services:
-  nginx: proxy-server
+  nginx:
     container_name: proxy-server
     image:
-      proxy-server
+      proxy-server-image
     build:
-      context: requirements/proxy-server/
-      dockerfile: Dockerfile
+      context: services/proxy-server/
     # environment:
     #   - name=value
     ports:
