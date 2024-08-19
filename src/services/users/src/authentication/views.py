@@ -4,7 +4,7 @@ from django.shortcuts import render
 
 from django.contrib.auth import get_user_model, login, logout
 from django.http import JsonResponse, HttpResponse
-from django.db.utils import IntegrityError
+from django.db.utils import IntegrityError, DataError
 # from django.db import models
 
 import json
@@ -91,19 +91,47 @@ def create_user(request):
 	if (data["password"] != data["confirm_password"]):
 		return JsonResponse({'status': 0, 'message' : 'Passwords do not match'}, status=400)
 	try:
+		data = json.loads(request.body)
+	except json.decoder.JSONDecodeError:
+		return JsonResponse({'status': 0, 'message': 'Couldn\'t read input'}, status=500)
+	if (data["password"] != data["confirm_password"]):
+		return JsonResponse({'status': 0, 'message' : 'Passwords do not match'}, status=400)
+	try:
 		user = User.objects.create_user(data["username"], password=data["password"])
-		request.user = user
 	except IntegrityError:
-		return JsonResponse({
-			'status': 0, 
-			'message' : 'Username already taken'}, 
-			status=400)
+		return JsonResponse({'status': 0, 'message': "Username already taken"}, status=400)
+	except DataError:
+		return JsonResponse({'status': 0, 'message': "Username too long"}, status=400)
+	except Exception:
+		return JsonResponse({'status': 0, 'message': 'An unexpected error occurred'}, status=500)
+	#todo: check if the fields are present
+	#todo: perform hashing and salting before storing the password.
+	#user.password = data["password"]
 	user.is_active = True
 	user.save()
-	# login(request, user)
-	return JsonResponse(
-		user_to_json(user), 
-		status=201)
+	login(request, user)
+
+		# send a post request to user-management to create a user
+		# response = user_management.post("/create-user/", data={"id": user.id}, content_type="application/json")
+		# if response.status_code != 201:
+		# 	return JsonResponse({'status': 0, 'message' : 'USER MANAGEMENT TEST'}, status=400)
+	
+	return JsonResponse({'status': 1, 'message' : 'successfully signed up',  'user': {'username': 'bert', 'profile_picture': 'https://cdn.intra.42.fr/users/7877e411d4514ebf416307e7b17ae1a1/bvercaem.jpg' }}, status=201)
+	# try:
+	# 	user = User.objects.create_user(data["username"], password=data["password"])
+	# 	request.user = user
+	# except IntegrityError:
+	# 	return JsonResponse({
+	# 		'status': 0, 
+	# 		'message' : 'Username already taken'}, 
+	# 		status=400)
+	# user.is_active = True
+	# user.save()
+	# # login(request, user)
+	# return JsonResponse(
+	# 	user_to_json(user), 
+	# 	status=201)
 
 def is_authenticated(request):
-	pass
+	if request.user.is_authenticated:
+		return

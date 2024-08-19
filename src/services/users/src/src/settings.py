@@ -25,13 +25,15 @@ SECRET_KEY = 'django-insecure-(vy8y!ar$z7w4m2n9*_zxj10h=)ar&c$%pv31yl^7_c6x7n+(i
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['https://localhost', 'https://127.0.0.1', 'localhost', '127.0.0.1', 'users']
+CSRF_TRUSTED_ORIGINS = ['https://localhost', 'https://127.0.0.1', 'http://users']
 
 
 # Application definition
 
 INSTALLED_APPS = [
 	'authentication',
+	'session_manager',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -51,6 +53,7 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'src.urls'
+SESSION_ENGINE =  'common.session_store'
 
 TEMPLATES = [
     {

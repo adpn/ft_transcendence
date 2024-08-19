@@ -15,8 +15,6 @@ function getCookie(name) {
 }
 
 document.addEventListener("DOMContentLoaded", function() {
-	var csrftoken = getCookie('csrftoken');
-
 	var	signupForm = document.getElementById("signup-form");
 	var	signupUserName = document.getElementById("signup-username");
 	var	signupPassword = document.getElementById("signup-password");
@@ -35,7 +33,7 @@ document.addEventListener("DOMContentLoaded", function() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-				'X-CSRFToken': csrftoken
+				'X-CSRFToken': getCookie('csrftoken')
             },
             body: JSON.stringify(credentials)
         })
