@@ -9,8 +9,6 @@ services:
 
     ports:
       - "443:443"
-    # volumes:
-    #   - wordpress:/var/www/wordpress
     networks:
       - transcendence
     depends_on:
@@ -25,10 +23,11 @@ services:
       context: services/users/
     environment:
       AUTH_URL: "${AUTH_URL}"
-    # ports:
-    #   - "443:443"
-    # volumes:
-    #   - wordpress:/var/www/wordpress
+      POSTGRES_USER : "${POSTGRES_USER}"
+      POSTGRES_PASSWORD : "${POSTGRES_PASSWORD}"
+      CLIENT_ID : "${CLIENT_ID}"
+      CLIENT_SECRET : "${CLIENT_SECRET}"
+      REDIRECT_URI : "${REDIRECT_URI}"
     networks:
       - transcendence
     depends_on:
@@ -46,15 +45,12 @@ services:
     networks:
       - transcendence
     environment:
-      CLIENT_ID : "${CLIENT_ID}"
-      CLIENT_SECRET : "${CLIENT_SECRET}"
-      REDIRECT_URI : "${REDIRECT_URI}"
       POSTGRES_USER : "${POSTGRES_USER}"
       POSTGRES_PASSWORD : "${POSTGRES_PASSWORD}"
       SESSION_SERVER : "${SESSION_SERVER}"
       AUTH_URL: "${AUTH_URL}"
-    ports:
-      - "8000:8000"
+    # ports:
+    #   - "8000:8000"
     restart: always
   
   game-server:
@@ -97,20 +93,6 @@ services:
       POSTGRES_USER : "${POSTGRES_USER}"
       POSTGRES_PASSWORD : "${POSTGRES_PASSWORD}"
     restart: always
-
-# volumes:
-#   wordpress:
-#     driver: local
-#     driver_opts:
-#       type: 'none'
-#       o:  'bind'
-#       device: /home/ychalant/data/wordpress
-#   db:
-#     driver: local
-#     driver_opts:
-#       type: 'none'
-#       o:  'bind'
-#       device: /home/ychalant/data/mariadb
 
 networks:
   transcendence:
