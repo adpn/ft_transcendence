@@ -13,8 +13,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Check out the code
+      uses: actions/checkout@v3
     - name: Install tools
-      run: sudo apt install make docker
+      run: sudo apt-get update && sudo apt-get install make docker
     - name: Build project
       run: docker compose -f src/docker-compose.yaml build
   
