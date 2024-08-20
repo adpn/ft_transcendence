@@ -110,13 +110,14 @@ def check_authentication(request):
 	except ValueError:
 		return False
 
-def custom_login(username, password):
+def custom_login(request, username, password):
 	user = User.objects.filter(username=username).first()
 	if user is None:
 		return JsonResponse({'status': 0, 'message': 'User does not exist'}, status=401)
 	if user.username42 is not None:
 		return JsonResponse({'status': 0, 'message': 'You should login through 42auth'}, status=401)
 	if user.check_password(password):
+		login(request, user)
 		return JsonResponse({
 			'status': 1, 
 			'token': create_jwt(username), 
@@ -129,7 +130,7 @@ def custom_login(username, password):
 		'message': 'Login failed'}, status=401)
 
 def login_view(request):
-	if (check_authentication(request)):
+	if request.user.is_authenticated:
 		return JsonResponse({'status': 2, 'message': 'already logged in'}, status=200)
 	try:
 		data = json.loads(request.body)
@@ -138,11 +139,12 @@ def login_view(request):
 	username = data["username"]
 	password = data["password"]
 	# todo: need to implement this...
-	return custom_login(username, password)
+	return custom_login(request, username, password)
 
 def logout_view(request):
 	if not request.user.is_authenticated:
 		return JsonResponse({'status': 0, 'message': 'not logged in'}, status=401)
+	# todo: add token to black list
 	logout(request)
 	return JsonResponse({'status' : 1}, status=200)
 
@@ -191,8 +193,7 @@ def is_authenticated_view(request):
 				'username': 'bert', 
 				'profile_picture': 'https://cdn.intra.42.fr/users/7877e411d4514ebf416307e7b17ae1a1/bvercaem.jpg'
 				}}, status=200)
-	else :
-		return JsonResponse({'status': 0, 'message': 'User not connected'}, status=200)
+	return JsonResponse({'status': 0, 'message': 'User not connected'}, status=200)
 
 def generate_username():
 	words = ["alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf"]
@@ -288,6 +289,5 @@ def auth42_view(request):
 		user.is_active = True
 		user.save()
 	# todo: create entry in user management db
-
 	login(request, user)
 	return redirect('/')

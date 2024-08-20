@@ -14,6 +14,29 @@ function getCookie(name) {
     return cookieValue;
 }
 
+async function makeAuthenticatedRequest(url, method = 'GET', body = null) {
+    const token = localStorage.getItem('jwt'); // or sessionStorage.getItem('jwt')
+
+    const headers = {
+        'Authorization': `Bearer ${token}`, // Include token in the Authorization header
+        'Content-Type': 'application/json' // Optional, depending on the request type
+    };
+
+    return fetch(url, {
+        method: method,
+        headers: headers,
+        body: body ? JSON.stringify(body) : null
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Response Data:', data);
+        return data;
+    })
+    .catch(error => {
+        console.error('Request Error:', error);
+    });
+}
+
 document.addEventListener("DOMContentLoaded", function() {
 	var	signupForm = document.getElementById("signup-form");
 	var	signupUserName = document.getElementById("signup-username");
@@ -47,6 +70,7 @@ document.addEventListener("DOMContentLoaded", function() {
             } else {
                 successAlertPlaceholder();
                 replaceLoginButtons(data.user);
+				localStorage.setItem('auth_token', data.token);
             }
             const signUpModalElement = document.getElementById('signUpModal');
             const signUpModal = bootstrap.Modal.getInstance(signUpModalElement);
