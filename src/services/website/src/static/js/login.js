@@ -14,6 +14,8 @@ function getCookie(name) {
     return cookieValue;
 }
 
+var token = null;
+
 document.addEventListener("DOMContentLoaded", function() {
     var loginForm = document.getElementById("login-form");
     var loginUserName = document.getElementById("login-username");
@@ -58,6 +60,7 @@ document.addEventListener("DOMContentLoaded", function() {
             } else if (data.status === 1) {
                 successAlertPlaceholder();
                 replaceLoginButtons(data.user);
+				token = data.token;
             }
             const loginModalElement = document.getElementById('loginModal');
             const loginModal = bootstrap.Modal.getInstance(loginModalElement);
