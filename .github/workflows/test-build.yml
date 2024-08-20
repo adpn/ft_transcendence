@@ -16,5 +16,5 @@ jobs:
     - name: Install tools
       run: sudo apt install make docker
     - name: Build project
-      run: ls -l; make build
+      run: docker compose -f src/docker-compose.yaml build
   
