@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from common import jwt
 
 # Create your views here.
 
@@ -11,6 +11,8 @@ import json
 from uuid import uuid4
 from http import client
 import os
+import time
+from datetime import datetime, timedelta
 
 User = get_user_model()
 
@@ -43,6 +45,69 @@ def get_user(request):
 # 	if user is not None and user.check_password(password):
 # 		return user_to_json(user)
 # 	return JsonResponse({'status': 0, 'message': 'Failed to authenticate'}, status=404)
+
+SECRET = os.environ.get('JWT_SECRET_KEY')
+
+def create_jwt(username):
+	header = {
+		"alg": "HS256",
+		"typ": "JWT"
+	}
+
+	now = datetime.now()
+	exp = now + timedelta(hours=2)
+
+	payload = {
+    	"sub": uuid4().int,
+    	"name": username,
+    	"iat": int(now.timestamp()),
+		"exp": int(exp.timestamp()),
+		"iss": "ft_transcendence.com"
+	}
+
+	payload_json = json.dumps(payload, separators=(',', ':')).encode('utf-8')
+	payload_b64 = jwt.base64url_encode(payload_json)
+	header_json = json.dumps(header, separators=(',', ':')).encode('utf-8')
+	header_b64 = jwt.base64url_encode(header_json)
+	signature = jwt.hmac.new(SECRET, f"{header_b64}.{payload_b64}".encode('utf-8'), jwt.hashlib.sha256).digest()
+	signature_b64 = jwt.base64url_encode(signature)
+
+	return f"{header_b64}.{payload_b64}.{signature_b64}"
+
+def get_jwt(request):
+	auth = request.headers.get('Authorization')
+	if not auth and not 'Bearer ' in auth:
+		return None
+	values = auth.split(' ')
+	if len(values) != 2:
+		return None
+	return values[1]
+
+def authenticate(request):
+	token = get_jwt(request)
+	payload = jwt.verify_jwt(token)
+	# todo: check for expiration date.
+	exp = payload.get("exp")
+	if exp is None:
+		raise ValueError("Token has no expiration time")
+	# Compare with the current time
+	current_time = int(time.time())
+	if current_time > exp:
+		raise ValueError("Token has expired")
+
+def check_authentication(request):
+	try:
+		authenticate(request)
+		return True
+	except ValueError:
+		return False
+
+def custom_login(username, password):
+	user = User.objects.filter(username=username).first()
+	if user is not None and user.username42 is not None:
+		return JsonResponse({'status': 0, 'message': 'You should login through 42auth'}, status=401)
+	if user is not None and user.check_password(password):
+		return JsonResponse({'status': 1, 'token': create_jwt(username), 'message': 'successfully logged-in', 'user': {'username': 'bert', 'profile_picture': 'https://cdn.intra.42.fr/users/7877e411d4514ebf416307e7b17ae1a1/bvercaem.jpg' }}, status=200)
 
 def login_view(request):
 	if request.method == 'GET' and request.user.is_authenticated:
@@ -110,13 +175,12 @@ def create_user(request):
 	user.is_active = True
 	user.save()
 	login(request, user)
-
 		# send a post request to user-management to create a user
 		# response = user_management.post("/create-user/", data={"id": user.id}, content_type="application/json")
 		# if response.status_code != 201:
 		# 	return JsonResponse({'status': 0, 'message' : 'USER MANAGEMENT TEST'}, status=400)
 	
-	return JsonResponse({'status': 1, 'message' : 'successfully signed up',  'user': {'username': 'bert', 'profile_picture': 'https://cdn.intra.42.fr/users/7877e411d4514ebf416307e7b17ae1a1/bvercaem.jpg' }}, status=201)
+	return JsonResponse({'status': 1, 'token': create_jwt(data["username"]), 'message': 'successfully logged-in', 'user': {'username': 'bert', 'profile_picture': 'https://cdn.intra.42.fr/users/7877e411d4514ebf416307e7b17ae1a1/bvercaem.jpg' }}, status=201)
 	# try:
 	# 	user = User.objects.create_user(data["username"], password=data["password"])
 	# 	request.user = user
@@ -133,5 +197,10 @@ def create_user(request):
 	# 	status=201)
 
 def is_authenticated(request):
-	if request.user.is_authenticated:
-		return
+	# try:
+	# 	if session_store.has_session(request.session[SESSION_KEY]):
+	# 		return JsonResponse({'status' : 1}, status=200)
+	# except KeyError:
+	# 	return JsonResponse({'status' : 0}, status=401)
+	# return JsonResponse({'status' : 0}, status=401)
+	pass

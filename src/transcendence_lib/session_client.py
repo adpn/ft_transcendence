@@ -54,3 +54,11 @@ class SessionStore(SessionBase):
 		if session_key:
 			url = f"/session/{session_key}/"
 			self._request("DELETE", url)
+	
+	def exists(self, session_key: str) -> bool:
+		url = f"/session/{session_key}/"
+		status, response_body = self._request("GET", url)
+		if status == 200:
+			return True
+		return False
+
