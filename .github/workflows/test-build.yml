@@ -1,0 +1,20 @@
+name: Test build
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Install tools
+      run: apt install make docker
+    - name: Build project
+      run: make build
+  
