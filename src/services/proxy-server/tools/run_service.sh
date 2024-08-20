@@ -26,5 +26,5 @@ while ! nc -z website 8000; do
 	fi
 done
 
-echo "Launching nginx..."
+echo "Launching proxy-server..."
 nginx -g "daemon off;"

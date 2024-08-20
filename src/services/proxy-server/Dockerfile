@@ -1,6 +1,6 @@
 FROM		alpine:3.20
 
-RUN			apk update && apk upgrade && apk add --no-cache \
+RUN			apk update && apk upgrade && apk add \
 			openssl \
 			nginx
 

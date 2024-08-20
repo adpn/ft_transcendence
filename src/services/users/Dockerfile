@@ -1,12 +1,13 @@
 FROM		alpine:3.20
 
-RUN			apk update && apk upgrade && apk add --no-cache \
+RUN			apk update && apk upgrade && apk add \
 			python3-dev \
 			build-base \
 			py3-pip \
 			jpeg-dev \
 			zlib-dev \
-			py3-django
+			py3-django \
+			py3-psycopg-c
 
 
 # RUN			pip3 install django

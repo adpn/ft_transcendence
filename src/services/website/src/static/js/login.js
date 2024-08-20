@@ -18,9 +18,8 @@ document.addEventListener("DOMContentLoaded", function() {
     var loginForm = document.getElementById("login-form");
     var loginUserName = document.getElementById("login-username");
     var loginPassword = document.getElementById("login-password");
-    var testButton = document.getElementById("test-button");
 
-    fetch('/is_authenticated/', {
+    fetch('/auth/is_authenticated/', {
         method: 'GET',
         headers: {
             'X-CSRFToken': getCookie('csrftoken')
@@ -111,26 +110,5 @@ document.addEventListener("DOMContentLoaded", function() {
             </div>
         `;
     }
-
-    testButton.addEventListener('click', function(event) { 
-        event.preventDefault();
-    
-        fetch('/auth/protected/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            credentials: 'include'
-        })
-        .then(response => response.json())
-        //todo: confirm login.
-        .then(data => {
-            // todo if succeeded, close dialog box
-            // else display error message
-            console.log(data)
-        });
-    
-    });
 
 });

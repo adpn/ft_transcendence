@@ -5,4 +5,4 @@ from django.contrib.auth.models import AbstractUser
 
 class User(AbstractUser):
     username42 = models.CharField(max_length=25, default=None, null=True)
-    username = models.CharField(max_length=25, unique=True)
+    username = models.CharField(max_length=25, unique=True, null=False)
