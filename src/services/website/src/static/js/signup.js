@@ -31,6 +31,8 @@ document.addEventListener("DOMContentLoaded", function() {
             'password': signupPassword.value,
             'confirm_password': signupConfirmPassword.value
         };
+
+        signupForm.reset();
         fetch('/auth/signup/', {
             method: 'POST',
             headers: {
@@ -53,7 +55,6 @@ document.addEventListener("DOMContentLoaded", function() {
             if (signUpModal) {
                 signUpModal.hide();
             }
-            signupForm.reset();
         });
     });
 

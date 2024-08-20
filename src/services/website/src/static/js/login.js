@@ -44,6 +44,7 @@ document.addEventListener("DOMContentLoaded", function() {
             password: loginPassword.value
         };
 
+        loginForm.reset();
         fetch('/auth/login/', {
             method: 'POST',
             headers: {
@@ -66,7 +67,6 @@ document.addEventListener("DOMContentLoaded", function() {
             if (loginModal) {
                 loginModal.hide();
             }
-            loginForm.reset();
         });
     });
 

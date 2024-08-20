@@ -10,9 +10,12 @@ const navigateTo = url => {
 const router = async () => {
     const routes = [
         { path: "/", view: Home },
-        { path: "/games", view: Games },
+        { path: "/pong", view: Pong },
+        { path: "/other-game", view: Other_game },
         { path: "/profile", view: Profile },
-        { path: "/settings", view: Settings }
+        // { path: "/settings", view: Settings },
+        { path: "/friends", view: Friends },
+        { path: "/stats", view: Stats }
     ];
 
     // Find a matching route or return 404
@@ -44,7 +47,17 @@ const Home = () => `
     </div>
 `;
 
-const Games = () => `
+const Pong = () => `
+    <div class="row">
+    <div class="col text-center">
+        <div class="canvas-container">
+            <canvas id="gameCanvas" class="w-100 border"></canvas>
+        </div>
+    </div>
+    </div>
+`;
+
+const Other_game = () => `
     <div class="row">
     <div class="col text-center">
         <div class="canvas-container">
@@ -58,13 +71,46 @@ const Profile = () => `
     <div class="text-center">
         <h1>Profile Page</h1>
         <p>Manage your profile here.</p>
+        <div id="profile-picture-change">
+            <span> temporary profile picture change </span>
+        </div>
+        <div id="username-change">
+            <span> temporary username change </span>
+        </div>
+        <div id="password-change">
+            <span> temporary password change </span>
+        </div>
     </div>
 `;
 
-const Settings = () => `
+// const Settings = () => `
+//     <div class="text-center">
+//         <h1>Settings Page</h1>
+//         <p>Customize your settings.</p>
+//     </div>
+// `;
+
+const Friends = () => `
     <div class="text-center">
-        <h1>Settings Page</h1>
-        <p>Customize your settings.</p>
+        <h1>Friends Page</h1>
+        <div id="friends-invites">
+            <span> temporary friends invites </span>
+        </div>
+        <div id="friends-list">
+            <span> temporary friends list </span>
+        </div>
+    </div>
+`;
+
+const Stats = () => `
+    <div class="text-center">
+        <h1>Stats Page</h1>
+        <div id="total-stats">
+            <span> temporary total stats </span>
+        </div>
+        <div id="game-history">
+            <span> temporary game history (will use json) </span>
+        </div>
     </div>
 `;
 
