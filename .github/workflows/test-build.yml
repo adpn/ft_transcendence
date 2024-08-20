@@ -16,5 +16,5 @@ jobs:
     - name: Install tools
       run: sudo apt install make docker
     - name: Build project
-      run: make build
+      run: ls -l && make build
   
