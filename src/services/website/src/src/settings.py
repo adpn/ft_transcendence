@@ -55,7 +55,7 @@ MIDDLEWARE = [
 ]
 
 SESSION_ENGINE =  'common.session_client'
-AUTHENTICATION_BACKENDS = ['common.auth_client.AuthenticationClient']
+# AUTHENTICATION_BACKENDS = ['common.auth_client.AuthenticationClient']
 
 ROOT_URLCONF = 'src.urls'
 

@@ -15,14 +15,12 @@ function getCookie(name) {
 }
 
 document.addEventListener("DOMContentLoaded", function() {
-    var csrftoken = getCookie('csrftoken');
-
     var loginForm = document.getElementById("login-form");
     var loginUserName = document.getElementById("login-username");
     var loginPassword = document.getElementById("login-password");
     var testButton = document.getElementById("test-button");
 
-    fetch('/auth/login/', {
+    fetch('/is_authenticated/', {
         method: 'GET',
         headers: {
             'X-CSRFToken': getCookie('csrftoken')

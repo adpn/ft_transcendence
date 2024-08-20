@@ -70,3 +70,8 @@ class ServiceClient(object):
 			resp[header] = value
 		return resp
 
+def is_authenticated(request):
+	if request.user.is_authenticated:
+		return JsonResponse({'status' : 1}, status=200)
+	return JsonResponse({'status' : 0}, status=401)
+

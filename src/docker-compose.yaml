@@ -7,8 +7,8 @@ services:
       context: services/proxy-server/
     # environment:
 
-    # ports:
-    #   - "443:443"
+    ports:
+      - "443:443"
     # volumes:
     #   - wordpress:/var/www/wordpress
     networks:
@@ -42,7 +42,7 @@ services:
     build:
       context: services/website/
     depends_on:
-      - session-manager
+      - users
     networks:
       - transcendence
     environment:
@@ -64,28 +64,26 @@ services:
     build:
       context: services/game-server/
       dockerfile: Dockerfile
-    depends_on:
-      - session-manager
     ports:
       - "8001:8001"
     networks:
       - transcendence
     restart: always
 
-  session-manager:
-    container_name: session-manager
-    image:
-      session-manager-image
-    build:
-      context: services/session-manager/
-      dockerfile: Dockerfile
-    # depends_on:
-    #   - user-management
-    networks:
-      - transcendence
-    environment:
-      SESSION_SERVER : "${SESSION_SERVER}"
-    restart: always
+  # session-manager:
+  #   container_name: session-manager
+  #   image:
+  #     session-manager-image
+  #   build:
+  #     context: services/session-manager/
+  #     dockerfile: Dockerfile
+  #   # depends_on:
+  #   #   - user-management
+  #   networks:
+  #     - transcendence
+  #   environment:
+  #     SESSION_SERVER : "${SESSION_SERVER}"
+  #   restart: always
 
   postgresql:
     container_name: postgresql

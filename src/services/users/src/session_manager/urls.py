@@ -1,6 +1,5 @@
 from django.urls import path
 from .views import SessionView
-import views
 
 urlpatterns = [
     path('session/', SessionView.as_view(), name='create_session'),
