@@ -14,6 +14,8 @@ function getCookie(name) {
     return cookieValue;
 }
 
+var token = null;
+
 document.addEventListener("DOMContentLoaded", function() {
     var loginForm = document.getElementById("login-form");
     var loginUserName = document.getElementById("login-username");
@@ -46,7 +48,8 @@ document.addEventListener("DOMContentLoaded", function() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
+                'X-CSRFToken': getCookie('csrftoken'),
+				'Authorization': 'Bearer ' + localStorage.getItem('auth_token')
             },
             body: JSON.stringify(creds),
             credentials: 'include'
@@ -58,6 +61,7 @@ document.addEventListener("DOMContentLoaded", function() {
             } else if (data.status === 1) {
                 successAlertPlaceholder();
                 replaceLoginButtons(data.user);
+				localStorage.setItem('auth_token', data.token);
             }
             const loginModalElement = document.getElementById('loginModal');
             const loginModal = bootstrap.Modal.getInstance(loginModalElement);

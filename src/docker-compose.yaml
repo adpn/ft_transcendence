@@ -12,7 +12,7 @@ services:
     depends_on:
       - postgresql
     restart: always
-  
+
   users:
     container_name: users
     image:
@@ -26,12 +26,13 @@ services:
       CLIENT_ID : "${CLIENT_ID}"
       CLIENT_SECRET : "${CLIENT_SECRET}"
       REDIRECT_URI : "${REDIRECT_URI}"
+      JWT_SECRET_KEY: "${JWT_SECRET_KEY}"
     networks:
       - transcendence
     depends_on:
       - postgresql
     restart: always
-  
+
   website:
     container_name: website
     image:
@@ -48,7 +49,7 @@ services:
       SESSION_SERVER : "${SESSION_SERVER}"
       AUTH_URL: "${AUTH_URL}"
     restart: always
-  
+
   game-server:
     container_name: game-server
     image:

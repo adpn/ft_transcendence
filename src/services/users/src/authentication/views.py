@@ -1,5 +1,5 @@
 from django.shortcuts import redirect
-from common import jwt
+from common import jwt, service_client
 
 # Create your views here.
 
@@ -38,7 +38,7 @@ def get_user_view(request):
 	except User.DoesNotExist:
 		return JsonResponse({'status': 0, 'message': 'User does not exist'}, status=404)
 
-SECRET = os.environ.get('JWT_SECRET_KEY')
+SECRET = os.environ.get('JWT_SECRET_KEY').encode('utf-8')
 
 def create_jwt(username):
 	header = {
@@ -68,7 +68,9 @@ def create_jwt(username):
 
 def get_jwt(request):
 	auth = request.headers.get('Authorization')
-	if not auth and not 'Bearer ' in auth:
+	if not auth:
+		return None
+	if not 'Bearer ' in auth:
 		return None
 	values = auth.split(' ')
 	if len(values) != 2:
@@ -77,7 +79,9 @@ def get_jwt(request):
 
 def authenticate(request):
 	token = get_jwt(request)
-	payload = jwt.verify_jwt(token)
+	if not token:
+		raise ValueError("No token")
+	payload = jwt.verify_jwt(token, SECRET)
 	# todo: check for expiration date.
 	exp = payload.get("exp")
 	if exp is None:
@@ -94,12 +98,18 @@ def check_authentication(request):
 	except ValueError:
 		return False
 
-def custom_login(username, password):
+def custom_login(request, username, password):
 	user = User.objects.filter(username=username).first()
-	if user is not None and user.username42 is not None:
+	if user is None:
+		return JsonResponse({'status': 0, 'message': 'User does not exist'}, status=401)
+	if user.username42 is not None:
 		return JsonResponse({'status': 0, 'message': 'You should login through 42auth'}, status=401)
-	if user is not None and user.check_password(password):
-		return JsonResponse({'status': 1, 'token': create_jwt(username), 'message': 'successfully logged-in', 'user': {'username': 'bert', 'profile_picture': 'https://cdn.intra.42.fr/users/7877e411d4514ebf416307e7b17ae1a1/bvercaem.jpg' }}, status=200)
+	if user.check_password(password):
+		login(request, user)
+		return profile_mini(request)
+	return JsonResponse({
+		'status': 0, 
+		'message': 'Login failed'}, status=401)
 
 def login_view(request) -> JsonResponse:
 	if request.user.is_authenticated:
@@ -111,20 +121,12 @@ def login_view(request) -> JsonResponse:
 	username = data["username"]
 	password = data["password"]
 	# todo: need to implement this...
-	user = User.objects.filter(username=username).first()
-	if user is None:
-		return JsonResponse({'status': 0, 'message': 'User does not exist'}, status=401)
-	if user.username42 is not None:
-		return JsonResponse({'status': 0, 'message': 'You should login through 42auth'}, status=401)
-	if user.check_password(password):
-		login(request, user)
-		#todo: need a login response json -> should contain images
-		return profile_mini(request)
-	return JsonResponse({'status': 0, 'message': 'Login failed'}, status=401)
+	return custom_login(request, username, password)
 
 def logout_view(request) -> JsonResponse:
 	if not request.user.is_authenticated:
 		return JsonResponse({'status': 0, 'message': 'not logged in'}, status=401)
+	# todo: add token to black list
 	logout(request)
 	return JsonResponse({'status' : 1}, status=200)
 
@@ -161,6 +163,7 @@ def profile_mini(request) -> JsonResponse:
     return JsonResponse({
         'status': 1,
         'message': 'logged-in',
+		'token': create_jwt(request.user.username),
         'user': {
             'username': request.user.username,
             'profile_picture': profile_picture
@@ -261,6 +264,18 @@ def generate_username() -> str:
 	words = ["alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf", "hotel", "lima"]
 	username = random.choice(words) + "".join(random.choices(string.digits, k=4))
 	return username
+
+games_client = service_client.ServiceClient('website:8000')
+
+def create_game(request):
+	if request.user.is_authenticated:
+		return games_client.forward('/games/create_game/')(request)
+	return JsonResponse({}, status=401)
+
+def check_token(request):
+	if check_authentication(request):
+		return HttpResponse(status=200)
+	return HttpResponse(status=401)
 
 def auth42_view(request):
 	if request.user.is_authenticated:
