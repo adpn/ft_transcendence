@@ -29,24 +29,29 @@ var socket;
 var is_focus = false;
 var game_status = 0;
 
-document.addEventListener("DOMContentLoaded", function() {
+document.addEventListener("DOMContentLoaded", function () {
+	window.addEventListener("https://localhost/pong", loadPong);
+});
+
+function loadPong() {
 	const canvas = document.getElementById("gameCanvas");
 	canvas.setAttribute("tabindex", "-1");
+	canvas.addEventListener("focus", connectGameRoom);
 	canvas.addEventListener("focus", function () { is_focus = true; });
 	canvas.addEventListener("blur", function () { is_focus = false; });
 	const ctx = canvas.getContext("2d");
-	window.addEventListener("load", resizeCanvas, false);
 	window.addEventListener("resize", resizeCanvas, false);
 	window.addEventListener("keydown", takeInputDown, true);
 	window.addEventListener("keyup", takeInputUp, true);
+	resizeCanvas();
 
-	const button = document.getElementById("test-game");
-	button.addEventListener("click", connectGameRoom);
 	function connectGameRoom() {
+		canvas.removeEventListener("focus", connectGameRoom);
 		fetch("/games/create_game", {
 			method: "GET",
 			headers: {
-				"X-CSRFToken": getCookie("csrftoken")
+				"X-CSRFToken": getCookie("csrftoken"),
+				"Authorization": "Bearer " + localStorage.getItem("auth_token")
 			},
 			credentials: "include"
 		})
@@ -122,7 +127,7 @@ document.addEventListener("DOMContentLoaded", function() {
 		canvas.height = canvas.scrollHeight;
 		clearCanvas();
 		if (game_status == 0)
-			drawMessage("Welcome!");
+			drawMessage("Click here to find a game");
 		else if (game_status == 1)
 			drawMessage("Connecting...");
 		else if (game_status == 6)
@@ -194,4 +199,4 @@ document.addEventListener("DOMContentLoaded", function() {
 		ctx.textAlign = "center";
 		ctx.fillText(message, makeXCord(500), makeYCord(500));
 	}
-});
+}

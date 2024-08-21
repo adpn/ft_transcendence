@@ -62,8 +62,8 @@ services:
       context: services/game-server/
       dockerfile: Dockerfile
     depends_on:
-      - user-management
-      - session-manager
+      - users
+      # - session-manager
     ports:
       - "8001:8000"
     networks:
@@ -78,7 +78,7 @@ services:
   #     context: services/session-manager/
   #     dockerfile: Dockerfile
   #   # depends_on:
-  #   #   - user-management
+  #   #   - users
   #   networks:
   #     - transcendence
   #   environment:
