@@ -21,16 +21,16 @@ class GameRoom:
 	@property
 	def num_players(self):
 		return self._num_players
-	
+
 	@property
 	def room_id(self):
 		return self._room_name
-	
+
 	def add_player(self, player_id):
 		self._num_players += 1
 		self._players[player_id] = player_id
 		return self._room_name
-	
+
 	def __contains__(self, value):
 		return value in self._players
 
@@ -52,9 +52,9 @@ def create_game(request):
 		# todo: conditions for a room to be ready depend on game settings.
 		if game_room.num_players == 2 and session_key in game_room:
 			return JsonResponse({
-				'game-room-id': game_room.room_id,
+				'game_room_id': game_room.room_id,
 				'status': 'playing',
-				'player-id': session_key
+				'player_id': session_key
 				}, status=200)
 
 	# find a game room
@@ -64,11 +64,11 @@ def create_game(request):
 			# remove the game room
 			# GAME_ROOMS.remove(game_room)
 			return JsonResponse({
-				'game-room-id': game_room.add_player(session_key),
+				'game_room_id': game_room.add_player(session_key),
 				'status': 'joined',
-				'player-id': session_key
+				'player_id': session_key
 				}, status=200)
-	
+
 	# create a new game room
 	room_id = str(uuid.uuid4())
 	# add it to the session store.
@@ -78,7 +78,6 @@ def create_game(request):
 	# save the session key.
 	#session_store.save(True)
 	return JsonResponse({
-		'game-room-id': game_room.add_player(session_key),
-		'status': 'new-room', 
-		'player-id': session_key}, status=201)
-
+		'game_room_id': game_room.add_player(session_key),
+		'status': 'new-room',
+		'player_id': session_key}, status=201)

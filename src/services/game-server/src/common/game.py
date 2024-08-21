@@ -16,17 +16,22 @@ class Player:
 
 
 class GameSession(object):
-	def __init__(self, players, game_logic):
-		self._players = players
+	def __init__(self, game_logic):
 		self._game_logic = game_logic
-		self._queue = queue.Queue(5)
+		# self._queue = asyncio.Queue(5)
+		self.current_players = 0
+		self.min_players = 2
 
-	async def update(self, data):
-		self._queue.put(data)
+	async def update(self, data, player):
+		# await self._queue.put(data)
+		await self._game_logic.updateInput(data[0], data[1], player)
 
 	async def start(self, callback):
-		while True:
-			await callback(self._game_logic.update(self._queue.get()))
+		while True:					# concatanate maybe when it works
+			# data = await self._queue.get()
+			# data = await self._game_logic.update(data)
+			data = await self._game_logic.gameTick()
+			await callback(data)
 			await asyncio.sleep(0.05)
 
 class GameServer(object):
@@ -39,11 +44,11 @@ class GameServer(object):
 		self.SessionStore = engine.SessionStore
 
 	def get_game_session(self, room):
-		if room not in self._self._game_sessions:
-			self._game_sessions[room] = GameSession(self._game_factory.create_game()) # create new game logic for the game room.
+		if room not in self._game_sessions:
+			self._game_sessions[room] = GameSession(self._game_factory()) # create new game logic for the game room.
 		session = self._game_sessions[room]
 		return session
-	
+
 	async def check_room(self, room_id):
 		return self.SessionStore(room_id).exists(room_id)
 
@@ -51,12 +56,14 @@ class GameServer(object):
 		await self._lock.acquire()
 		return self
 
-	async def __aexit__(self):
+	async def __aexit__(self, exc_type, exc_value, exc_tb):
 		self._lock.release()
 
 class GameLogic(abc.ABC):
 	@abc.abstractmethod
-	def update(data):
+	async def updateInput(data):
+		pass
+	async def gameTick():
 		pass
 
 class GameConsumer(AsyncWebsocketConsumer):
@@ -78,8 +85,8 @@ class GameConsumer(AsyncWebsocketConsumer):
 		self.game_room = self.scope['url_route']['kwargs']['room_name']
 
 		#reject any invalid room_name.
-		if not await self._game_server.check_room(self.game_room):
-			await self.close()
+		# if not await self._game_server.check_room(self.game_room):
+		# 	await self.close()
 
 		# todo: need a game logic factory
 		# create new game session if none exists.
@@ -87,37 +94,41 @@ class GameConsumer(AsyncWebsocketConsumer):
 			room = server.get_game_session(self.game_room)
 			await self.channel_layer.group_add(self.game_room, self.channel_name)
 			# if the amount of players is met, notify all clients.
+			self.player = room.current_players
 			room.current_players += 1
 			if room.current_players == room.min_players:
-				await self.channel_layer.group_send(
-				self.game_room,
-				{
-					'type': 'game_status',
-					'message': 'ready'
-				})
 				# keep a reference to the game session.
 				self._game_session = room
+				# todo: set _game_session of all players to room
 				await self.accept()
+				# send ready notification.
+				await self.channel_layer.group_send(
+				self.game_room,
+				{
+					'type': 'game_status',
+					'message': {'status': 'ready'}
+				})
 				# start game loop for the session.
 				asyncio.create_task(self._game_session.start(self.state_callback))
-			elif room.num_players < self._game_settings.min_players:
-				await self.channel_layer.group_send(
-				self.game_room,
-				{
-					'type': 'game_status',
-					'message': {'status' : 'waiting'}
-				})
+			elif room.current_players < room.min_players:
 				await self.accept()
-			# refuse connection if the game is full
-			elif room.num_players > self._game_settings.min_players:
+				self._game_session = room
 				await self.channel_layer.group_send(
 				self.game_room,
 				{
 					'type': 'game_status',
-					'message': {'status' : 'full'}
+					'message': {'status': 'waiting'}
 				})
+			# refuse connection if the game is full
+			elif room.current_players > room.min_players:
 				# close connection
 				await self.accept()
+				await self.channel_layer.group_send(
+				self.game_room,
+				{
+					'type': 'game_status',
+					'message': {'status': 'full'}
+				})
 				await self.close()
 
 	async def disconnect(self, close_code):
@@ -126,29 +137,28 @@ class GameConsumer(AsyncWebsocketConsumer):
 		if not self._game_session:
 			await self.channel_layer.group_discard(self.game_room, self.channel_name)
 		room = self._game_session
-		room.num_players -= 1
-		if room.num_players <= 0:
+		room.current_players -= 1
+		if room.current_players <= 0:
 			await self.channel_layer.group_discard(self.game_room, self.channel_name)
 
 	# receives data from websocket.
 	# todo: if there are no player a
-	async def receive(self, text_data):
+	async def receive(self, bytes_data):
 		if self._game_session:
-			data = json.loads(text_data)
 			# Broadcast to group
 			# todo: if game is not ready update all
-			await self._game_session.update(data)
+			await self._game_session.update(bytes_data, self.player)
 		else:
 			await self.channel_layer.group_send(
 				self.game_room,
 				{
 					'type': 'game_state',
-					'message': {},
+					'message': {'status': 'no session'}
 				}
 			)
 
 	async def game_state(self, event):
 		await self.send(text_data=json.dumps(event['message']))
-	
+
 	async def game_status(self, event):
 		await self.send(text_data=json.dumps(event['message']))
