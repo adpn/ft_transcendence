@@ -1,8 +1,7 @@
-FROM		python:3.11
+FROM		python:3.11-slim
 
-RUN	pip install django channels uvicorn[standard]
+RUN			pip install django channels uvicorn[standard]
 
-# RUN			pip install uvicorn
 COPY		src /home/service
 COPY		tools/run_service.sh /bin/run_service.sh
 

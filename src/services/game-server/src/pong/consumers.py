@@ -1,5 +1,12 @@
 from common import game
 
+DEFAULT_BALL_SPEED = 20
+MAX_BALL_SPEED = 40
+BALL_ACCELERATION = 1.002
+DEFAULT_RACKET_SPEED = 30
+MAX_DIRY = 0.8
+MAX_DEVIATION = 0.6
+
 class PongLogic(game.GameLogic):
 	def __init__(self):
 		self.game_data = {
@@ -13,69 +20,61 @@ class PongLogic(game.GameLogic):
 			"score_left": 0,
 			"score_right": 0
 			}
-		self.ball_dirx = 1.0
-		self.ball_diry = 0.0
-		self.ball_speed = 10
-		self.maxdeviation = 0.5
-		self.maxdiry = 0.9
-		self.racket_speed = 10
-		self.left_up = False
-		self.left_down = False
-		self.right_up = False
-		self.right_down = False
+		self.ball_dirx = 0.9
+		self.ball_diry = 0.1
+		self.ball_speed = DEFAULT_BALL_SPEED
+		self.racket_speed = DEFAULT_RACKET_SPEED
+		self.input = [[False, False], [False, False]]	# [player][direction] = pressed
 
-	def update(self, data):
-		self.left_up = data["left_up"]
-		self.left_down = data["left_down"]
-		self.right_up = data["right_up"]
-		self.right_down = data["right_down"]
-		self.gameTick()
-		return self.game_data
+	async def updateInput(self, dir, action, player):
+		self.input[player][dir] = action
 
-	def gameTick(self):
-		self.update_rackets()
-		self.update_ball()
+	async def gameTick(self):
+		await self.update_rackets()
+		await self.update_ball()
+		return self.game_data	# try to do this in binary stuff instead of json ?
 
-	def update_rackets(self):
-		if self.right_up:
+	async def update_rackets(self):
+		if self.input[1][1]:
 			self.game_data["racket_right_pos"] -= self.racket_speed
 			if self.game_data["racket_right_pos"] < 0:
 				self.game_data["racket_right_pos"] = 0
-		if self.right_down:
+		if self.input[1][0]:
 			self.game_data["racket_right_pos"] += self.racket_speed
 			if self.game_data["racket_right_pos"] + self.game_data["racket_right_size"] > 1000:
 				self.game_data["racket_right_pos"] = 1000 - self.game_data["racket_right_size"]
-		if self.left_up:
+		if self.input[0][1]:
 			self.game_data["racket_left_pos"] -= self.racket_speed
 			if self.game_data["racket_left_pos"] < 0:
 				self.game_data["racket_left_pos"] = 0
-		if self.left_down:
+		if self.input[0][0]:
 			self.game_data["racket_left_pos"] += self.racket_speed
 			if self.game_data["racket_left_pos"] + self.game_data["racket_left_size"] > 1000:
 				self.game_data["racket_left_pos"] = 1000 - self.game_data["racket_left_size"]
 
-	def update_ball(self):
+	async def update_ball(self):
 		self.game_data["ball_posx"] += self.ball_dirx * self.ball_speed
 		self.game_data["ball_posy"] += self.ball_diry * self.ball_speed
-		self.do_collision()
-		self.ball_speed *= 1.05
-		self.do_score()
+		await self.do_collision()
+		if self.ball_speed < MAX_BALL_SPEED:
+			self.ball_speed *= BALL_ACCELERATION
+		await self.do_score()
 
-	def do_collision(self):
+	async def do_collision(self):
 		if self.game_data["ball_posy"] - (self.game_data["ball_size"] / 2) <= 0:
-			self.bounce('u')
+			await self.bounce('u')
 		elif self.game_data["ball_posy"] + (self.game_data["ball_size"] / 2) >= 1000:
-			self.bounce('d')
+			await self.bounce('d')
 		elif ( self.game_data["ball_posx"] - (self.game_data["ball_size"] / 2) <= 15
 			and self.game_data["racket_left_pos"] < self.game_data["ball_posy"] + (self.game_data["ball_size"] / 2)
 			and self.game_data["racket_left_pos"] + self.game_data["racket_left_size"] > self.game_data["ball_posy"] - (self.game_data["ball_size"] / 2)):
-			self.bounce('l')
+			await self.bounce('l')
 		elif ( self.game_data["ball_posx"] + (self.game_data["ball_size"] / 2) >= 985
 			and self.game_data["racket_right_pos"] < self.game_data["ball_posy"] + (self.game_data["ball_size"] / 2)
 			and self.game_data["racket_right_pos"] + self.game_data["racket_right_size"] > self.game_data["ball_posy"] - (self.game_data["ball_size"] / 2)):
-			self.bounce('r')
+			await self.bounce('r')
 
-	def bounce(self, side):
+	async def bounce(self, side):
 		if side == 'u':
 			self.game_data["ball_posy"] = 0 + self.game_data["ball_size"] - self.game_data["ball_posy"]
 			self.ball_diry *= -1
@@ -94,34 +93,41 @@ class PongLogic(game.GameLogic):
 			racket_half_size = self.game_data["racket_right_size"] / 2
 		remainingspeed = self.ball_speed - ((limit - self.game_data["ball_posx"] + self.ball_dirx * self.ball_speed) / self.ball_dirx)
 		self.game_data["ball_posy"] -= self.ball_diry * remainingspeed
-		self.ball_diry += (racket_pos + racket_half_size - self.game_data["ball_posy"]) / racket_half_size * self.maxdeviation
-		if (self.ball_diry > self.maxdiry):
-			self.ball_diry = self.maxdiry
-		elif (self.ball_diry < -self.maxdiry):
-			self.ball_diry = -self.maxdiry
-		self.ball_dirx = (1 - abs(self.ball_diry)) * (self.ball_dirx / abs(self.ball_dirx)) # self.ball_dirx cannot be 0
+		relative_racket_hit = -((racket_pos + racket_half_size - self.game_data["ball_posy"]) / racket_half_size)
+		self.ball_diry += relative_racket_hit * MAX_DEVIATION
+		if (self.ball_diry > MAX_DIRY):
+			self.ball_diry = MAX_DIRY
+		elif (self.ball_diry < -MAX_DIRY):
+			self.ball_diry = -MAX_DIRY
+		self.ball_dirx = (1 - await get_abs(self.ball_diry)) * -(self.ball_dirx / await get_abs(self.ball_dirx)) # self.ball_dirx cannot be 0
 		self.game_data["ball_posx"] = limit + self.ball_dirx * remainingspeed
 		self.game_data["ball_posy"] += self.ball_diry * remainingspeed
 
-	def do_score(self):
+	async def do_score(self):
 		if self.game_data["ball_posx"] < 0:
-			self.goal('l')
+			await self.goal('l')
 		elif self.game_data["ball_posx"] > 1000:
-			self.goal('r')
+			await self.goal('r')
 
 # doesn't check endgame yet
-	def goal(self, side):
+	async def goal(self, side):
 		if side == 'l':
 			self.game_data["score_right"] += 1
-			self.ball_dirx = -1.0
+			self.ball_dirx = -0.9
 		elif side == 'r':
 			self.game_data["score_left"] += 1
-			self.ball_dirx = 1.0
-		self.ball_diry = 0.0
-		self.ball_speed = 10
+			self.ball_dirx = 0.9
+		self.ball_diry = 0.1
+		self.ball_speed = DEFAULT_BALL_SPEED
 		self.game_data["ball_posx"] = 500
 		self.game_data["ball_posy"] = 500
 		self.game_data["racket_left_pos"] = 400
 		self.game_data["racket_left_size"] = 200
 		self.game_data["racket_right_pos"] = 400
 		self.game_data["racket_right_size"] = 200
+
+
+async def get_abs(value):
+	if value < 0:
+		return -value
+	return value

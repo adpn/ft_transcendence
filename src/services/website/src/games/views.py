@@ -36,8 +36,8 @@ class GameRoom:
 
 def create_game(request):
 	#todo: the request body should contain the game name, then fetch game settings from the game-server.
-	# if not request.user.is_authenticated:
-	# 	return JsonResponse({}, status=401)
+	if not request.user.is_authenticated:
+		return JsonResponse({}, status=401)
 	session_key = request.COOKIES.get(settings.SESSION_COOKIE_NAME)
 
 	# check if is already playing
@@ -74,4 +74,3 @@ def create_game(request):
 		'game_room_id': game_room.add_player(session_key),
 		'status': 'new-room',
 		'player_id': session_key}, status=201)
-

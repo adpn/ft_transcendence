@@ -1,5 +1,10 @@
 // import * as THREE from 'three';
 
+const UP = true;
+const DOWN = false;
+const START = true;
+const STOP = false;
+
 // this stuff is relative to a canvas of 1000,1000
 var game_data = {
 	ball_posx: 500,
@@ -11,30 +16,32 @@ var game_data = {
 	racket_right_size: 200,
 	score_left: 0,
 	score_right: 0
-}
+};
 
-var game_input = {
-	left_up: false,
-	left_down: false,
-	right_up: false,
-	right_down: false
-}
+// var game_input = {
+// 	left_up: false,
+// 	left_down: false,
+// 	right_up: false,
+// 	right_down: false
+// }
 
-var is_focus = false
-var is_gaming = false
+var socket;
+var is_focus = false;
+var game_status = 0;
 
 document.addEventListener("DOMContentLoaded", function() {
 	const canvas = document.getElementById("gameCanvas");
 	canvas.setAttribute("tabindex", "-1");
-	canvas.addEventListener("focus", function () { is_focus = true; })
-	canvas.addEventListener("blur", function () { is_focus = false; })
+	canvas.addEventListener("focus", function () { is_focus = true; });
+	canvas.addEventListener("blur", function () { is_focus = false; });
 	const ctx = canvas.getContext("2d");
 	window.addEventListener("load", resizeCanvas, false);
 	window.addEventListener("resize", resizeCanvas, false);
 	window.addEventListener("keydown", takeInputDown, true);
 	window.addEventListener("keyup", takeInputUp, true);
 
-	window.addEventListener("load", connectGameRoom);
+	const button = document.getElementById("test-game");
+	button.addEventListener("click", connectGameRoom);
 	function connectGameRoom() {
 		fetch("/games/create_game", {
 			method: "GET",
@@ -43,12 +50,35 @@ document.addEventListener("DOMContentLoaded", function() {
 			},
 			credentials: "include"
 		})
-		.then(response => response.json())
+		.then((response) => {
+			if(!response.ok)
+				throw new Error(response.status);
+			return response.json();
+		  })
         .then(data => {
-			const socket = new WebSocket("ws://localhost:8001/ws/game/pong/" + data.game_room_id); // ws for now to do testing, wss later.
-			socket.addEventListener("open", gameStart);
-			socket.addEventListener("message", update);
+			socket = new WebSocket("ws://localhost:8001/ws/game/pong/" + data.game_room_id); // ws for now to do testing, wss later.
+			if (socket.readyState > socket.OPEN)
+				throw new Error("WebSocket error: " + socket.readyState);
+			socket.addEventListener("close", function () {
+				game_status = 6;
+				resizeCanvas();
+				throw new Error("Websocket closed: " + socket.readyState);		// this error goes uncaught
+			});
+			socket.addEventListener("open", function () {
+				game_status = 1;
+				resizeCanvas();
+				socket.addEventListener("message", waitRoom);
+			});
 		})
+		.catch((error) => { console.log(error); });
+	}
+
+	function waitRoom(event) {
+		if (JSON.parse(event.data).status != "ready")
+			return ;
+		socket.removeEventListener("message", waitRoom);
+		socket.addEventListener("message", update);
+		gameStart();
 	}
 
 	// would need to differentiate between local and network-play for input
@@ -57,20 +87,14 @@ document.addEventListener("DOMContentLoaded", function() {
 			return ;
 		}
 		switch (e.key) {
-			case "ArrowUp":
-				game_input.right_up = true;
-				break ;
-			case "ArrowDown":
-				game_input.right_down = true;
-				break ;
 			case "w":
-				game_input.left_up = true;
+			case "ArrowUp":
+				submit(UP, START);
 				break ;
 			case "s":
-				game_input.left_down = true;
+			case "ArrowDown":
+				submit(DOWN, START);
 				break ;
-			default:
-				return ;
 		}
 		e.preventDefault();
 	}
@@ -81,20 +105,14 @@ document.addEventListener("DOMContentLoaded", function() {
 			return ;
 		}
 		switch (e.key) {
-			case "ArrowUp":
-				game_input.right_up = false;
-				break ;
-			case "ArrowDown":
-				game_input.right_down = false;
-				break ;
 			case "w":
-				game_input.left_up = false;
+			case "ArrowUp":
+				submit(UP, STOP);
 				break ;
 			case "s":
-				game_input.left_down = false;
+			case "ArrowDown":
+				submit(DOWN, STOP);
 				break ;
-			default:
-				return ;
 		}
 		e.preventDefault();
 	}
@@ -103,10 +121,14 @@ document.addEventListener("DOMContentLoaded", function() {
 		canvas.width = canvas.scrollWidth;
 		canvas.height = canvas.scrollHeight;
 		clearCanvas();
-		if (is_gaming)
-			drawFrame();
+		if (game_status == 0)
+			drawMessage("Welcome!");
+		else if (game_status == 1)
+			drawMessage("Connecting...");
+		else if (game_status == 6)
+			drawMessage("Disconnected");
 		else
-			drawConnecting();
+			drawFrame();
 	}
 
 	function makeXCord(number) {
@@ -117,44 +139,36 @@ document.addEventListener("DOMContentLoaded", function() {
 	}
 
 	function gameStart() {
-		is_gaming = true;
+		game_status = 2;
 		resizeCanvas();
-		setInterval(gameTick, 20);
+		// setInterval(gameTick, 20);
 	}
 
 	function gameTick() {
-		submit();
 		clearCanvas();
 		drawFrame();
 	}
 
-	function submit() {
-		socket.send(game_input);
+	function submit(dir, action) {
+		socket.send(new Uint8Array([dir, action]));
 	}
 
 	function update(event) {
 		received_data = JSON.parse(event.data);
-		console.log(received_data);								// TESTING
-		game_data.ball_posx = received_data["ball_posx"];
-		game_data.ball_posy = received_data["ball_posy"];
-		game_data.ball_size = received_data["ball_size"];
-		game_data.racket_left_pos = received_data["racket_left_pos"];
-		game_data.racket_left_size = received_data["racket_left_size"];
-		game_data.racket_right_pos = received_data["racket_right_pos"];
-		game_data.racket_right_size = received_data["racket_right_size"];
-		game_data.score_left = received_data["score_left"];
-		game_data.score_right = received_data["score_right"];
+		// if (Object.keys(received_data).length == 9)
+			game_data = received_data;
+		gameTick();
 	}
 
 	function clearCanvas() {
 		ctx.fillStyle = "black";
 		ctx.fillRect(0, 0, canvas.width, canvas.height);
-		ctx.fillStyle = "white";
-		ctx.fillRect(canvas.width / 2 - makeXCord(1), 0, makeXCord(2), canvas.height);
 	}
 
 	function drawFrame() {
 		ctx.fillStyle = "white";
+		// midline
+		ctx.fillRect(canvas.width / 2 - makeXCord(1), 0, makeXCord(2), canvas.height);
 		// ball
 		ctx.fillRect(makeXCord(game_data.ball_posx) - makeXCord(game_data.ball_size / 2), makeYCord(game_data.ball_posy) - makeYCord(game_data.ball_size / 2),
 				makeXCord(game_data.ball_size), makeXCord(game_data.ball_size));
@@ -169,7 +183,7 @@ document.addEventListener("DOMContentLoaded", function() {
 		ctx.fillText(game_data.score_right, makeXCord(520), makeYCord(15));
 	}
 
-	function drawConnecting() {
+	function drawMessage(message) {
 		ctx.fillStyle = "white";
 		// rackets
 		ctx.fillRect(makeXCord(5), makeYCord(game_data.racket_left_pos), makeXCord(10), makeYCord(game_data.racket_left_size));
@@ -178,6 +192,6 @@ document.addEventListener("DOMContentLoaded", function() {
 		ctx.font = makeXCord(30) + "px arial";
 		ctx.textBaseline = "middle";
 		ctx.textAlign = "center";
-		ctx.fillText("connecting...", makeXCord(500), makeYCord(500));
+		ctx.fillText(message, makeXCord(500), makeYCord(500));
 	}
 });
