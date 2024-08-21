@@ -38,18 +38,6 @@ def get_user_view(request):
 	except User.DoesNotExist:
 		return JsonResponse({'status': 0, 'message': 'User does not exist'}, status=404)
 
-# def authenticate(request):
-# 	try:
-# 		data = json.loads(request.body)
-# 	except json.decoder.JSONDecodeError:
-# 		return JsonResponse({'status': 0, 'message': 'Couldn\'t read input'}, status=500)
-# 	username = data["username"]
-# 	password = data["password"]
-# 	user = User.objects.filter(username=username).first()
-# 	if user is not None and user.check_password(password):
-# 		return user_to_json(user)
-# 	return JsonResponse({'status': 0, 'message': 'Failed to authenticate'}, status=404)
-
 SECRET = os.environ.get('JWT_SECRET_KEY').encode('utf-8')
 
 def create_jwt(username):
@@ -118,18 +106,12 @@ def custom_login(request, username, password):
 		return JsonResponse({'status': 0, 'message': 'You should login through 42auth'}, status=401)
 	if user.check_password(password):
 		login(request, user)
-		return JsonResponse({
-			'status': 1, 
-			'token': create_jwt(username), 
-			'message': 'successfully logged-in', 
-			'user': {
-				'username': 'bert', 
-				'profile_picture': 'https://cdn.intra.42.fr/users/7877e411d4514ebf416307e7b17ae1a1/bvercaem.jpg' }}, status=200)
+		return profile_mini(request)
 	return JsonResponse({
 		'status': 0, 
 		'message': 'Login failed'}, status=401)
 
-def login_view(request):
+def login_view(request) -> JsonResponse:
 	if request.user.is_authenticated:
 		return JsonResponse({'status': 2, 'message': 'already logged in'}, status=200)
 	try:
@@ -141,16 +123,56 @@ def login_view(request):
 	# todo: need to implement this...
 	return custom_login(request, username, password)
 
-def logout_view(request):
+def logout_view(request) -> JsonResponse:
 	if not request.user.is_authenticated:
 		return JsonResponse({'status': 0, 'message': 'not logged in'}, status=401)
 	# todo: add token to black list
 	logout(request)
 	return JsonResponse({'status' : 1}, status=200)
 
-def sign_up_view(request):
+def profile_mini(request) -> JsonResponse:
+    connection = client.HTTPConnection("users:8000")
+    
+    try:
+        connection.request("GET", f"/get_picture/{request.user.id}/")
+        response = connection.getresponse()
+        
+        # Debug: print the status and response data
+        print("Response status:", response.status)
+        raw_data = response.read().decode()
+        print("Raw response data:", raw_data)
+        
+        if response.status != 200:
+            return JsonResponse({'status': 0, 'message': 'Failed to retrieve profile picture'}, status=response.status)
+        
+        if not raw_data:
+            return JsonResponse({'status': 0, 'message': 'Empty response from users service'}, status=500)
+        
+        profile_picture = json.loads(raw_data).get('profile_picture')
+        
+        if not profile_picture:
+            return JsonResponse({'status': 0, 'message': 'Profile picture not found'}, status=404)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 0, 'message': 'Invalid JSON response from users service'}, status=500)
+    except Exception as e:
+        return JsonResponse({'status': 0, 'message': f'An error occurred: {str(e)}'}, status=500)
+    finally:
+        connection.close()
+
+    return JsonResponse({
+        'status': 1,
+        'message': 'logged-in',
+		'token': create_jwt(request.user.username),
+        'user': {
+            'username': request.user.username,
+            'profile_picture': profile_picture
+        }
+    }, status=200)
+
+def sign_up_view(request) -> JsonResponse:
 	try:
-		data = json.loads(request.body)
+		data: dict = json.loads(request.body)
 	except json.decoder.JSONDecodeError:
 		return JsonResponse({'status': 0, 'message': 'Couldn\'t read input'}, status=500)
 	if (data["password"] != data["confirm_password"]):
@@ -173,34 +195,25 @@ def sign_up_view(request):
 	#todo: perform hashing and salting before storing the password.
 	user.is_active = True
 	user.save()
+
+	# send create_user to user_data app
+	connection = client.HTTPConnection("users:8000")
+	connection.request("POST", "/create_user/", json.dumps({"user_id": user.id, "profile_picture": ""}), {'Content-Type': 'application/json'})
+	response = connection.getresponse()
+	connection.close()
+	if response.status != 201:
+		return JsonResponse({'status': 0, 'message': 'User creation failed'}, status=500)
 	login(request, user)
 	
-	return JsonResponse({
-		'status': 1, 
-		'token': create_jwt(data["username"]), 
-		'message': 'successfully logged-in', 
-		'user': {
-			'username': 'bert', 
-			'profile_picture': 'https://cdn.intra.42.fr/users/7877e411d4514ebf416307e7b17ae1a1/bvercaem.jpg' 
-			}}, status=201)
+	return profile_mini(request)
 
-def is_authenticated_view(request):
+def is_authenticated_view(request) -> JsonResponse:
 	if request.user.is_authenticated:
-		return JsonResponse({
-			'status': 1, 
-			'message': 'logged-in', 
-			'user': {
-				'username': 'bert', 
-				'profile_picture': 'https://cdn.intra.42.fr/users/7877e411d4514ebf416307e7b17ae1a1/bvercaem.jpg'
-				}}, status=200)
-	return JsonResponse({'status': 0, 'message': 'User not connected'}, status=200)
+		return profile_mini(request)
+	else :
+		return JsonResponse({'status': 0, 'message': 'User not connected'}, status=200)
 
-def generate_username():
-	words = ["alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf"]
-	username = random.choice(words) + "".join(random.choices(string.digits, k=4))
-	return username
-
-def authenticate_42API(request):
+def authenticate_42API(request) -> tuple:
 	path = request.get_full_path()
 	if "error" in path:
 		return None, 'Failed to authenticate'
@@ -247,7 +260,7 @@ def authenticate_42API(request):
 		return None, 'Failed to authenticate'
 	return json.loads(data), None
 
-def generate_username():
+def generate_username() -> str:
 	words = ["alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf", "hotel", "lima"]
 	username = random.choice(words) + "".join(random.choices(string.digits, k=4))
 	return username
@@ -271,7 +284,7 @@ def auth42_view(request):
 	auth_response, error_message = authenticate_42API(request)
 	if error_message:
 		messages.error(request, error_message)
-		return redirect('/error')
+		return redirect('/', permanent=True)
 	
 	headers = {
 		"Authorization": "Bearer " + auth_response["access_token"]
@@ -288,7 +301,7 @@ def auth42_view(request):
 
 	if api_response.status != 200:
 		messages.error(request, 'Failed to retrieve user data')
-		return redirect('/')
+		return redirect('/', permanent=True)
 
 	MeData = json.loads(data)
 	user = User.objects.filter(username42=MeData["login"]).first()
@@ -297,9 +310,15 @@ def auth42_view(request):
 		username = generate_username()
 		while User.objects.filter(username=username).exists():
 			username = generate_username()
-		user = User.objects.create_user(username=username, username42=MeData["login"])
-		user.is_active = True
-		user.save()
-	# todo: create entry in user management db
-	login(request, user)
-	return redirect('/')
+		new_user = User.objects.create_user(username=username, username42=MeData["login"])
+		new_user.is_active = True
+		new_user.save()
+
+		profile_picture = MeData["image"]["link"]
+		connection = client.HTTPConnection("users:8000")
+		connection.request("POST", "/create_user/", json.dumps({"user_id": new_user.id, "profile_picture": profile_picture}))
+		connection.close()
+		login(request, new_user)
+	else:
+		login(request, user)
+	return redirect('/', permanent=True)
