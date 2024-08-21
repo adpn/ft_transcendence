@@ -11,5 +11,5 @@ urlpatterns = [
 	path('logout/', views.logout_view),
 	path('is_authenticated/', views.is_authenticated_view),
 	path('auth42/', views.auth42_view),
-	# path('check_token/', views.check_token)
+	path('check_token/', views.check_token)
 ]

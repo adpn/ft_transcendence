@@ -34,9 +34,16 @@ class GameRoom:
 	def __contains__(self, value):
 		return value in self._players
 
+from http import client
+
 def create_game(request):
 	#todo: the request body should contain the game name, then fetch game settings from the game-server.
-	if not request.user.is_authenticated:
+	# if not request.user.is_authenticated:
+	# 	return JsonResponse({}, status=401)
+	conn = client.HTTPConnection('users:8000')
+	conn.request('GET', '/check_token/', request.body, request.headers)
+	response = conn.getresponse()
+	if response.status != 200:
 		return JsonResponse({}, status=401)
 	session_key = request.COOKIES.get(settings.SESSION_COOKIE_NAME)
 
@@ -65,11 +72,11 @@ def create_game(request):
 	# create a new game room
 	room_id = str(uuid.uuid4())
 	# add it to the session store.
-	session_store = engine.SessionStore(room_id)
+	#session_store = engine.SessionStore(room_id)
 	game_room = GameRoom(room_id)
 	GAME_ROOMS.append(game_room)
 	# save the session key.
-	session_store.save(True)
+	#session_store.save(True)
 	return JsonResponse({
 		'game-room-id': game_room.add_player(session_key),
 		'status': 'new-room', 

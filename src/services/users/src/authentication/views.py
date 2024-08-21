@@ -1,5 +1,5 @@
 from django.shortcuts import redirect
-from common import jwt
+from common import jwt, service_client
 
 # Create your views here.
 
@@ -251,6 +251,18 @@ def generate_username():
 	words = ["alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf", "hotel", "lima"]
 	username = random.choice(words) + "".join(random.choices(string.digits, k=4))
 	return username
+
+games_client = service_client.ServiceClient('website:8000')
+
+def create_game(request):
+	if request.user.is_authenticated:
+		return games_client.forward('/games/create_game/')(request)
+	return JsonResponse({}, status=401)
+
+def check_token(request):
+	if check_authentication(request):
+		return HttpResponse(status=200)
+	return HttpResponse(status=401)
 
 def auth42_view(request):
 	if request.user.is_authenticated:
