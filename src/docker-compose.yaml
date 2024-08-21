@@ -1,16 +1,34 @@
 services:
-  user-management:
-    container_name: user-management
+  proxy-server:
+    container_name: proxy-server
     image:
-      user-management-image
+      proxy-server-image
     build:
-      context: services/user-management/
+      context: services/proxy-server/
     # environment:
 
-    # ports:
-    #   - "443:443"
-    # volumes:
-    #   - wordpress:/var/www/wordpress
+    ports:
+      - "443:443"
+    networks:
+      - transcendence
+    depends_on:
+      - postgresql
+    restart: always
+
+  users:
+    container_name: users
+    image:
+      users-image
+    build:
+      context: services/users/
+    environment:
+      AUTH_URL: "${AUTH_URL}"
+      POSTGRES_USER : "${POSTGRES_USER}"
+      POSTGRES_PASSWORD : "${POSTGRES_PASSWORD}"
+      CLIENT_ID : "${CLIENT_ID}"
+      CLIENT_SECRET : "${CLIENT_SECRET}"
+      REDIRECT_URI : "${REDIRECT_URI}"
+      JWT_SECRET_KEY: "${JWT_SECRET_KEY}"
     networks:
       - transcendence
     depends_on:
@@ -24,19 +42,16 @@ services:
     build:
       context: services/website/
     depends_on:
-      - session-manager
-      - user-management
+      - users
     networks:
       - transcendence
     environment:
-      CLIENT_ID : "${CLIENT_ID}"
-      CLIENT_SECRET : "${CLIENT_SECRET}"
-      REDIRECT_URI : "${REDIRECT_URI}"
       POSTGRES_USER : "${POSTGRES_USER}"
       POSTGRES_PASSWORD : "${POSTGRES_PASSWORD}"
       SESSION_SERVER : "${SESSION_SERVER}"
-    ports:
-      - "8000:8000"
+      AUTH_URL: "${AUTH_URL}"
+    # ports:
+    #   - "8000:8000"
     restart: always
 
   game-server:
@@ -55,20 +70,20 @@ services:
       - transcendence
     restart: always
 
-  session-manager:
-    container_name: session-manager
-    image:
-      session-manager-image
-    build:
-      context: services/session-manager/
-      dockerfile: Dockerfile
-    depends_on:
-      - user-management
-    networks:
-      - transcendence
-    environment:
-      SESSION_SERVER : "${SESSION_SERVER}"
-    restart: always
+  # session-manager:
+  #   container_name: session-manager
+  #   image:
+  #     session-manager-image
+  #   build:
+  #     context: services/session-manager/
+  #     dockerfile: Dockerfile
+  #   # depends_on:
+  #   #   - user-management
+  #   networks:
+  #     - transcendence
+  #   environment:
+  #     SESSION_SERVER : "${SESSION_SERVER}"
+  #   restart: always
 
   postgresql:
     container_name: postgresql
@@ -82,20 +97,6 @@ services:
       POSTGRES_USER : "${POSTGRES_USER}"
       POSTGRES_PASSWORD : "${POSTGRES_PASSWORD}"
     restart: always
-
-# volumes:
-#   wordpress:
-#     driver: local
-#     driver_opts:
-#       type: 'none'
-#       o:  'bind'
-#       device: /home/ychalant/data/wordpress
-#   db:
-#     driver: local
-#     driver_opts:
-#       type: 'none'
-#       o:  'bind'
-#       device: /home/ychalant/data/mariadb
 
 networks:
   transcendence:

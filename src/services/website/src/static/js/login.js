@@ -14,15 +14,14 @@ function getCookie(name) {
     return cookieValue;
 }
 
-document.addEventListener("DOMContentLoaded", function() {
-    var csrftoken = getCookie('csrftoken');
+var token = null;
 
+document.addEventListener("DOMContentLoaded", function() {
     var loginForm = document.getElementById("login-form");
     var loginUserName = document.getElementById("login-username");
     var loginPassword = document.getElementById("login-password");
-    var testButton = document.getElementById("test-button");
 
-    fetch('/auth/login/', {
+    fetch('/auth/is_authenticated/', {
         method: 'GET',
         headers: {
             'X-CSRFToken': getCookie('csrftoken')
@@ -44,11 +43,13 @@ document.addEventListener("DOMContentLoaded", function() {
             password: loginPassword.value
         };
 
+        loginForm.reset();
         fetch('/auth/login/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
+                'X-CSRFToken': getCookie('csrftoken'),
+				'Authorization': 'Bearer ' + localStorage.getItem('auth_token')
             },
             body: JSON.stringify(creds),
             credentials: 'include'
@@ -60,13 +61,13 @@ document.addEventListener("DOMContentLoaded", function() {
             } else if (data.status === 1) {
                 successAlertPlaceholder();
                 replaceLoginButtons(data.user);
+				localStorage.setItem('auth_token', data.token);
             }
             const loginModalElement = document.getElementById('loginModal');
             const loginModal = bootstrap.Modal.getInstance(loginModalElement);
             if (loginModal) {
                 loginModal.hide();
             }
-            loginForm.reset();
         });
     });
 
@@ -105,34 +106,13 @@ document.addEventListener("DOMContentLoaded", function() {
                     <img src="${user.profile_picture}" alt="${user.username}" class="rounded-circle" width="30" height="30">
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
-                    <li><a class="dropdown-item" href="/profile/">Profile</a></li>
-                    <li><a class="dropdown-item" href="/settings/">Settings</a></li>
+                    <li><a href="/profile" class="dropdown-item" data-link>Profile</a></li>
+                    <li><a href="/settings" class="dropdown-item" data-link>Settings</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item" onclick="handleLogout()">Logout</a></li>
                 </ul>
             </div>
         `;
     }
-
-    testButton.addEventListener('click', function(event) {
-        event.preventDefault();
-
-        fetch('/auth/protected/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            credentials: 'include'
-        })
-        .then(response => response.json())
-        //todo: confirm login.
-        .then(data => {
-            // todo if succeeded, close dialog box
-            // else display error message
-            console.log(data)
-        });
-
-    });
 
 });

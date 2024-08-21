@@ -14,9 +14,30 @@ function getCookie(name) {
     return cookieValue;
 }
 
-document.addEventListener("DOMContentLoaded", function() {
-	var csrftoken = getCookie('csrftoken');
+async function makeAuthenticatedRequest(url, method = 'GET', body = null) {
+    const token = localStorage.getItem('jwt'); // or sessionStorage.getItem('jwt')
 
+    const headers = {
+        'Authorization': `Bearer ${token}`, // Include token in the Authorization header
+        'Content-Type': 'application/json' // Optional, depending on the request type
+    };
+
+    return fetch(url, {
+        method: method,
+        headers: headers,
+        body: body ? JSON.stringify(body) : null
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Response Data:', data);
+        return data;
+    })
+    .catch(error => {
+        console.error('Request Error:', error);
+    });
+}
+
+document.addEventListener("DOMContentLoaded", function() {
 	var	signupForm = document.getElementById("signup-form");
 	var	signupUserName = document.getElementById("signup-username");
 	var	signupPassword = document.getElementById("signup-password");
@@ -31,29 +52,31 @@ document.addEventListener("DOMContentLoaded", function() {
             'password': signupPassword.value,
             'confirm_password': signupConfirmPassword.value
         };
+
+        signupForm.reset();
         fetch('/auth/signup/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-				'X-CSRFToken': csrftoken
+				'X-CSRFToken': getCookie('csrftoken')
             },
             body: JSON.stringify(credentials)
         })
         .then(response => response.json())
         .then(data => {
-			console.log(data)
+			// console.log(data)
             if (data.status === 0) {
                 updateAlertPlaceholderError(data.message);
             } else {
                 successAlertPlaceholder();
                 replaceLoginButtons(data.user);
+				localStorage.setItem('auth_token', data.token);
             }
             const signUpModalElement = document.getElementById('signUpModal');
             const signUpModal = bootstrap.Modal.getInstance(signUpModalElement);
             if (signUpModal) {
                 signUpModal.hide();
             }
-            signupForm.reset();
         });
     });
 
@@ -92,8 +115,8 @@ document.addEventListener("DOMContentLoaded", function() {
                     <img src="${user.profile_picture}" alt="${user.username}" class="rounded-circle" width="30" height="30">
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
-                    <li><a class="dropdown-item" href="/profile/">Profile</a></li>
-                    <li><a class="dropdown-item" href="/settings/">Settings</a></li>
+                <li><a href="/profile" class="dropdown-item" data-link>Profile</a></li>
+                <li><a href="/settings" class="dropdown-item" data-link>Settings</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <li class="dropdown-item" onclick="handleLogout()">Logout</li>
                 </ul>

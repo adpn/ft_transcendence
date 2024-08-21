@@ -5,6 +5,8 @@ from http import client
 from os import environ
 import json
 
+#TODO: implement getters and setters that send data to the backend.
+
 class SessionStore(SessionBase):
 	def __init__(self, session_key=None) -> None:
 		super().__init__(session_key)
@@ -52,3 +54,11 @@ class SessionStore(SessionBase):
 		if session_key:
 			url = f"/session/{session_key}/"
 			self._request("DELETE", url)
+	
+	def exists(self, session_key: str) -> bool:
+		url = f"/session/{session_key}/"
+		status, response_body = self._request("GET", url)
+		if status == 200:
+			return True
+		return False
+

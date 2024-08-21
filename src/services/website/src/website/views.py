@@ -70,3 +70,31 @@ class ServiceClient(object):
 			resp[header] = value
 		return resp
 
+from os import environ
+
+AUTH_URL = environ.get('AUTH_URL')
+server_url = environ.get('SESSION_SERVER')
+
+def api_call(method, url, body=None, headers={}):
+		conn = client.HTTPConnection(AUTH_URL)
+		try:
+			conn.request(method, url, body, headers)
+			response = conn.getresponse()
+			return response.status, json.loads(response.read().decode())
+		finally:
+			conn.close()
+
+def _request(self, method, url, body=None, headers={}):
+	conn = client.HTTPConnection(server_url)
+	try:
+		conn.request(method, url, body, headers)
+		response = conn.getresponse()
+		return response.status, response.read().decode()
+	finally:
+		conn.close()
+
+def is_authenticated(request):
+	#_request(request.method, '/auth/is_authenticated/', request.body, request.headers)
+	status, data = api_call(request.method, '/is_authenticated/', request.body, request.headers)
+	return JsonResponse(data, status=status)
+
