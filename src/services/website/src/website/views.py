@@ -7,26 +7,8 @@ import json
 
 from http import client
 
-from .serializers import ItemSerializer
-from .models import Item
-
 def index(request):
 	return render(request, 'index.html')
-
-class ItemListView(View):
-
-	def get(self, request):
-		items = Item.objects.all()
-		data = ItemSerializer.serialize_many(items)
-		return JsonResponse(data, safe=False)
-
-	def post(self, request):
-		try:
-			data = json.loads(request.body)
-			item = Item.objects.create(name=data['name'], description=data['description'])
-			return JsonResponse(ItemSerializer.serialize(item), status=201)
-		except (KeyError, json.JSONDecodeError):
-			return HttpResponse(status=400)
 
 #relays request to a backend service.
 class ServiceClient(object):

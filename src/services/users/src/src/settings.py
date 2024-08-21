@@ -87,15 +87,15 @@ DATABASES = {
         'PASSWORD': os.environ.get("POSTGRES_PASSWORD"),
         'HOST': 'postgresql',
         'PORT': '5432',
-    },
-    'user_data': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'user_data',
-        'USER': os.environ.get("POSTGRES_USER"),
-        'PASSWORD': os.environ.get("POSTGRES_PASSWORD"),
-        'HOST': 'postgresql',
-        'PORT': '5432',
     }
+    # 'user_data': {
+    #     'ENGINE': 'django.db.backends.postgresql',
+    #     'NAME': 'user_data',
+    #     'USER': os.environ.get("POSTGRES_USER"),
+    #     'PASSWORD': os.environ.get("POSTGRES_PASSWORD"),
+    #     'HOST': 'postgresql',
+    #     'PORT': '5432',
+    # }
 }
 
 
@@ -141,3 +141,7 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'authentication.User'
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
