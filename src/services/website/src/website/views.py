@@ -1,7 +1,6 @@
 from django.shortcuts import render
 from django.http import JsonResponse, HttpResponse
 from django.views import View
-from django.contrib.auth.models import User
 
 import json
 
@@ -46,10 +45,10 @@ class ServiceClient(object):
 				content=response.read(), 
 				status=response.status, 
 				content_type=response.getheader('Content-Type'))
-			#copy headers
-			for header, value in response.getheaders():
-				resp[header] = value
-			return resp
+			# #copy headers
+			# for header, value in response.getheaders():
+			# 	resp[header] = value
+			# return resp
 		return execute
 
 	def __call__(self, request):
@@ -65,9 +64,9 @@ class ServiceClient(object):
 			content=response.read(), 
 			status=response.status, 
 			content_type=response.getheader('Content-Type'))
-		#copy headers
-		for header, value in response.getheaders():
-			resp[header] = value
+		# #copy headers
+		# for header, value in response.getheaders():
+		# 	resp[header] = value
 		return resp
 
 from os import environ
