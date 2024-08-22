@@ -7,6 +7,7 @@ from django.core.files.base import ContentFile
 from django.conf import settings
 import os
 from http import client
+import sys
 
 # Create user in the database user_data
 @csrf_exempt
@@ -14,6 +15,7 @@ def create_user(request):
     body = json.loads(request.body)
     user_id = body['user_id']
     if len(body["profile_picture"]) > 0:
+        print(body["profile_picture"], flush=True, file=sys.stderr)
         image_url: str = body["profile_picture"]
         url_parsed: list = image_url.split("/")
         connection = client.HTTPSConnection(url_parsed[2])
@@ -28,7 +30,7 @@ def create_user(request):
     return HttpResponse(status=201)
 
 @csrf_exempt
-def get_picture_url(request, user_id) -> JsonResponse:
+def get_picture_url(request, user_id: int) -> JsonResponse:
     # .using("user_data")
     user = UserProfile.objects.get(user_id=user_id)
     profile_picture = user.profile_picture.url

@@ -14,7 +14,6 @@ const router = async () => {
         { path: "/pong", view: Pong },
         { path: "/other-game", view: Other_game },
         { path: "/profile", view: Profile },
-        // { path: "/settings", view: Settings },
         { path: "/friends", view: Friends },
         { path: "/stats", view: Stats }
     ];

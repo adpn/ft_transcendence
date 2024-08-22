@@ -33,7 +33,6 @@ document.addEventListener("DOMContentLoaded", () => {
             event.preventDefault();
             const newUsername = document.getElementById("new-username").value;
 
-            usernameChangeForm.reset();
             try {
                 const response = await fetch('/auth/change_username/', {
                     method: 'POST',
@@ -47,7 +46,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 
                 const result = await response.json();
                 if (result.status === 1) {
+                    successAlertPlaceholder(result.message);
                     document.querySelector("#profileDropdown span").textContent = newUsername;
+                } else {
+                    updateAlertPlaceholderError(result.message);
                 }
             } catch (error) {
                 console.error('Error:', error);
@@ -60,7 +62,6 @@ document.addEventListener("DOMContentLoaded", () => {
             const newPassword = document.getElementById("new-password").value;
             const confirmNewPassword = document.getElementById("confirm-new-password").value;
             
-            passwordChangeForm.reset();
             try {
                 const response = await fetch('/auth/change_password/', {
                     method: 'POST',
@@ -68,12 +69,15 @@ document.addEventListener("DOMContentLoaded", () => {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': getCookie('csrftoken'),
                     },
-                    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword, confirm_new_password: confirmNewPassword }),
+                    body: JSON.stringify({ old_password: currentPassword, new_password: newPassword, confirm_new_password: confirmNewPassword }),
                     credentials: 'include'
                 });
                 
                 const result = await response.json();
                 if (result.status === 1) {
+                    successAlertPlaceholder(result.message);
+                } else {
+                    updateAlertPlaceholderError(result.message);
                 }
             } catch (error) {
                 console.error('Error:', error);
