@@ -9,14 +9,15 @@ from django.http import JsonResponse, HttpResponse
 from django.db.utils import IntegrityError, DataError
 # from django.db import models
 
+import os
 import json
 from uuid import uuid4
 from http import client
-import os
 import random
 import string
 import time
 from datetime import datetime, timedelta
+from .models import UserToken
 
 User = get_user_model()
 
@@ -50,9 +51,9 @@ def create_jwt(username):
 	exp = now + timedelta(hours=2)
 
 	payload = {
-    	"sub": uuid4().int,
-    	"name": username,
-    	"iat": int(now.timestamp()),
+		"sub": uuid4().int,
+		"name": username,
+		"iat": int(now.timestamp()),
 		"exp": int(exp.timestamp()),
 		"iss": "ft_transcendence.com"
 	}
@@ -77,8 +78,7 @@ def get_jwt(request):
 		return None
 	return values[1]
 
-def authenticate(request):
-	token = get_jwt(request)
+def validate_jwt(token):
 	if not token:
 		raise ValueError("No token")
 	payload = jwt.verify_jwt(token, SECRET)
@@ -91,17 +91,28 @@ def authenticate(request):
 	if current_time > exp:
 		raise ValueError("Token has expired")
 
-def check_authentication(request):
+def check_jwt(request):
+	# check if we have the token in the database -> means that user has not logged out
+	token = get_jwt(request)
+	user_token = UserToken.objects.filter(token=token).first()
+	if not user_token:
+		return None
+	# check if the token is still valid.
 	try:
-		authenticate(request)
-		return True
+		validate_jwt(token)
+		return user_token.user
 	except ValueError:
-		return False
+		# remove the token from the database as it is invalid
+		user_token.delete()
+		return None
 
 def custom_login(request, username, password):
 	user = User.objects.filter(username=username).first()
 	if user is None:
-		return JsonResponse({'status': 0, 'message': 'User does not exist'}, status=401)
+		return JsonResponse({
+			'status': 0, 
+			'message': 
+			'User does not exist'}, status=401)
 	if user.username42 is not None:
 		return JsonResponse({'status': 0, 'message': 'You should login through 42auth'}, status=401)
 	if user.check_password(password):
@@ -126,49 +137,55 @@ def login_view(request) -> JsonResponse:
 def logout_view(request) -> JsonResponse:
 	if not request.user.is_authenticated:
 		return JsonResponse({'status': 0, 'message': 'not logged in'}, status=401)
-	# todo: add token to black list
+	# delete token from database.
+	user_token = UserToken.objects.filter(user=request.user).first()
+	user_token.delete()
 	logout(request)
 	return JsonResponse({'status' : 1}, status=200)
 
 def profile_mini(request) -> JsonResponse:
-    connection = client.HTTPConnection("users:8000")
-    
-    try:
-        connection.request("GET", f"/get_picture/{request.user.id}/")
-        response = connection.getresponse()
-        
-        # Debug: print the status and response data
-        print("Response status:", response.status)
-        raw_data = response.read().decode()
-        print("Raw response data:", raw_data)
-        
-        if response.status != 200:
-            return JsonResponse({'status': 0, 'message': 'Failed to retrieve profile picture'}, status=response.status)
-        
-        if not raw_data:
-            return JsonResponse({'status': 0, 'message': 'Empty response from users service'}, status=500)
-        
-        profile_picture = json.loads(raw_data).get('profile_picture')
-        
-        if not profile_picture:
-            return JsonResponse({'status': 0, 'message': 'Profile picture not found'}, status=404)
-        
-    except json.JSONDecodeError:
-        return JsonResponse({'status': 0, 'message': 'Invalid JSON response from users service'}, status=500)
-    except Exception as e:
-        return JsonResponse({'status': 0, 'message': f'An error occurred: {str(e)}'}, status=500)
-    finally:
-        connection.close()
+	connection = client.HTTPConnection("users:8000")
+	
+	try:
+		connection.request("GET", f"/get_picture/{request.user.id}/")
+		response = connection.getresponse()
+		
+		# Debug: print the status and response data
+		print("Response status:", response.status)
+		raw_data = response.read().decode()
+		print("Raw response data:", raw_data)
+		
+		if response.status != 200:
+			return JsonResponse({'status': 0, 'message': 'Failed to retrieve profile picture'}, status=response.status)
+		
+		if not raw_data:
+			return JsonResponse({'status': 0, 'message': 'Empty response from users service'}, status=500)
+		
+		profile_picture = json.loads(raw_data).get('profile_picture')
+		
+		if not profile_picture:
+			return JsonResponse({'status': 0, 'message': 'Profile picture not found'}, status=404)
+		
+	except json.JSONDecodeError:
+		return JsonResponse({'status': 0, 'message': 'Invalid JSON response from users service'}, status=500)
+	except Exception as e:
+		return JsonResponse({'status': 0, 'message': f'An error occurred: {str(e)}'}, status=500)
+	finally:
+		connection.close()
 
-    return JsonResponse({
-        'status': 1,
-        'message': 'logged-in',
-		'token': create_jwt(request.user.username),
-        'user': {
-            'username': request.user.username,
-            'profile_picture': profile_picture
-        }
-    }, status=200)
+	token = create_jwt(request.user.username)
+	# save token in db.
+	UserToken(user=request.user, token=token).save()
+
+	return JsonResponse({
+		'status': 1,
+		'message': 'logged-in',
+		'token': token,
+		'user': {
+			'username': request.user.username,
+			'profile_picture': profile_picture
+		}
+	}, status=200)
 
 def sign_up_view(request) -> JsonResponse:
 	try:
@@ -208,6 +225,11 @@ def sign_up_view(request) -> JsonResponse:
 	return profile_mini(request)
 
 def is_authenticated_view(request) -> JsonResponse:
+	# check if it has a valid token first
+	user = check_jwt(request)
+	if user:
+		login(request, user)
+		return profile_mini(request)
 	if request.user.is_authenticated:
 		return profile_mini(request)
 	else :
@@ -265,15 +287,16 @@ def generate_username() -> str:
 	username = random.choice(words) + "".join(random.choices(string.digits, k=4))
 	return username
 
-games_client = service_client.ServiceClient('website:8000')
+# games_client = service_client.ServiceClient('website:8000')
 
-def create_game(request):
-	if request.user.is_authenticated:
-		return games_client.forward('/games/create_game/')(request)
-	return JsonResponse({}, status=401)
+# def create_game(request):
+# 	if request.user.is_authenticated:
+# 		return games_client.forward('/games/create_game/')(request)
+# 	return JsonResponse({}, status=401)
 
 def check_token(request):
-	if check_authentication(request):
+	# todo: if the user has logged-out this should 
+	if check_jwt(request):
 		return HttpResponse(status=200)
 	return HttpResponse(status=401)
 

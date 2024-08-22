@@ -1,7 +1,6 @@
 import json
 import abc
 import asyncio
-import queue
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.conf import settings
@@ -16,23 +15,36 @@ class Player:
 
 
 class GameSession(object):
-	def __init__(self, game_logic):
+	def __init__(self, game_logic, game_server, session_id):
 		self._game_logic = game_logic
-		# self._queue = asyncio.Queue(5)
 		self.current_players = 0
 		self.min_players = 2
+		self._game_server = game_server
+		self._session_id = session_id
+		self._end_callbacks = []
 
 	async def update(self, data, player):
-		# await self._queue.put(data)
 		await self._game_logic.updateInput(data[0], data[1], player)
 
 	async def start(self, callback):
+		await callback(await self._game_logic.startEvent())
 		while True:					# concatanate maybe when it works
-			# data = await self._queue.get()
-			# data = await self._game_logic.update(data)
+			data = await self._game_logic.sendEvent()
+			while data:
+				await callback(data)
+				data = await self._game_logic.sendEvent()
 			data = await self._game_logic.gameTick()
+			if data["type"] == "win":
+				await self._game_server.delete_session(self._session_id)
+				for end in self._end_callbacks:
+					await end(data["player"])
+				# await self.channel_layer.group_discard(self.game_room, self.channel_name)
+				return
 			await callback(data)
-			await asyncio.sleep(0.05)
+			await asyncio.sleep(0.03)
+
+	def on_session_end(self, callback):
+		self._end_callbacks.append(callback)
 
 class GameServer(object):
 	def __init__(self, game_factory):
@@ -41,16 +53,16 @@ class GameServer(object):
 		self._lock = asyncio.Lock()
 		self._game_factory = game_factory
 		engine = import_module(settings.SESSION_ENGINE)
-		self.SessionStore = engine.SessionStore
 
 	def get_game_session(self, room):
 		if room not in self._game_sessions:
-			self._game_sessions[room] = GameSession(self._game_factory()) # create new game logic for the game room.
+			self._game_sessions[room] = GameSession(self._game_factory(), self, room) # create new game logic for the game room.
 		session = self._game_sessions[room]
 		return session
 
-	async def check_room(self, room_id):
-		return self.SessionStore(room_id).exists(room_id)
+	async def delete_session(self, session_id):
+		if session_id in self._game_sessions:	# this should work without the check now ?
+			del self._game_sessions[session_id]
 
 	async def __aenter__(self):
 		await self._lock.acquire()
@@ -61,9 +73,13 @@ class GameServer(object):
 
 class GameLogic(abc.ABC):
 	@abc.abstractmethod
-	async def updateInput(data):
+	async def startEvent():
 		pass
 	async def gameTick():
+		pass
+	async def updateInput(data):
+		pass
+	async def sendEvent():
 		pass
 
 class GameConsumer(AsyncWebsocketConsumer):
@@ -99,7 +115,6 @@ class GameConsumer(AsyncWebsocketConsumer):
 			if room.current_players == room.min_players:
 				# keep a reference to the game session.
 				self._game_session = room
-				# todo: set _game_session of all players to room
 				await self.accept()
 				# send ready notification.
 				await self.channel_layer.group_send(
@@ -108,9 +123,11 @@ class GameConsumer(AsyncWebsocketConsumer):
 					'type': 'game_status',
 					'message': {'status': 'ready'}
 				})
+				self._game_session.on_session_end(self.flush_game_session)
 				# start game loop for the session.
 				asyncio.create_task(self._game_session.start(self.state_callback))
 			elif room.current_players < room.min_players:
+				room.on_session_end(self.flush_game_session)
 				await self.accept()
 				self._game_session = room
 				await self.channel_layer.group_send(
@@ -131,8 +148,16 @@ class GameConsumer(AsyncWebsocketConsumer):
 				})
 				await self.close()
 
+	async def flush_game_session(self, player):
+		self.game_room = self.scope['url_route']['kwargs']['room_name']
+		if self.player == player:
+			data = { "type": "win", "player": 1 }
+		else:
+			data = { "type": "win", "player": 0 }
+		await self.send(text_data=json.dumps(data))
+		await self.close()
+
 	async def disconnect(self, close_code):
-		# todo: remove game room from session store.
 		self.game_room = self.scope['url_route']['kwargs']['room_name']
 		if not self._game_session:
 			await self.channel_layer.group_discard(self.game_room, self.channel_name)

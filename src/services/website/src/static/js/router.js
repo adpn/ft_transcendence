@@ -1,9 +1,10 @@
 // router.js
 
 // Function to navigate to a new URL and update content
-export const navigateTo = url => {
+export const navigateTo = async url => {
     history.pushState(null, null, url);
-    router();
+    await router();
+    window.dispatchEvent(new Event(url));
 };
 
 // Router function to handle routes

@@ -24,7 +24,8 @@ document.addEventListener("DOMContentLoaded", function() {
     fetch('/auth/is_authenticated/', {
         method: 'GET',
         headers: {
-            'X-CSRFToken': getCookie('csrftoken')
+            'X-CSRFToken': getCookie('csrftoken'),
+			"Authorization": "Bearer " + localStorage.getItem("auth_token")
         },
         credentials: 'include'
     })
