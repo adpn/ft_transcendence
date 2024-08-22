@@ -16,8 +16,10 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from . import views
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-	path('', include('session_manager.urls'))
+    path('create_user/', views.create_user, name='create_user'),
+    path('get_picture/<int:user_id>/', views.get_picture, name='get_picture'),
+    path('profile_pictures/<str:filename>', views.send_picture, name='send_picture')
 ]

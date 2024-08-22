@@ -16,7 +16,7 @@ done
 
 retries=0
 
-echo "Waiting for authentication service to be ready..."
+echo "Waiting for users service to be ready..."
 while ! nc -z users 8000; do
 	retries=$((retries + 1))
 	sleep 1

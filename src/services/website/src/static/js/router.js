@@ -44,7 +44,7 @@ const router = async () => {
 const Home = () => `
     <div class="text-center">
         <h1>Home Page</h1>
-        <p>Welcome to ft_transcendance!</p>
+        <p>Welcome to ft_transcendence!</p>
     </div>
 `;
 

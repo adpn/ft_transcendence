@@ -4,7 +4,6 @@ detached:
 	build upd
 
 build:
-	# bash src/setup.sh
 	docker compose -f src/docker-compose.yaml build
 
 up:

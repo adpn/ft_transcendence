@@ -5,8 +5,6 @@ services:
       proxy-server-image
     build:
       context: services/proxy-server/
-    # environment:
-
     ports:
       - "443:443"
     networks:
@@ -50,8 +48,6 @@ services:
       POSTGRES_PASSWORD : "${POSTGRES_PASSWORD}"
       SESSION_SERVER : "${SESSION_SERVER}"
       AUTH_URL: "${AUTH_URL}"
-    # ports:
-    #   - "8000:8000"
     restart: always
 
   game-server:
@@ -63,7 +59,7 @@ services:
       dockerfile: Dockerfile
     depends_on:
       - users
-      # - session-manager
+    #   - session-manager
     ports:
       - "8001:8000"
     networks:
