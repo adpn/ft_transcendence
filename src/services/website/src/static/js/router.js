@@ -1,7 +1,7 @@
 // router.js
 
 // Function to navigate to a new URL and update content
-const navigateTo = url => {
+export const navigateTo = url => {
     history.pushState(null, null, url);
     router();
 };
@@ -49,11 +49,11 @@ const Home = () => `
 
 const Pong = () => `
     <div class="row">
-    <div class="col text-center">
-        <div class="canvas-container">
-            <canvas id="gameCanvas" class="w-100 border"></canvas>
+        <div class="col text-center">
+            <div class="canvas-container">
+                <canvas id="gameCanvas" class="w-100 border"></canvas>
+            </div>
         </div>
-    </div>
     </div>
 `;
 
@@ -67,28 +67,71 @@ const Other_game = () => `
     </div>
 `;
 
-const Profile = () => `
+const Profile = async () => {
+    const token = localStorage.getItem('jwt');
+    const response = await fetch('/auth/is_authenticated/', {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        }
+    });
+    const data = await response.json();
+
+    if (data.status === 0) {
+        return `
+            <div class="text-center">
+                <h1>Access Denied</h1>
+                <p>You need to be logged in to view this page.</p>
+            </div>
+        `;
+    }
+
+    const { username, profile_picture } = data.user;
+
+    return`
     <div class="text-center">
         <h1>Profile Page</h1>
         <p>Manage your profile here.</p>
-        <div id="profile-picture-change">
-            <span> temporary profile picture change </span>
+
+        <!-- Change Profile Picture -->
+        <div id="profile-picture-change" class="mb-3">
+            <h4>Change Profile Picture</h4>
+            <form id="profile-picture-form" enctype="multipart/form-data">
+                <img src="${profile_picture}" alt="Profile Picture" width="100" height="100">
+                <br>
+                <input type="file" id="profile-picture-input" name="profile_picture" accept="image/*" required>
+                <br>
+                <button type="submit" class="btn btn-primary mt-2">Upload</button>
+            </form>
         </div>
-        <div id="username-change">
-            <span> temporary username change </span>
+
+        <!-- Change Username -->
+        <div id="username-change" class="mb-3">
+            <h4>Change Username</h4>
+            <form id="username-change-form">
+                <input type="text" id="new-username" name="username" value="${username}" placeholder="New Username" required>
+                <br>
+                <button type="submit" class="btn btn-primary mt-2">Change Username</button>
+            </form>
         </div>
-        <div id="password-change">
-            <span> temporary password change </span>
+                
+        <!-- Change Password -->
+        <div id="password-change" class="mb-3">
+            <h4>Change Password</h4>
+            <form id="password-change-form">
+                <input type="password" id="current-password" name="current_password" placeholder="Current Password" required>
+                <br>
+                <input type="password" id="new-password" name="new_password" placeholder="New Password" required>
+                <br>
+                <input type="password" id="confirm-new-password" name="confirm_new_password" placeholder="Confirm New Password" required>
+                <br>
+                <button type="submit" class="btn btn-primary mt-2">Change Password</button>
+            </form>
         </div>
     </div>
-`;
-
-// const Settings = () => `
-//     <div class="text-center">
-//         <h1>Settings Page</h1>
-//         <p>Customize your settings.</p>
-//     </div>
-// `;
+    `;
+};
 
 const Friends = () => `
     <div class="text-center">
