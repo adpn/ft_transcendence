@@ -59,7 +59,6 @@ services:
       dockerfile: Dockerfile
     depends_on:
       - users
-    #   - session-manager
     ports:
       - "8001:8000"
     networks:
@@ -77,8 +76,13 @@ services:
     environment:
       POSTGRES_USER : "${POSTGRES_USER}"
       POSTGRES_PASSWORD : "${POSTGRES_PASSWORD}"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
     restart: always
 
 networks:
   transcendence:
     driver: bridge
+
+volumes:
+  postgres-data:

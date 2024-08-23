@@ -11,7 +11,6 @@
 	<link rel="icon" href="{% static 'favicon.ico' %}" type="image/x-icon">
     <script src="{% static 'js/signup.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
 	<script src="{% static 'js/login.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
-    {% comment %} <script src="{% static 'js/app.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script> {% endcomment %}
 	<script src="{% static 'js/pong.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
     <script src="{% static 'js/profile.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
     <script type="module" src="{% static 'js/router.js' %}"></script>
@@ -20,7 +19,7 @@
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <a class="navbar-brand" href="#" data-link="/">ft_transcendence</a>
+        <a class="navbar-brand"href="/" data-link>ft_transcendence</a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarTogglerDemo02" aria-controls="navbarTogglerDemo02" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>

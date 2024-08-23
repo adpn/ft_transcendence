@@ -281,13 +281,6 @@ def generate_username() -> str:
 	username = random.choice(words) + "".join(random.choices(string.digits, k=4))
 	return username
 
-# games_client = service_client.ServiceClient('website:8000')
-
-# def create_game(request):
-# 	if request.user.is_authenticated:
-# 		return games_client.forward('/games/create_game/')(request)
-# 	return JsonResponse({}, status=401)
-
 def check_token(request):
 	# todo: if the user has logged-out this should 
 	if check_jwt(request):

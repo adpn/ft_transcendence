@@ -145,19 +145,87 @@ const Friends = () => `
     </div>
 `;
 
-const Stats = () => `
+const Stats = async () => {
+    const token = localStorage.getItem('jwt');
+    const response = await fetch('/auth/is_authenticated/', {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        }
+    });
+    const data = await response.json();
+
+    if (data.status === 0) {
+        return `
+            <div class="text-center">
+                <h1>Access Denied</h1>
+                <p>You need to be logged in to view this page.</p>
+            </div>
+        `;
+    }
+
+    // Render the basic structure of the Stats page
+    const app_content = `
     <div class="text-center">
         <h1>Stats Page</h1>
         <div id="total-stats">
-            <span> temporary total stats </span>
+            <span id="total-stats-content">Loading total stats...</span>
         </div>
         <div id="game-history">
-            <span> temporary game history (will use json) </span>
+            <h2>Game History</h2>
+            <ul id="game-history-list">
+                <li>Loading game history...</li>
+            </ul>
         </div>
     </div>
-`;
+    `;
 
-// Event delegation for navigation links
+    document.getElementById('app').innerHTML = app_content;
+
+    const statsResponse = await fetch('/stats/personal_stats/', {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        }
+    });
+
+    const statsData = await statsResponse.json();
+    if (statsData.total_games === 0) {
+        document.getElementById('app').innerHTML = `
+        <div class="text-center">
+            <h1>Stats Page</h1>
+            <p>No games played yet.</p>
+        </div>
+        `;
+    } else {
+        document.getElementById("total-stats-content").textContent =
+            `Total Games: ${statsData.total_games} | Wins: ${statsData.total_wins} | Losses: ${statsData.total_losses}`;
+
+        const gameHistoryList = document.getElementById("game-history-list");
+        gameHistoryList.innerHTML = '';
+
+        statsData.games.forEach(game => {
+            const listItem = document.createElement("div");
+            listItem.className = `game-stat ${game.is_winner ? 'victory' : 'defeat'}`;
+
+            const resultText = game.is_winner ? 'Victory' : 'Defeat';
+            listItem.innerHTML = `
+                <strong>${resultText}</strong> - 
+                Opponent: ${game.opponent} | 
+                Your Score: ${game.personal_score} | 
+                Opponent's Score: ${game.opponent_score} | 
+                Duration: ${game.game_duration} | 
+                Date: ${new Date(game.game_date).toLocaleString()}
+            `;
+
+            gameHistoryList.appendChild(listItem);
+        });
+    }
+    return document.getElementById('app').innerHTML;
+};
+
 document.addEventListener("click", e => {
     if (e.target.matches("[data-link]")) {
         e.preventDefault();
@@ -165,8 +233,6 @@ document.addEventListener("click", e => {
     }
 });
 
-// Handle popstate event (Back/Forward buttons)
 window.addEventListener("popstate", router);
 
-// Initial load
 document.addEventListener("DOMContentLoaded", router);

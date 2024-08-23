@@ -22,5 +22,7 @@ urlpatterns = [
     path('create_user/', views.create_user, name='create_user'),
     path('get_picture/<int:user_id>/', views.get_picture_url, name='get_picture_url'),
     path('profile_pictures/<str:filename>', views.get_image, name='get_image'),
-    path('change_profile_picture/', views.change_profile_picture, name='change_profile_picture')
+    path('change_profile_picture/', views.change_profile_picture, name='change_profile_picture'),
+    path('game_stats/<int:user_id>/', views.game_stats_view, name='game_stats_view'),
+    path('personal_stats/', views.personal_stats, name='personal_stats')
 ]

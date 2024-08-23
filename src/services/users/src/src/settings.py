@@ -55,7 +55,6 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'src.urls'
-SESSION_ENGINE =  'common.session_store'
 
 TEMPLATES = [
     {

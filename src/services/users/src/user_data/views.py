@@ -1,5 +1,5 @@
 from django.views.decorators.csrf import csrf_exempt
-from user_data.models import UserProfile
+from user_data.models import UserProfile, Game
 from django.http import HttpResponse, JsonResponse, FileResponse
 import json
 from django.core.files.base import ContentFile
@@ -7,8 +7,6 @@ from django.conf import settings
 import os
 from http import client
 from django.contrib.auth import get_user_model
-
-import sys
 
 User = get_user_model()
 
@@ -42,8 +40,9 @@ def create_user(request):
 
 @csrf_exempt
 def get_picture_url(request, user_id: int) -> JsonResponse:
-    # .using("user_data")
     user = UserProfile.objects.get(user_id=user_id)
+    if not user:
+        return JsonResponse({'profile_picture': ""}, status=404)
     profile_picture = user.profile_picture.url
     return JsonResponse({'profile_picture': profile_picture}, status=200)
 
@@ -65,3 +64,44 @@ def change_profile_picture(request) -> JsonResponse:
     user.profile_picture.save(f"{user.user_id}.jpg", image)
     user.save()
     return JsonResponse({'status': 1, 'message': 'Profile picture updated', 'new_profile_picture_url': user.profile_picture.url}, status=200)
+
+@csrf_exempt
+def game_stats_view(request, user_id):
+    if request.method != 'GET':
+        return JsonResponse({'status': 0, 'message': 'Only GET method is allowed'}, status=405)
+    user_profile = UserProfile.objects.get(user__id=user_id)
+    if not user_profile:
+        return JsonResponse({'status': 0, 'message': 'User not found'}, status=404)
+    games_won = Game.objects.filter(winner=user_profile)
+    games_lost = Game.objects.filter(loser=user_profile)
+
+    games_data = []
+    for game in games_won.union(games_lost):
+        games_data.append({
+            'is_winner': game.winner == user_profile,
+            'opponent': game.loser.user.username if game.winner == user_profile else game.winner.user.username,
+            'personal_score': game.winner_score if game.winner == user_profile else game.loser_score,
+            'opponent_score': game.loser_score if game.winner == user_profile else game.winner_score,
+            'game_date': game.game_date,
+            'game_duration': game.game_duration,
+        })
+
+    response_data = {
+        'status': 1,
+        'total_games': games_won.count() + games_lost.count(),
+        'total_wins': games_won.count(),
+        'total_losses': games_lost.count(),
+        'games': games_data
+    }
+
+    return JsonResponse(response_data, status=200)
+
+def personal_stats(request):
+	if not request.user.is_authenticated:
+		return JsonResponse({'status': 0, 'message': 'User not connected'}, status=401)
+	connection = client.HTTPConnection("users:8000")
+	connection.request("GET", f"/game_stats/{request.user.id}/")
+	response = connection.getresponse()
+	data = json.loads(response.read().decode())
+	connection.close()
+	return JsonResponse(data, status=response.status)

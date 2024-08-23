@@ -3,9 +3,6 @@ from django.urls import include, path
 
 from . import views
 
-# microservices.
-auth_client = views.ServiceClient("user-management:8000")
-
 # pong_client = views.ServiceClient("pong:8000")
 
 #todo: for each path, call the view code

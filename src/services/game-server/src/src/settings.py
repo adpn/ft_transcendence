@@ -51,8 +51,6 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-SESSION_ENGINE =  'common.session_client'
-
 ROOT_URLCONF = 'src.urls'
 
 TEMPLATES = [
