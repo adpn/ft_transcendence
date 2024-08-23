@@ -51,7 +51,6 @@ class GameServer(object):
 		self._rooms = []
 		self._lock = asyncio.Lock()
 		self._game_factory = game_factory
-		engine = import_module(settings.SESSION_ENGINE)
 
 	def get_game_session(self, room):
 		if room not in self._game_sessions:

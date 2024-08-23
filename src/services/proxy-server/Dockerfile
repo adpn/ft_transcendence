@@ -10,7 +10,7 @@ RUN			rm -f /etc/nginx/nginx.conf && \
 			openssl req -x509 -nodes \
 			-out /etc/nginx/ssl/ft_transcendence.crt \
 			-keyout /etc/nginx/ssl/ft_transcendence.key \ 
-			-subj "/C=FR/ST=IDF/L=Bruxelles/O=42/OU=42/CN=ft_transcendence.fr/UID=login"
+			-subj "/C=BE/ST=IDF/L=Bruxelles/O=42/OU=42/CN=ft_transcendence.fr/UID=login"
 
 COPY		conf/nginx.conf /etc/nginx/nginx.conf
 COPY		tools/run_service.sh /bin/run_service.sh

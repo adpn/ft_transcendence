@@ -21,7 +21,6 @@ from pong.consumers import PongLogic
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'src.settings')
 setup()
-application = get_asgi_application()
 
 PONG_SERVER = GameServer(PongLogic)
 
@@ -29,11 +28,13 @@ URL_PATTERNS = [
 	path("ws/game/pong/<str:room_name>", GameConsumer.as_asgi(game_server=PONG_SERVER))
 ]
 
-application = ProtocolTypeRouter({
 #     'websocket': AuthMiddlewareStack(
 #         URLRouter(
 #             URL_PATTERNS
 #         )
 #     ),
+
+application = ProtocolTypeRouter({
+	'http': get_asgi_application(),
 	'websocket': URLRouter(URL_PATTERNS)
 })

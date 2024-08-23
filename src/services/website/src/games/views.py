@@ -72,7 +72,6 @@ def create_game(request):
 	# create a new game room
 	room_id = str(uuid.uuid4())
 	# add it to the session store.
-	#session_store = engine.SessionStore(room_id)
 	game_room = GameRoom(room_id)
 	GAME_ROOMS.append(game_room)
 	# save the session key.

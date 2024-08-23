@@ -18,26 +18,9 @@ import string
 import time
 from datetime import datetime, timedelta
 from .models import UserToken
+import sys
 
 User = get_user_model()
-
-def user_to_json(user):
-	return {
-		'id': user.pk,
-		'username': user.username,
-		'password': user.password,
-		'username42': user.username42
-	}
-
-def get_user_view(request):
-	try:
-		data = json.loads(request.body)
-	except json.decoder.JSONDecodeError:
-		return JsonResponse({'status': 0, 'message': 'Couldn\'t read input'}, status=500)
-	try:
-		user_to_json(User.objects.get(id=data['id']).first())
-	except User.DoesNotExist:
-		return JsonResponse({'status': 0, 'message': 'User does not exist'}, status=404)
 
 SECRET = os.environ.get('JWT_SECRET_KEY').encode('utf-8')
 
@@ -91,7 +74,7 @@ def validate_jwt(token):
 	if current_time > exp:
 		raise ValueError("Token has expired")
 
-def check_jwt(request):
+def check_jwt(request) -> User:
 	# check if we have the token in the database -> means that user has not logged out
 	token = get_jwt(request)
 	user_token = UserToken.objects.filter(token=token).first()
@@ -139,30 +122,24 @@ def logout_view(request) -> JsonResponse:
 		return JsonResponse({'status': 0, 'message': 'not logged in'}, status=401)
 	# delete token from database.
 	user_token = UserToken.objects.filter(user=request.user).first()
+	print("TOKEN DELETE", user_token.token, flush=True)
 	user_token.delete()
 	logout(request)
 	return JsonResponse({'status' : 1}, status=200)
 
 def profile_mini(request) -> JsonResponse:
-	connection = client.HTTPConnection("users:8000")
-	
 	try:
+		connection = client.HTTPConnection("users:8000")
 		connection.request("GET", f"/get_picture/{request.user.id}/")
 		response = connection.getresponse()
-		
-		# Debug: print the status and response data
-		print("Response status:", response.status)
 		raw_data = response.read().decode()
-		print("Raw response data:", raw_data)
 		
 		if response.status != 200:
 			return JsonResponse({'status': 0, 'message': 'Failed to retrieve profile picture'}, status=response.status)
-		
 		if not raw_data:
 			return JsonResponse({'status': 0, 'message': 'Empty response from users service'}, status=500)
 		
 		profile_picture = json.loads(raw_data).get('profile_picture')
-		
 		if not profile_picture:
 			return JsonResponse({'status': 0, 'message': 'Profile picture not found'}, status=404)
 		
@@ -287,27 +264,29 @@ def generate_username() -> str:
 	username = random.choice(words) + "".join(random.choices(string.digits, k=4))
 	return username
 
-# games_client = service_client.ServiceClient('website:8000')
-
-# def create_game(request):
-# 	if request.user.is_authenticated:
-# 		return games_client.forward('/games/create_game/')(request)
-# 	return JsonResponse({}, status=401)
-
 def check_token(request):
 	# todo: if the user has logged-out this should 
 	if check_jwt(request):
 		return HttpResponse(status=200)
 	return HttpResponse(status=401)
 
+def get_user(request) -> JsonResponse:
+	user = check_jwt(request)
+	if user:
+		return JsonResponse({
+			'username': user.username,
+			'user_id': user.id
+		}, status=200)
+	return JsonResponse({}, status=401)
+
 def auth42_view(request):
 	if request.user.is_authenticated:
-		return redirect('/')
+		return redirect('/') 
 	
 	auth_response, error_message = authenticate_42API(request)
 	if error_message:
 		messages.error(request, error_message)
-		return redirect('/', permanent=True)
+		return redirect('/', permanent=True) #find a way to display error message
 	
 	headers = {
 		"Authorization": "Bearer " + auth_response["access_token"]
@@ -324,11 +303,12 @@ def auth42_view(request):
 
 	if api_response.status != 200:
 		messages.error(request, 'Failed to retrieve user data')
-		return redirect('/', permanent=True)
+		return redirect('/', permanent=True) #find a way to display error message
 
 	MeData = json.loads(data)
 	user = User.objects.filter(username42=MeData["login"]).first()
 	if user is None:
+		print("Creating new user", flush=True, file=sys.stderr)
 		# generate a username, that the user will change later
 		username = generate_username()
 		while User.objects.filter(username=username).exists():
@@ -340,8 +320,52 @@ def auth42_view(request):
 		profile_picture = MeData["image"]["link"]
 		connection = client.HTTPConnection("users:8000")
 		connection.request("POST", "/create_user/", json.dumps({"user_id": new_user.id, "profile_picture": profile_picture}))
+		response = connection.getresponse()
 		connection.close()
+		if response.status != 201:
+			return redirect('/', permanent=True) #find a way to display error message
 		login(request, new_user)
 	else:
 		login(request, user)
 	return redirect('/', permanent=True)
+
+def change_username_view(request) -> JsonResponse:
+	if not request.user.is_authenticated:
+		return JsonResponse({'status': 0, 'message': 'User not connected'}, status=401)
+	if request.method != 'POST':
+		return JsonResponse({'status': 0, 'message': 'Only POST method is allowed'}, status=405)
+	try:
+		data: dict = json.loads(request.body)
+	except json.decoder.JSONDecodeError:
+		return JsonResponse({'status': 0, 'message': 'Couldn\'t read input'}, status=500)
+	# will go to 4 characters
+	if (len(data["username"]) < 1):
+		return JsonResponse({'status': 0, 'message' : 'Username too short'}, status=400)
+	if User.objects.filter(username=data["username"]).exists():
+		return JsonResponse({'status': 0, 'message' : 'Username already exists'}, status=400)
+	user = User.objects.get(id=request.user.id)
+	user.username = data["username"]
+	user.save()
+	return JsonResponse({'status': 1, 'message': 'Username changed', 'username': data['username']}, status=200)
+
+def change_password_view(request) -> JsonResponse:
+	if not request.user.is_authenticated:
+		return JsonResponse({'status': 0, 'message': 'User not connected'}, status=401)
+	if request.method != 'POST':
+		return JsonResponse({'status': 0, 'message': 'Only POST method is allowed'}, status=405)
+	try:
+		data: dict = json.loads(request.body)
+	except json.decoder.JSONDecodeError:
+		return JsonResponse({'status': 0, 'message': 'Couldn\'t read input'}, status=500)
+	if (data["new_password"] != data["confirm_new_password"]):
+		return JsonResponse({'status': 0, 'message' : 'Passwords do not match'}, status=400)
+	if (len(data["new_password"]) < 1):
+		return JsonResponse({'status': 0, 'message' : 'Password too short'}, status=400)
+	user = User.objects.get(id=request.user.id)
+	if user.username42:
+		return JsonResponse({'status': 0, 'message' : 'Cannot change password of 42 account'}, status=400)
+	if not user.check_password(data["old_password"]):
+		return JsonResponse({'status': 0, 'message' : 'Incorrect password'}, status=400)
+	user.set_password(data["new_password"])
+	user.save()
+	return JsonResponse({'status': 1, 'message': 'Password changed'}, status=200)
