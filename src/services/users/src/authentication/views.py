@@ -22,24 +22,6 @@ import sys
 
 User = get_user_model()
 
-def user_to_json(user):
-	return {
-		'id': user.pk,
-		'username': user.username,
-		'password': user.password,
-		'username42': user.username42
-	}
-
-def get_user_view(request):
-	try:
-		data = json.loads(request.body)
-	except json.decoder.JSONDecodeError:
-		return JsonResponse({'status': 0, 'message': 'Couldn\'t read input'}, status=500)
-	try:
-		user_to_json(User.objects.get(id=data['id']).first())
-	except User.DoesNotExist:
-		return JsonResponse({'status': 0, 'message': 'User does not exist'}, status=404)
-
 SECRET = os.environ.get('JWT_SECRET_KEY').encode('utf-8')
 
 def create_jwt(username):
@@ -92,7 +74,7 @@ def validate_jwt(token):
 	if current_time > exp:
 		raise ValueError("Token has expired")
 
-def check_jwt(request):
+def check_jwt(request) -> User:
 	# check if we have the token in the database -> means that user has not logged out
 	token = get_jwt(request)
 	user_token = UserToken.objects.filter(token=token).first()
@@ -140,6 +122,7 @@ def logout_view(request) -> JsonResponse:
 		return JsonResponse({'status': 0, 'message': 'not logged in'}, status=401)
 	# delete token from database.
 	user_token = UserToken.objects.filter(user=request.user).first()
+	print("TOKEN DELETE", user_token.token, flush=True)
 	user_token.delete()
 	logout(request)
 	return JsonResponse({'status' : 1}, status=200)
@@ -286,6 +269,15 @@ def check_token(request):
 	if check_jwt(request):
 		return HttpResponse(status=200)
 	return HttpResponse(status=401)
+
+def get_user(request) -> JsonResponse:
+	user = check_jwt(request)
+	if user:
+		return JsonResponse({
+			'username': user.username,
+			'user_id': user.id
+		}, status=200)
+	return JsonResponse({}, status=401)
 
 def auth42_view(request):
 	if request.user.is_authenticated:

@@ -27,12 +27,12 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-
 # Application definition
 
 INSTALLED_APPS = [
 	'channels',
 	'pong',
+	'games',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',

@@ -10,4 +10,5 @@ done
 # Create databases
 createdb -U "$POSTGRES_USER" users
 # createdb -U "$POSTGRES_USER" game_history
-# createdb -U "$POSTGRES_USER" authentication
+createdb -U "$POSTGRES_USER" authentication
+createdb -U "$POSTGRES_USER" games
