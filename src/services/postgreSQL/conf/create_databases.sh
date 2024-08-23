@@ -11,3 +11,4 @@ done
 createdb -U "$POSTGRES_USER" user_data
 # createdb -U "$POSTGRES_USER" game_history
 createdb -U "$POSTGRES_USER" authentication
+createdb -U "$POSTGRES_USER" games

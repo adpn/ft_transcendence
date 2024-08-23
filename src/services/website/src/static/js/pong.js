@@ -44,13 +44,16 @@ function loadPong() {
 
 	function connectGameRoom() {
 		canvas.removeEventListener("focus", connectGameRoom);
-		fetch("/games/create_game", {
-			method: "GET",
+		fetch("/games/create_game/", {
+			method: "POST",
 			headers: {
 				"X-CSRFToken": getCookie("csrftoken"),
 				"Authorization": "Bearer " + localStorage.getItem("auth_token")
 			},
-			credentials: "include"
+			credentials: "include",
+			body: JSON.stringify({
+				"game": "pong"
+			})
 		})
 		.then((response) => {
 			if(!response.ok)

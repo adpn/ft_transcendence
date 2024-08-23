@@ -17,4 +17,4 @@
 python3 /home/service/manage.py makemigrations
 python3 /home/service/manage.py migrate
 
-cd /home/service && uvicorn src.asgi:application --host 0.0.0.0 --port 8000
+cd /home/service && uvicorn src.asgi:application --host 0.0.0.0 --port 8000 --reload
