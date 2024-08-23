@@ -5,6 +5,13 @@ const DOWN = false;
 const START = true;
 const STOP = false;
 
+const NOT_JOINED = 0;
+const CONNECTING = 1;
+const PLAYING = 2;
+const WON = 3;
+const LOST = 4;
+const DISCONNECTED = 6;
+
 const BTN_ID = "game-button"
 
 // this stuff is relative to a canvas of 1000,1000
@@ -21,11 +28,11 @@ var button;
 var canvas;
 var ctx;
 var is_focus = false;
-var game_status = 0;
+var game_status = NOT_JOINED;
 
 
 document.addEventListener("DOMContentLoaded", function () {
-	window.addEventListener("https://localhost/pong", loadPong);
+	window.addEventListener("pong", loadPong);
 });
 
 function loadPong() {
@@ -38,8 +45,8 @@ function loadPong() {
 	window.addEventListener("resize", resizeCanvas, false);
 	window.addEventListener("keydown", takeInputDown, true);
 	window.addEventListener("keyup", takeInputUp, true);
-	if (game_status > 2)
-		game_status = 0;
+	if (game_status >= WON)
+		game_status = NOT_JOINED;
 	changeButton();
 	resizeCanvas();
 }
@@ -62,12 +69,12 @@ function connectGameRoom() {
 		return response.json();
 		})
 	.then(data => {
-		socket = new WebSocket("ws://localhost:8001/ws/game/pong/" + data.game_room_id); // ws for now to do testing, wss later.
+		socket = new WebSocket("wss://" + data.ip_address + "/ws/game/pong/" + data.game_room_id);
 		if (socket.readyState > socket.OPEN)
 			throw new Error("WebSocket error: " + socket.readyState);
 		socket.addEventListener("close", disconnected);
 		socket.addEventListener("open", function () {
-			game_status = 1;
+			game_status = CONNECTING;
 			resizeCanvas();
 			changeButton();
 			socket.addEventListener("message", waitRoom);
@@ -81,8 +88,8 @@ function cancel() {
 }
 
 function disconnected() {
-	if (game_status < 3)
-		game_status = 6;
+	if (game_status <= PLAYING)
+		game_status = DISCONNECTED;
 	resizeCanvas();
 	changeButton();
 }
@@ -97,22 +104,21 @@ function changeButton() {
 	button.removeEventListener("click", connectGameRoom);
 	button.removeEventListener("click", cancel);
 	button.removeEventListener("click", GiveUp);
-	// add give up functionality
 	switch (game_status) {
-		case 0:
-		case 3:
-		case 4:
-		case 6:
+		case NOT_JOINED:
+		case WON:
+		case LOST:
+		case DISCONNECTED:
 			button.addEventListener("click", connectGameRoom);
 			title = "find game";
 			btn_class = "btn-success";
 			break ;
-		case 1:
+		case CONNECTING:
 			button.addEventListener("click", cancel);
 			title = "cancel";
 			btn_class = "btn-danger";
 			break ;
-		case 2:
+		case PLAYING:
 			button.addEventListener("click", GiveUp);
 			title = "give up";
 			btn_class = "btn-warning";
@@ -163,22 +169,22 @@ function resizeCanvas() {
 	canvas.height = canvas.scrollHeight;
 	clearCanvas();
 	switch (game_status) {
-		case 0:
+		case NOT_JOINED:
 			drawMessage("Welcome");
 			break ;
-		case 1:
+		case CONNECTING:
 			drawMessage("Connecting...");
 			break ;
-		case 2:
+		case PLAYING:
 			drawFrame();
 			break ;
-		case 3:
+		case WON:
 			drawMessage("Victory");
 			break ;
-		case 4:
+		case LOST:
 			drawMessage("Defeat");
 			break ;
-		case 6:
+		case DISCONNECTED:
 			drawMessage("Disconnected");
 	}
 }
@@ -193,17 +199,17 @@ function makeYCord(number) {
 function gameStart() {
 	socket.removeEventListener("message", waitRoom);
 	socket.addEventListener("message", update);
-	game_status = 2;
+	game_status = PLAYING;
 	changeButton();
 	resizeCanvas();
 	canvas.focus();
 }
 
 function gameOver(is_winner) {
-	game_status = 4;
+	game_status = LOST;
 	if (is_winner)
-		game_status = 3;
-	socket.close();		// no rematch stuff for you
+		game_status = WON;
+	socket.close();
 	resizeCanvas();
 }
 
@@ -251,7 +257,7 @@ function clearCanvas() {
 
 function drawFrame() {
 	ctx.fillStyle = "white";
-	// midline
+	// centerline
 	ctx.fillRect(canvas.width / 2 - makeXCord(1), 0, makeXCord(2), canvas.height);
 	// ball
 	ctx.fillRect(makeXCord(game_data.ball_pos[0]) - makeXCord(game_data.ball_size / 2), makeYCord(game_data.ball_pos[1]) - makeYCord(game_data.ball_size / 2),
@@ -273,7 +279,7 @@ function drawMessage(message) {
 	ctx.fillRect(makeXCord(5), makeYCord(game_data.racket_pos[0]), makeXCord(10), makeYCord(game_data.racket_size[0]));
 	ctx.fillRect(canvas.width - makeXCord(15), makeYCord(game_data.racket_pos[1]), makeXCord(10), makeYCord(game_data.racket_size[1]));
 	// message
-	ctx.font = makeXCord(30) + "px arial";
+	ctx.font = makeXCord(40) + "px arial";
 	ctx.textBaseline = "middle";
 	ctx.textAlign = "center";
 	ctx.fillText(message, makeXCord(500), makeYCord(500));

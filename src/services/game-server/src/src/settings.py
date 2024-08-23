@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,7 +26,7 @@ SECRET_KEY = 'django-insecure-nij_k$4=6(3r15srht9)0$)!44nn4@7=m)lcp(2c8fo_zjb*d8
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [str(os.environ.get('IP_ADDRESS'))]
 
 # Application definition
 
@@ -75,7 +76,7 @@ ASGI_APPLICATION = 'src.asgi.application'
 # For development. Use Redis in production.
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer', 
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
     },
 }
 

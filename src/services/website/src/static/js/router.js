@@ -4,7 +4,10 @@
 export const navigateTo = async url => {
     history.pushState(null, null, url);
     await router();
-    window.dispatchEvent(new Event(url));
+    const matches = url.match('https://[^/]*/');
+    if (matches && matches.length) {
+        window.dispatchEvent(new Event(url.substr(matches[0].length)));
+    }
 };
 
 // Router function to handle routes
@@ -117,7 +120,7 @@ const Profile = async () => {
                 <button type="submit" class="btn btn-primary mt-2">Change Username</button>
             </form>
         </div>
-                
+
         <!-- Change Password -->
         <div id="password-change" class="mb-3">
             <h4>Change Password</h4>
@@ -214,11 +217,11 @@ const Stats = async () => {
 
             const resultText = game.is_winner ? 'Victory' : 'Defeat';
             listItem.innerHTML = `
-                <strong>${resultText}</strong> - 
-                Opponent: ${game.opponent} | 
-                Your Score: ${game.personal_score} | 
-                Opponent's Score: ${game.opponent_score} | 
-                Duration: ${game.game_duration} | 
+                <strong>${resultText}</strong> -
+                Opponent: ${game.opponent} |
+                Your Score: ${game.personal_score} |
+                Opponent's Score: ${game.opponent_score} |
+                Duration: ${game.game_duration} |
                 Date: ${new Date(game.game_date).toLocaleString()}
             `;
 

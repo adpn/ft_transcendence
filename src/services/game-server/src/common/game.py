@@ -151,6 +151,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 		await self.channel_layer.group_discard(self.game_room, self.channel_name)
 		# await self.close()	# no rematching
 
+# is this ft in use ? (also add a del room.on_session_end(self.flush_game_session) type deal)
 	async def disconnect(self, close_code):
 		self.game_room = self.scope['url_route']['kwargs']['room_name']
 		if not self._game_session:

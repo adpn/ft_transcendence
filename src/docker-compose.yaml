@@ -20,6 +20,7 @@ services:
     build:
       context: services/users/
     environment:
+      IP_ADDRESS : "${IP_ADDRESS}"
       AUTH_URL: "${AUTH_URL}"
       POSTGRES_USER : "${POSTGRES_USER}"
       POSTGRES_PASSWORD : "${POSTGRES_PASSWORD}"
@@ -44,6 +45,7 @@ services:
     networks:
       - transcendence
     environment:
+      IP_ADDRESS : "${IP_ADDRESS}"
       POSTGRES_USER : "${POSTGRES_USER}"
       POSTGRES_PASSWORD : "${POSTGRES_PASSWORD}"
       SESSION_SERVER : "${SESSION_SERVER}"
@@ -59,10 +61,10 @@ services:
       dockerfile: Dockerfile
     depends_on:
       - users
-    ports:
-      - "8001:8000"
     networks:
       - transcendence
+    environment:
+      IP_ADDRESS : "${IP_ADDRESS}"
     restart: always
 
   postgresql:

@@ -26,8 +26,8 @@ SECRET_KEY = 'django-insecure-(vy8y!ar$z7w4m2n9*_zxj10h=)ar&c$%pv31yl^7_c6x7n+(i
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['https://localhost', 'https://127.0.0.1', 'localhost', '127.0.0.1', 'users']
-CSRF_TRUSTED_ORIGINS = ['https://localhost', 'https://127.0.0.1', 'http://users']
+ALLOWED_HOSTS = ['https://localhost', 'https://127.0.0.1', 'localhost', '127.0.0.1', 'users', 'https://' + str(os.environ.get('IP_ADDRESS')), str(os.environ.get('IP_ADDRESS'))]
+CSRF_TRUSTED_ORIGINS = ['https://localhost', 'https://127.0.0.1', 'http://users', 'https://' + str(os.environ.get('IP_ADDRESS'))]
 
 
 # Application definition

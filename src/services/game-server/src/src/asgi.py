@@ -25,7 +25,7 @@ setup()
 PONG_SERVER = GameServer(PongLogic)
 
 URL_PATTERNS = [
-	path("ws/game/pong/<str:room_name>", GameConsumer.as_asgi(game_server=PONG_SERVER))
+	path("game/pong/<str:room_name>", GameConsumer.as_asgi(game_server=PONG_SERVER))
 ]
 
 #     'websocket': AuthMiddlewareStack(
