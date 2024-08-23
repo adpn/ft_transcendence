@@ -1,4 +1,3 @@
-from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from user_data.models import UserProfile
 from django.http import HttpResponse, JsonResponse, FileResponse
@@ -7,25 +6,37 @@ from django.core.files.base import ContentFile
 from django.conf import settings
 import os
 from http import client
+from django.contrib.auth import get_user_model
+
 import sys
+
+User = get_user_model()
 
 # Create user in the database user_data
 @csrf_exempt
 def create_user(request):
     body = json.loads(request.body)
     user_id = body['user_id']
+
+    try:
+        user = User.objects.get(id=user_id)  # Retrieve the User instance using the user_id
+    except User.DoesNotExist:
+        return HttpResponse(status=500)
+
     if len(body["profile_picture"]) > 0:
-        print(body["profile_picture"], flush=True, file=sys.stderr)
         image_url: str = body["profile_picture"]
         url_parsed: list = image_url.split("/")
         connection = client.HTTPSConnection(url_parsed[2])
         connection.request("GET", "/" + "/".join(url_parsed[3:]))
         response = connection.getresponse()
+        if response.status != 200:
+            connection.close()
+            return HttpResponse(status=500)
         image = ContentFile(response.read(), name=str(user_id) + ".jpg")
         connection.close()
-        new_user = UserProfile(user_id=user_id, profile_picture=image)
+        new_user = UserProfile(user=user, profile_picture=image)
     else:
-        new_user = UserProfile(user_id=user_id)
+        new_user = UserProfile(user=user)
     new_user.save() #using='user_data'
     return HttpResponse(status=201)
 

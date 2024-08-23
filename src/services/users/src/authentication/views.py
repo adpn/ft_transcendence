@@ -145,25 +145,18 @@ def logout_view(request) -> JsonResponse:
 	return JsonResponse({'status' : 1}, status=200)
 
 def profile_mini(request) -> JsonResponse:
-	connection = client.HTTPConnection("users:8000")
-	
 	try:
+		connection = client.HTTPConnection("users:8000")
 		connection.request("GET", f"/get_picture/{request.user.id}/")
 		response = connection.getresponse()
-		
-		# Debug: print the status and response data
-		print("Response status:", response.status)
 		raw_data = response.read().decode()
-		print("Raw response data:", raw_data)
 		
 		if response.status != 200:
 			return JsonResponse({'status': 0, 'message': 'Failed to retrieve profile picture'}, status=response.status)
-		
 		if not raw_data:
 			return JsonResponse({'status': 0, 'message': 'Empty response from users service'}, status=500)
 		
 		profile_picture = json.loads(raw_data).get('profile_picture')
-		
 		if not profile_picture:
 			return JsonResponse({'status': 0, 'message': 'Profile picture not found'}, status=404)
 		
@@ -303,12 +296,12 @@ def check_token(request):
 
 def auth42_view(request):
 	if request.user.is_authenticated:
-		return redirect('/')
+		return redirect('/') 
 	
 	auth_response, error_message = authenticate_42API(request)
 	if error_message:
 		messages.error(request, error_message)
-		return redirect('/', permanent=True)
+		return redirect('/', permanent=True) #find a way to display error message
 	
 	headers = {
 		"Authorization": "Bearer " + auth_response["access_token"]
@@ -325,7 +318,7 @@ def auth42_view(request):
 
 	if api_response.status != 200:
 		messages.error(request, 'Failed to retrieve user data')
-		return redirect('/', permanent=True)
+		return redirect('/', permanent=True) #find a way to display error message
 
 	MeData = json.loads(data)
 	user = User.objects.filter(username42=MeData["login"]).first()
@@ -342,7 +335,10 @@ def auth42_view(request):
 		profile_picture = MeData["image"]["link"]
 		connection = client.HTTPConnection("users:8000")
 		connection.request("POST", "/create_user/", json.dumps({"user_id": new_user.id, "profile_picture": profile_picture}))
+		response = connection.getresponse()
 		connection.close()
+		if response.status != 201:
+			return redirect('/', permanent=True) #find a way to display error message
 		login(request, new_user)
 	else:
 		login(request, user)
