@@ -54,6 +54,8 @@ const Pong = () => `
         <div class="canvas-container">
             <canvas id="gameCanvas" class="w-100 border"></canvas>
         </div>
+        <div id="game-button">
+        </div>
     </div>
     </div>
 `;

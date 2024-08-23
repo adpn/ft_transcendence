@@ -24,22 +24,21 @@ class GameSession(object):
 		self._end_callbacks = []
 
 	async def update(self, data, player):
-		await self._game_logic.updateInput(data[0], data[1], player)
+		await self._game_logic.update(data, player)
 
 	async def start(self, callback):
 		await callback(await self._game_logic.startEvent())
 		while True:					# concatanate maybe when it works
 			data = await self._game_logic.sendEvent()
 			while data:
+				if data["type"] == "win":
+					del self._game_server._game_sessions[self._session_id]
+					for end in self._end_callbacks:
+						await end(data["player"])
+					return
 				await callback(data)
 				data = await self._game_logic.sendEvent()
 			data = await self._game_logic.gameTick()
-			if data["type"] == "win":
-				await self._game_server.delete_session(self._session_id)
-				for end in self._end_callbacks:
-					await end(data["player"])
-				# await self.channel_layer.group_discard(self.game_room, self.channel_name)
-				return
 			await callback(data)
 			await asyncio.sleep(0.03)
 
@@ -60,10 +59,6 @@ class GameServer(object):
 		session = self._game_sessions[room]
 		return session
 
-	async def delete_session(self, session_id):
-		if session_id in self._game_sessions:	# this should work without the check now ?
-			del self._game_sessions[session_id]
-
 	async def __aenter__(self):
 		await self._lock.acquire()
 		return self
@@ -77,7 +72,7 @@ class GameLogic(abc.ABC):
 		pass
 	async def gameTick():
 		pass
-	async def updateInput(data):
+	async def update(data, player):
 		pass
 	async def sendEvent():
 		pass
@@ -149,13 +144,13 @@ class GameConsumer(AsyncWebsocketConsumer):
 				await self.close()
 
 	async def flush_game_session(self, player):
-		self.game_room = self.scope['url_route']['kwargs']['room_name']
 		if self.player == player:
 			data = { "type": "win", "player": 1 }
 		else:
 			data = { "type": "win", "player": 0 }
 		await self.send(text_data=json.dumps(data))
-		await self.close()
+		await self.channel_layer.group_discard(self.game_room, self.channel_name)
+		# await self.close()	# no rematching
 
 	async def disconnect(self, close_code):
 		self.game_room = self.scope['url_route']['kwargs']['room_name']

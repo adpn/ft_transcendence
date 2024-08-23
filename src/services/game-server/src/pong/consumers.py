@@ -1,4 +1,5 @@
 from common import game
+import time
 
 DEFAULT_BALL_SPEED = 15
 MAX_BALL_SPEED = 35
@@ -6,7 +7,12 @@ BALL_ACCELERATION = 1.001
 DEFAULT_RACKET_SPEED = 25
 MAX_DIRY = 0.8
 MAX_DEVIATION = 0.6
-MAX_SCORE = 5
+MAX_SCORE = 1
+
+BOUNCE_UP = 0
+BOUNCE_DOWN = 1
+BOUNCE_LEFT = 2
+BOUNCE_RIGHT = 3
 
 class PongLogic(game.GameLogic):
 	def __init__(self):
@@ -22,27 +28,39 @@ class PongLogic(game.GameLogic):
 		self.ball_speed = DEFAULT_BALL_SPEED
 		self.racket_speed = DEFAULT_RACKET_SPEED
 		self.input = [[False, False], [False, False]]	# [player][direction]
+		self.time = 0.0
+		self.date = ""
+		self.game_id = 0
+		self.player0_id = 0
+		self.player1_id = 0
 		# event flags
 		self.goalEvent = False
 		self.playerWin = -1
 
-	async def updateInput(self, dir, action, player):
-		self.input[player][dir] = action
+	async def update(self, data, player):
+		# give up
+		if data[0]:
+			await self.game_end(1 - player)
+			return
+		# input
+		self.input[player][data[1]] = data[2]
 
 	async def gameTick(self):
 		await self.update_rackets()
 		await self.update_ball()
-		if self.playerWin != -1:
-			return {"type": "win", "player": self.playerWin }
-		return {"type": "tick", "ball_pos": self.ball_pos, "racket_pos": self.racket_pos }	# try to do this in binary stuff instead of json ?
+		return {"type": "tick", "ball_pos": self.ball_pos, "racket_pos": self.racket_pos }
 
 	async def startEvent(self):
+		self.time = time.time()
+		self.date = time.asctime(time.localtime(self.time)) # IT RETURNS UTC I DON'T KNOW WHY
 		return { "type": "start", "ball_size": self.ball_size, "racket_size": self.racket_size, "score": self.score }
 
 	async def sendEvent(self):
 		if self.goalEvent:
 			self.goalEvent = False
 			return { "type": "goal", "score": self.score }
+		if self.playerWin != -1:
+			return {"type": "win", "player": self.playerWin }
 		return {}
 
 	async def update_rackets(self):
@@ -73,32 +91,32 @@ class PongLogic(game.GameLogic):
 
 	async def do_collision(self):
 		if self.ball_pos[1] - (self.ball_size / 2) <= 0:
-			await self.bounce('u')
+			await self.bounce(BOUNCE_UP)
 		elif self.ball_pos[1] + (self.ball_size / 2) >= 1000:
-			await self.bounce('d')
+			await self.bounce(BOUNCE_DOWN)
 		elif ( self.ball_pos[0] - (self.ball_size / 2) <= 15
 			and self.racket_pos[0] < self.ball_pos[1] + (self.ball_size / 2)
 			and self.racket_pos[0] + self.racket_size[0] > self.ball_pos[1] - (self.ball_size / 2)):
-			await self.bounce('l')
+			await self.bounce(BOUNCE_LEFT)
 		elif ( self.ball_pos[0] + (self.ball_size / 2) >= 985
 			and self.racket_pos[1] < self.ball_pos[1] + (self.ball_size / 2)
 			and self.racket_pos[1] + self.racket_size[1] > self.ball_pos[1] - (self.ball_size / 2)):
-			await self.bounce('r')
+			await self.bounce(BOUNCE_RIGHT)
 
 	async def bounce(self, side):
-		if side == 'u':
+		if side == BOUNCE_UP:
 			self.ball_pos[1] = 0 + self.ball_size - self.ball_pos[1]
 			self.ball_diry *= -1
 			return
-		if side == 'd':
+		if side == BOUNCE_DOWN:
 			self.ball_pos[1] = 2000 - self.ball_size - self.ball_pos[1]
 			self.ball_diry *= -1
 			return
-		if side == 'l':
+		if side == BOUNCE_LEFT:
 			limit = 15 + self.ball_size / 2
 			racket_pos = self.racket_pos[0]
 			racket_half_size = self.racket_size[0] / 2
-		elif side == 'r':
+		elif side == BOUNCE_RIGHT:
 			limit = 985 - self.ball_size / 2
 			racket_pos = self.racket_pos[1]
 			racket_half_size = self.racket_size[1] / 2
@@ -123,7 +141,7 @@ class PongLogic(game.GameLogic):
 	async def goal(self, player):
 		self.score[player] += 1
 		if self.score[player] >= MAX_SCORE:
-			await self.game_won(player)
+			await self.game_end(player)
 			return
 		self.goalEvent = True
 		if player == 0:
@@ -137,7 +155,8 @@ class PongLogic(game.GameLogic):
 		self.racket_pos[0] = 400
 		self.racket_pos[1] = 400
 
-	async def game_won(self, player):
+	async def game_end(self, player):
+		self.time = time.time() - self.time
 		self.playerWin = player
 
 
