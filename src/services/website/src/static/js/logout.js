@@ -1,3 +1,5 @@
+import { navigateTo } from './router.js';
+
 function getCookie(name) {
     var cookieValue = null;
     if (document.cookie && document.cookie != '') {
@@ -26,8 +28,11 @@ function handleLogout() {
 	.then(data => {
 			successAlertPlaceholder();
 			resetLoginButtons();
+			navigateTo('/');
 	});
 }
+
+window.handleLogout = handleLogout;
 
 function resetLoginButtons() {
 	var profileMenu = document.getElementById('profile-menu');

@@ -18,6 +18,7 @@ import string
 import time
 from datetime import datetime, timedelta
 from .models import UserToken
+import sys
 
 User = get_user_model()
 
@@ -321,6 +322,7 @@ def auth42_view(request):
 	MeData = json.loads(data)
 	user = User.objects.filter(username42=MeData["login"]).first()
 	if user is None:
+		print("Creating new user", flush=True, file=sys.stderr)
 		# generate a username, that the user will change later
 		username = generate_username()
 		while User.objects.filter(username=username).exists():
@@ -337,3 +339,44 @@ def auth42_view(request):
 	else:
 		login(request, user)
 	return redirect('/', permanent=True)
+
+def change_username_view(request) -> JsonResponse:
+	if not request.user.is_authenticated:
+		return JsonResponse({'status': 0, 'message': 'User not connected'}, status=401)
+	if request.method != 'POST':
+		return JsonResponse({'status': 0, 'message': 'Only POST method is allowed'}, status=405)
+	try:
+		data: dict = json.loads(request.body)
+	except json.decoder.JSONDecodeError:
+		return JsonResponse({'status': 0, 'message': 'Couldn\'t read input'}, status=500)
+	# will go to 4 characters
+	if (len(data["username"]) < 1):
+		return JsonResponse({'status': 0, 'message' : 'Username too short'}, status=400)
+	if User.objects.filter(username=data["username"]).exists():
+		return JsonResponse({'status': 0, 'message' : 'Username already exists'}, status=400)
+	user = User.objects.get(id=request.user.id)
+	user.username = data["username"]
+	user.save()
+	return JsonResponse({'status': 1, 'message': 'Username changed', 'username': data['username']}, status=200)
+
+def change_password_view(request) -> JsonResponse:
+	if not request.user.is_authenticated:
+		return JsonResponse({'status': 0, 'message': 'User not connected'}, status=401)
+	if request.method != 'POST':
+		return JsonResponse({'status': 0, 'message': 'Only POST method is allowed'}, status=405)
+	try:
+		data: dict = json.loads(request.body)
+	except json.decoder.JSONDecodeError:
+		return JsonResponse({'status': 0, 'message': 'Couldn\'t read input'}, status=500)
+	if (data["new_password"] != data["confirm_new_password"]):
+		return JsonResponse({'status': 0, 'message' : 'Passwords do not match'}, status=400)
+	if (len(data["new_password"]) < 1):
+		return JsonResponse({'status': 0, 'message' : 'Password too short'}, status=400)
+	user = User.objects.get(id=request.user.id)
+	if user.username42:
+		return JsonResponse({'status': 0, 'message' : 'Cannot change password of 42 account'}, status=400)
+	if not user.check_password(data["old_password"]):
+		return JsonResponse({'status': 0, 'message' : 'Incorrect password'}, status=400)
+	user.set_password(data["new_password"])
+	user.save()
+	return JsonResponse({'status': 1, 'message': 'Password changed'}, status=200)
