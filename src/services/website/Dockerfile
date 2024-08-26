@@ -3,7 +3,6 @@ FROM		alpine:3.19
 RUN			apk update && apk upgrade && apk add \
 			python3-dev \
 			build-base \
-			py3-pip \
 			jpeg-dev \
 			zlib-dev \
 			py3-django \

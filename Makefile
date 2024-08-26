@@ -20,5 +20,6 @@ clean:
 
 fclean: clean
 	docker system prune -af
+	docker volume prune -f
 
 .PHONY: all detached build up upd down clean fclean

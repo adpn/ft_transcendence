@@ -103,7 +103,7 @@ const Profile = async () => {
         <div id="profile-picture-change" class="mb-3">
             <h4>Change Profile Picture</h4>
             <form id="profile-picture-form" enctype="multipart/form-data">
-                <img src="${profile_picture}" alt="Profile Picture" width="100" height="100">
+                <img src="${profile_picture}" alt="Profile Picture" class="profile-picture-preview">
                 <br>
                 <input type="file" id="profile-picture-input" name="profile_picture" accept="image/*" required>
                 <br>

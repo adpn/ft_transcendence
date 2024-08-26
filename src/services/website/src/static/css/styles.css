@@ -70,6 +70,12 @@ footer {
     left: 0;
 }
 
+.profile-picture-preview {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+}
+
 .game-stat {
     padding: 10px;
     margin: 10px 0;

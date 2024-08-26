@@ -32,6 +32,8 @@ services:
       - transcendence
     depends_on:
       - postgresql
+    volumes:
+      - profile-pictures-data:/home/service/media/profile_pictures
     restart: always
 
   website:
@@ -88,3 +90,4 @@ networks:
 
 volumes:
   postgres-data:
+  profile-pictures-data:
