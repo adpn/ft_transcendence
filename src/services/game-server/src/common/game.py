@@ -1,18 +1,17 @@
 import json
 import abc
 import asyncio
+import os
+import django
 
+from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
-from django.conf import settings
-from django.http import JsonResponse
 
-from importlib import import_module
-import uuid
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'src.settings')
+django.setup()
 
-class Player:
-	def __init__(self, player_id) -> None:
-		self.player_id = player_id
-
+from common import auth_client as auth
+from games.models import PlayerRoom
 
 class GameSession(object):
 	def __init__(self, game_logic, game_server, session_id):
@@ -76,6 +75,13 @@ class GameLogic(abc.ABC):
 	async def sendEvent():
 		pass
 
+@database_sync_to_async
+def get_room_player(user_id, game_room):
+    return PlayerRoom.objects.filter(
+        player__player_id=user_id, 
+        game_room__room_name=game_room
+    ).first()
+
 class GameConsumer(AsyncWebsocketConsumer):
 	def __init__(self, game_server, *args, **kwargs):
 		super().__init__(*args, **kwargs)
@@ -92,7 +98,52 @@ class GameConsumer(AsyncWebsocketConsumer):
 			)
 
 	async def connect(self):
-		self.game_room = self.scope['url_route']['kwargs']['room_name']
+		self.game_room = game_room = self.scope['url_route']['kwargs']['room_name']
+
+		game_room = self.scope['url_route']['kwargs']['room_name']
+		
+		query_string = self.scope.get('query_string').decode('utf-8')
+		params = dict(param.split('=') for param in query_string.split('&') if '=' in param)
+		token = params.get('token')
+		csrf = params.get('csrf_token')
+		if not token and not csrf:
+			# If the room does not exist, close the connection
+			await self.accept()
+			# await self.send({
+			# 	"type": "websocket.close",
+			# 	"code": 4000,  # Custom close code
+			# 	"reason": "Tokens are missing."
+			# })
+			await self.close()
+			return
+
+		# todo: might need to specify csrf ?
+		user = auth.get_user_with_token(token, csrf)
+
+		if not user:
+			# If the room does not exist, close the connection
+			await self.accept()
+			# await self.send({
+			# 	"type": "websocket.close",
+			# 	"code": 4000,  # Custom close code
+			# 	"reason": "Invalid tokens."
+			# })
+			self.close()
+			return 
+
+		# room_player = RoomPlayer.objects.filter(game_room=game_room, 
+		# player=user['user-id']).first()
+		room_player = await get_room_player(user['user_id'], game_room)
+
+		if not room_player:
+			await self.accept()
+			# await self.send({
+			# 	"type": "websocket.close",
+			# 	"code": 4000,  # Custom close code
+			# 	"reason": "Player has no game room."
+			# })
+			self.close()
+			return
 
 		#reject any invalid room_name.
 		# if not await self._game_server.check_room(self.game_room):
