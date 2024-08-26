@@ -11,6 +11,7 @@ const PLAYING = 2;
 const WON = 3;
 const LOST = 4;
 const DISCONNECTED = 6;
+const ERROR = 7;
 
 const BTN_ID = "game-button"
 
@@ -18,8 +19,8 @@ const BTN_ID = "game-button"
 var game_data = {
 	ball_pos: [500, 500],
 	ball_size: 10,
-	racket_pos: [400, 400],
-	racket_size: [200, 200],
+	racket_pos: [425, 425],
+	racket_size: [150, 150],
 	score: [0, 0]
 };
 
@@ -80,7 +81,11 @@ function connectGameRoom() {
 			socket.addEventListener("message", waitRoom);
 		});
 	})
-	.catch((error) => { console.log(error); });
+	.catch((error) => {
+		game_status = ERROR
+		resizeCanvas();
+		console.log(error);
+	});
 }
 
 function cancel() {
@@ -186,6 +191,9 @@ function resizeCanvas() {
 			break ;
 		case DISCONNECTED:
 			drawMessage("Disconnected");
+			break ;
+		case ERROR:
+			drawMessage("Something went wrong");
 	}
 }
 
@@ -229,8 +237,8 @@ function GiveUp() {
 function update(event) {
 	received_data = JSON.parse(event.data);
 	if (received_data.type == "tick") {
-		game_data.ball_pos = received_data.ball_pos;
-		game_data.racket_pos = received_data.racket_pos;
+		game_data.ball_pos = received_data.b;
+		game_data.racket_pos = received_data.r;
 		gameTick();
 		return ;
 	}

@@ -22,25 +22,32 @@ class GameSession(object):
 		self._game_server = game_server
 		self._session_id = session_id
 		self._end_callbacks = []
+		self.is_running = True
 
 	async def update(self, data, player):
 		await self._game_logic.update(data, player)
 
 	async def start(self, callback):
 		await callback(await self._game_logic.startEvent())
-		while True:					# concatanate maybe when it works
-			data = await self._game_logic.sendEvent()
-			while data:
-				if data["type"] == "win":
-					del self._game_server._game_sessions[self._session_id]
-					for end in self._end_callbacks:
-						await end(data["player"])
-					return
-				await callback(data)
-				data = await self._game_logic.sendEvent()
-			data = await self._game_logic.gameTick()
+		while self.is_running:
+			await asyncio.gather(
+				self.game_loop(callback),
+				asyncio.sleep(0.017)		# about 60 loops/second
+			)
+
+	async def game_loop(self, callback):	# try to shorten maybe when it works
+		data = await self._game_logic.sendEvent()
+		while data:
+			if data["type"] == "win":
+				del self._game_server._game_sessions[self._session_id]
+				for end in self._end_callbacks:
+					await end(data["player"])
+				self.is_running = False
+				return
 			await callback(data)
-			await asyncio.sleep(0.03)
+			data = await self._game_logic.sendEvent()
+		data = await self._game_logic.gameTick()
+		await callback(data)
 
 	def on_session_end(self, callback):
 		self._end_callbacks.append(callback)
