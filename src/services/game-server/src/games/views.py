@@ -68,7 +68,7 @@ def create_game(request):
 	if room:
 		room.player_count += 1
 		room.save()
-		PlayerRoom(player=player, game_room=room).save()
+		PlayerRoom(player=player, game_room=room, player_position=room.player_count - 1).save()
 		return JsonResponse({
 				'ip_address': os.environ.get('IP_ADDRESS'),
 				'game_room_id': room.room_name,
@@ -79,11 +79,12 @@ def create_game(request):
 	# create new room if room does not exist
 	room = GameRoom(room_name=str(uuid.uuid4()), game=game)
 	room.player_count += 1
+	room.expected_players = game.min_players
 	room.save()
-	PlayerRoom(player=player, game_room=room).save()
+	PlayerRoom(player=player, game_room=room, player_position=room.player_count - 1).save()
 	return JsonResponse({
 		'ip_address': os.environ.get('IP_ADDRESS'),
 		'game_room_id': room.room_name,
 		'status': 'created',
 		'player_id': player.player_name
-	}, status=200)
+	}, status=201)
