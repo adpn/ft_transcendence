@@ -18,7 +18,7 @@ class GameRoom(models.Model):
 	player_count = models.IntegerField(default=0)
 
 # associate a player to a room.
-class RoomPlayer(models.Model):
+class PlayerRoom(models.Model):
 	player = models.ForeignKey(Player, on_delete=models.CASCADE)
 	# a player can only have one room.
 	game_room = models.ForeignKey(GameRoom, on_delete=models.CASCADE)
