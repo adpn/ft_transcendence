@@ -154,11 +154,8 @@ def profile_mini(request, jwt_existing: bool) -> JsonResponse:
 
 	if not jwt_existing:
 		token = create_jwt(request.user.username)
-		UserToken(user=request.user, token=token).save()
-		# save token in db.
+		UserToken.objects.update_or_create(user=request.user, token=token)
 	else:
-		print('JWT already exists', flush=True)
-		print(get_jwt(request), flush=True)
 		token = get_jwt(request)
 	
 	return JsonResponse({
@@ -211,7 +208,6 @@ def sign_up_view(request) -> JsonResponse:
 def is_authenticated_view(request) -> JsonResponse:
 	# check if it has a valid token first
 	jwt_existing = False
-	print(get_jwt(request), flush=True)
 	if get_jwt(request):
 		jwt_existing = True
 	if request.user.is_authenticated:
