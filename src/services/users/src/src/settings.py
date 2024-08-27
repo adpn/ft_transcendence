@@ -36,6 +36,7 @@ INSTALLED_APPS = [
 	'authentication',
 	'session_manager',
     'user_data',
+    'friends',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -87,14 +88,6 @@ DATABASES = {
         'HOST': 'postgresql',
         'PORT': '5432',
     }
-    # 'user_data': {
-    #     'ENGINE': 'django.db.backends.postgresql',
-    #     'NAME': 'user_data',
-    #     'USER': os.environ.get("POSTGRES_USER"),
-    #     'PASSWORD': os.environ.get("POSTGRES_PASSWORD"),
-    #     'HOST': 'postgresql',
-    #     'PORT': '5432',
-    # }
 }
 
 
