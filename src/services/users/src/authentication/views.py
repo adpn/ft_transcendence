@@ -315,7 +315,6 @@ def auth42_view(request):
 	MeData = json.loads(data)
 	user = User.objects.filter(username42=MeData["login"]).first()
 	if user is None:
-		print("Creating new user", flush=True, file=sys.stderr)
 		# generate a username, that the user will change later
 		username = generate_username()
 		while User.objects.filter(username=username).exists():
