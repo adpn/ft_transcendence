@@ -114,12 +114,10 @@ def get_player_room(user_id, game_room):
 
 @database_sync_to_async
 def get_expected_players(player_room):
-    # Access the player_count in a synchronous context
     return player_room.game_room.expected_players
 
 @database_sync_to_async
 def get_player_id(player_room):
-    # Access the player_count in a synchronous context
     return player_room.player.player_id
 
 @database_sync_to_async
@@ -138,11 +136,17 @@ def get_game_room(player_room):
 @database_sync_to_async
 def set_in_session(game_room, value: bool):
 	game_room.in_session = value
+	# ! important ! need to spefify that this is the only field that needs to be updated
+	game_room.save(update_fields=['in_session'])
+
+@database_sync_to_async
+def set_player_count(game_room, value: int):
+	game_room.player_count = value
 	game_room.save()
 
 @database_sync_to_async
-def in_session(player_room):
-	return player_room.game_room.in_session
+def in_session(game_room):
+	return game_room.in_session
 
 class GameConsumer(AsyncWebsocketConsumer):
 	def __init__(self, game_server, *args, **kwargs):
@@ -222,6 +226,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 			#await set_player_position(player_room, session.current_players)
 			session.current_players += 1
 			if session.current_players == expected_players:
+				# await set_player_count(self.game_room, expected_players)
 				# keep a reference to the game session.
 				self._game_session = session
 				await self.accept()
@@ -235,7 +240,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 				session.on_session_end(self.flush_game_session)
 				session.on_connection_lost(self.connection_lost)
 				# only start new game loop if no game is in session.
-				if not await in_session(player_room):
+				if not await in_session(self.game_room):
 					asyncio.create_task(self._game_session.start(self.state_callback))
 					session.resume()
 					await set_in_session(self.game_room, True)

@@ -124,8 +124,8 @@ def logout_view(request) -> JsonResponse:
 		return JsonResponse({'status': 0, 'message': 'not logged in'}, status=401)
 	# delete token from database.
 	user_token = UserToken.objects.filter(user=request.user).first()
-	print("TOKEN DELETE", user_token.token, flush=True)
-	user_token.delete()
+	if user_token:
+		user_token.delete()
 	logout(request)
 	return JsonResponse({'status' : 1}, status=200)
 

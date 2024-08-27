@@ -11,11 +11,11 @@ class Player(models.Model):
 	player_id = models.IntegerField(primary_key=True)
 
 class GameRoom(models.Model):
-	room_name = models.CharField(max_length=100)
+	room_name = models.CharField(max_length=100, primary_key=True)
 	# a game room can only have one game.
 	game = models.ForeignKey(Game, on_delete=models.CASCADE)
 	created_at = models.DateTimeField(auto_now_add=True)
-	player_count = models.IntegerField(default=0)
+	num_players = models.IntegerField(default=0)
 	expected_players = models.IntegerField(default=2)
 	in_session = models.BooleanField(default=False)
 

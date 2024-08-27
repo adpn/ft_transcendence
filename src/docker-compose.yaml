@@ -63,10 +63,13 @@ services:
       dockerfile: Dockerfile
     depends_on:
       - users
+      - postgresql
     networks:
       - transcendence
     environment:
       IP_ADDRESS : "${IP_ADDRESS}"
+      POSTGRES_USER : "${POSTGRES_USER}"
+      POSTGRES_PASSWORD : "${POSTGRES_PASSWORD}"
     restart: always
 
   postgresql:
