@@ -41,15 +41,15 @@ class GameSession(object):
 			)
 
 	async def game_loop(self, callback):
-			try:
-				await asyncio.wait_for(self._pause_event.wait(), self._timeout)
-			# todo: maybe the winner should be the one that was connected ?
-			# if player has not reconnected before the timeout stop the loop.
-			except asyncio.TimeoutError:
-				for end in self._connection_lost_callbacks:
-					await end()
-				await set_in_session(self._game_room, False)
-				return
+		try:
+			await asyncio.wait_for(self._pause_event.wait(), self._timeout)
+		# todo: maybe the winner should be the one that was connected ?
+		# if player has not reconnected before the timeout stop the loop.
+		except asyncio.TimeoutError:
+			for end in self._connection_lost_callbacks:
+				await end()
+			await set_in_session(self._game_room, False)
+			return
 		data = await self._game_logic.sendEvent()
 		while data:
 			if data["type"] == "win":
