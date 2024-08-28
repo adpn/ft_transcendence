@@ -154,7 +154,12 @@ def profile_mini(request, jwt_existing: bool) -> JsonResponse:
 
 	if not jwt_existing:
 		token = create_jwt(request.user.username)
-		UserToken.objects.update_or_create(user=request.user, token=token)
+		user_token, created = UserToken.objects.get_or_create(user=request.user)
+		user_token.token = token
+		if not created:
+			user_token.save(update_fields=['token'])
+		else:
+			user_token.save()
 	else:
 		token = get_jwt(request)
 	

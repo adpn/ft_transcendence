@@ -73,7 +73,7 @@ const Other_game = () => `
 `;
 
 const Profile = async () => {
-    const token = localStorage.getItem('jwt');
+    const token = localStorage.getItem('auth_token');
     const response = await fetch('/auth/is_authenticated/', {
         method: 'GET',
         headers: {
@@ -139,7 +139,7 @@ const Profile = async () => {
 };
 
 const Friends = async () => {
-    const token = localStorage.getItem('jwt');
+    const token = localStorage.getItem('auth_token');
     const response = await fetch('/auth/is_authenticated/', {
         method: 'GET',
         headers: {
@@ -257,7 +257,7 @@ const Friends = async () => {
 };
 
 const handleFriendRequest = async (action, id) => {
-    const token = localStorage.getItem('jwt');
+    const token = localStorage.getItem('auth_token');
     const url = action === 'accept' 
         ? `/friend/accept_request/${id}` 
         : `/friend/refuse_request/${id}`;
@@ -278,7 +278,7 @@ const handleFriendRequest = async (action, id) => {
 };
 
 const Stats = async () => {
-    const token = localStorage.getItem('jwt');
+    const token = localStorage.getItem('auth_token');
     const response = await fetch('/auth/is_authenticated/', {
         method: 'GET',
         headers: {

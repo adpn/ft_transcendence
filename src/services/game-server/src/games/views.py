@@ -4,7 +4,6 @@ import os
 
 from django.http import JsonResponse
 from django.db.utils import IntegrityError
-from django.db.models import F
 
 from .models import GameRoom, PlayerRoom, Player, Game
 from common import auth_client as auth
@@ -68,8 +67,6 @@ def create_game(request):
 
 	room = rooms.first()
 	if room:
-		# room.player_count = F('player_count') + 1
-		# rooms.update(player_count=F('player_count') + 1)
 		room.num_players += 1
 		room.save()
 		PlayerRoom(player=player, game_room=room, player_position=room.num_players - 1).save()

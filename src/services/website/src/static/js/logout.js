@@ -20,7 +20,8 @@ function handleLogout() {
 	fetch('/auth/logout/', {
 		method: 'GET',
 		headers: {
-			'X-CSRFToken': getCookie('csrftoken')
+			'X-CSRFToken': getCookie('csrftoken'),
+			"Authorization": "Bearer " + localStorage.getItem("auth_token")
 		},
 		credentials: 'include'
 	})

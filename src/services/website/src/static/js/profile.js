@@ -11,6 +11,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     method: 'POST',
                     headers: {
                         'X-CSRFToken': getCookie('csrftoken'),
+						"Authorization": "Bearer " + localStorage.getItem("auth_token")
                     },
                     body: formData,
                     credentials: 'include'
@@ -39,6 +40,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': getCookie('csrftoken'),
+						"Authorization": "Bearer " + localStorage.getItem("auth_token")
                     },
                     body: JSON.stringify({ username: newUsername }),
                     credentials: 'include'
@@ -68,6 +70,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': getCookie('csrftoken'),
+						"Authorization": "Bearer " + localStorage.getItem("auth_token")
                     },
                     body: JSON.stringify({ old_password: currentPassword, new_password: newPassword, confirm_new_password: confirmNewPassword }),
                     credentials: 'include'
