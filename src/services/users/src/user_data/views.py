@@ -1,6 +1,6 @@
 from django.views.decorators.csrf import csrf_exempt
 from user_data.models import UserProfile, Game
-from django.http import HttpResponse, JsonResponse, FileResponse
+from django.http import HttpResponse, JsonResponse, FileResponse, HttpRequest
 import json
 from django.core.files.base import ContentFile
 from django.conf import settings
@@ -12,7 +12,7 @@ User = get_user_model()
 
 # Create user in the database user_data
 @csrf_exempt
-def create_user(request):
+def create_user(request : HttpRequest):
     body = json.loads(request.body)
     user_id = body['user_id']
 
@@ -46,7 +46,7 @@ def get_picture_url(request, user_id: int) -> JsonResponse:
     profile_picture = user.profile_picture.url
     return JsonResponse({'profile_picture': profile_picture}, status=200)
 
-def get_image(request, filename: str):
+def get_image(request : HttpRequest, filename: str):
     image_path = request.path
     full_image_path = os.path.join(settings.MEDIA_ROOT, image_path.lstrip('/'))
     if os.path.exists(full_image_path):
@@ -54,7 +54,7 @@ def get_image(request, filename: str):
     else:
        return HttpResponse(status=404)
 
-def change_profile_picture(request) -> JsonResponse:
+def change_profile_picture(request : HttpRequest) -> JsonResponse:
     if not request.user.is_authenticated:
         return JsonResponse({'status': 0, 'message': 'User not connected'}, status=401)
     if request.method != 'POST':
@@ -75,6 +75,11 @@ def game_stats_view(request, user_id):
     games_won = Game.objects.filter(winner=user_profile)
     games_lost = Game.objects.filter(loser=user_profile)
 
+    win_count = games_won.count()
+    loss_count = games_lost.count()
+    if win_count + loss_count == 0:
+        return JsonResponse({'status': 1, 'total_games': 0}, status=200)
+
     games_data = []
     for game in games_won.union(games_lost):
         games_data.append({
@@ -88,15 +93,15 @@ def game_stats_view(request, user_id):
 
     response_data = {
         'status': 1,
-        'total_games': games_won.count() + games_lost.count(),
-        'total_wins': games_won.count(),
-        'total_losses': games_lost.count(),
+        'total_games': win_count + loss_count,
+        'total_wins': win_count,
+        'win_percentage': round(win_count / (win_count + loss_count) * 100, 1),
         'games': games_data
     }
 
     return JsonResponse(response_data, status=200)
 
-def personal_stats(request):
+def personal_stats(request : HttpRequest):
 	if not request.user.is_authenticated:
 		return JsonResponse({'status': 0, 'message': 'User not connected'}, status=401)
 	connection = client.HTTPConnection("users:8000")

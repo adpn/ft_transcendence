@@ -3,11 +3,11 @@ from django.http import JsonResponse, HttpResponse
 from django.views import View
 
 import json
-
+import os
 from http import client
 
 def index(request):
-	return render(request, 'index.html')
+	return render(request, 'index.html', {'ip_address': os.getenv("IP_ADDRESS")})
 
 #relays request to a backend service.
 class ServiceClient(object):

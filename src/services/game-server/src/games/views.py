@@ -5,9 +5,10 @@ import os
 from django.http import JsonResponse
 from django.db.utils import IntegrityError
 
-from .models import GameRoom, RoomPlayer, Player, Game
-from http import client
+from .models import GameRoom, PlayerRoom, Player, Game
+from common import auth_client as auth
 
+# creates a game and perform matchmaking...
 def create_game(request):
 	# add pong game in database
 	PONG = Game(game_name='pong', min_players=2)
@@ -16,14 +17,12 @@ def create_game(request):
 	except IntegrityError:
 		pass
 
-	conn = client.HTTPConnection('users:8000')
-	conn.request('GET', '/get_user/', request.body, request.headers)
-	response = conn.getresponse()
-	if response.status != 200:
+	user_data = auth.get_user(request)
+	if not user_data:
 		return JsonResponse({
-			'status': 0,
-			'message': 'Invalid token'}, status=401)
-	user_data = json.loads(response.read().decode())
+			'status': 0, 
+			'message': 'Invalid token'
+		}, status=401)
 	try:
 		game_request = json.loads(request.body)
 		if 'game' not in game_request:
@@ -41,7 +40,7 @@ def create_game(request):
 			'status': 0,
 			'message': f"Game {game_request['game']} does not exist"}, status=404)
 
-	room_player = RoomPlayer.objects.filter(player__player_name=user_data['username']).first()
+	room_player = PlayerRoom.objects.filter(player__player_id=int(user_data['user_id'])).first()
 
 	# the player is already into a game room so do nothing.
 	if room_player:
@@ -53,21 +52,24 @@ def create_game(request):
 				}, status=200)
 
 	# try to create a new player
-	player = Player(player_name=user_data['username'], player_id=int(user_data['user_id']))
+	player = Player(
+		player_name=user_data['username'], 
+		player_id=int(user_data['user_id']))
 	try:
 		player.save()
 	except IntegrityError:
 		pass
 
 	# if the player is not found in any room, either assign it the oldest room that isn't full
-	room = GameRoom.objects.filter(
+	rooms = GameRoom.objects.filter(
 		game__game_name=game_request['game'].lower(),
-		player_count__lt=game.min_players).order_by('created_at').first()
+		num_players__lt=game.min_players).order_by('created_at')
 
+	room = rooms.first()
 	if room:
-		room.player_count += 1
+		room.num_players += 1
 		room.save()
-		RoomPlayer(player=player, game_room=room).save()
+		PlayerRoom(player=player, game_room=room, player_position=room.num_players - 1).save()
 		return JsonResponse({
 				'ip_address': os.environ.get('IP_ADDRESS'),
 				'game_room_id': room.room_name,
@@ -77,12 +79,13 @@ def create_game(request):
 
 	# create new room if room does not exist
 	room = GameRoom(room_name=str(uuid.uuid4()), game=game)
-	room.player_count += 1
+	room.num_players += 1
+	room.expected_players = game.min_players
 	room.save()
-	RoomPlayer(player=player, game_room=room).save()
+	PlayerRoom(player=player, game_room=room, player_position=room.num_players - 1).save()
 	return JsonResponse({
 		'ip_address': os.environ.get('IP_ADDRESS'),
 		'game_room_id': room.room_name,
 		'status': 'created',
 		'player_id': player.player_name
-	}, status=200)
+	}, status=201)

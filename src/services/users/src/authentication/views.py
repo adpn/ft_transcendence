@@ -59,6 +59,8 @@ def get_jwt(request):
 	values = auth.split(' ')
 	if len(values) != 2:
 		return None
+	if values[1] == 'null':
+		return None
 	return values[1]
 
 def validate_jwt(token):
@@ -100,7 +102,7 @@ def custom_login(request, username, password):
 		return JsonResponse({'status': 0, 'message': 'You should login through 42auth'}, status=401)
 	if user.check_password(password):
 		login(request, user)
-		return profile_mini(request)
+		return profile_mini(request, False)
 	return JsonResponse({
 		'status': 0, 
 		'message': 'Login failed'}, status=401)
@@ -122,12 +124,12 @@ def logout_view(request) -> JsonResponse:
 		return JsonResponse({'status': 0, 'message': 'not logged in'}, status=401)
 	# delete token from database.
 	user_token = UserToken.objects.filter(user=request.user).first()
-	print("TOKEN DELETE", user_token.token, flush=True)
-	user_token.delete()
+	if user_token:
+		user_token.delete()
 	logout(request)
 	return JsonResponse({'status' : 1}, status=200)
 
-def profile_mini(request) -> JsonResponse:
+def profile_mini(request, jwt_existing: bool) -> JsonResponse:
 	try:
 		connection = client.HTTPConnection("users:8000")
 		connection.request("GET", f"/get_picture/{request.user.id}/")
@@ -150,10 +152,17 @@ def profile_mini(request) -> JsonResponse:
 	finally:
 		connection.close()
 
-	token = create_jwt(request.user.username)
-	# save token in db.
-	UserToken(user=request.user, token=token).save()
-
+	if not jwt_existing:
+		token = create_jwt(request.user.username)
+		user_token, created = UserToken.objects.get_or_create(user=request.user)
+		user_token.token = token
+		if not created:
+			user_token.save(update_fields=['token'])
+		else:
+			user_token.save()
+	else:
+		token = get_jwt(request)
+	
 	return JsonResponse({
 		'status': 1,
 		'message': 'logged-in',
@@ -199,16 +208,19 @@ def sign_up_view(request) -> JsonResponse:
 		return JsonResponse({'status': 0, 'message': 'User creation failed'}, status=500)
 	login(request, user)
 	
-	return profile_mini(request)
+	return profile_mini(request, False)
 
 def is_authenticated_view(request) -> JsonResponse:
 	# check if it has a valid token first
+	jwt_existing = False
+	if get_jwt(request):
+		jwt_existing = True
+	if request.user.is_authenticated:
+		return profile_mini(request, jwt_existing)
 	user = check_jwt(request)
 	if user:
 		login(request, user)
-		return profile_mini(request)
-	if request.user.is_authenticated:
-		return profile_mini(request)
+		return profile_mini(request, jwt_existing)
 	else :
 		return JsonResponse({'status': 0, 'message': 'User not connected'}, status=200)
 
@@ -308,7 +320,6 @@ def auth42_view(request):
 	MeData = json.loads(data)
 	user = User.objects.filter(username42=MeData["login"]).first()
 	if user is None:
-		print("Creating new user", flush=True, file=sys.stderr)
 		# generate a username, that the user will change later
 		username = generate_username()
 		while User.objects.filter(username=username).exists():

@@ -10,6 +10,8 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
+import os
+
 from pathlib import Path
 import os
 
@@ -27,10 +29,12 @@ SECRET_KEY = 'django-insecure-nij_k$4=6(3r15srht9)0$)!44nn4@7=m)lcp(2c8fo_zjb*d8
 DEBUG = True
 
 ALLOWED_HOSTS = [str(os.environ.get('IP_ADDRESS'))]
+CSRF_TRUSTED_ORIGINS = ['https://localhost', 'https://127.0.0.1', 'http://users', 'https://' + str(os.environ.get('IP_ADDRESS'))]
 
 # Application definition
 
 INSTALLED_APPS = [
+	'common',
 	'channels',
 	'pong',
 	'games',
@@ -46,7 +50,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    # 'django.middleware.csrf.CsrfViewMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -86,8 +90,12 @@ CHANNEL_LAYERS = {
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'games',
+        'USER': os.environ.get("POSTGRES_USER"),
+        'PASSWORD': os.environ.get("POSTGRES_PASSWORD"),
+        'HOST': 'postgresql',
+        'PORT': '5432',
     }
 }
 

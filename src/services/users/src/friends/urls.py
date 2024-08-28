@@ -16,11 +16,11 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from . import views
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-	path('', include('authentication.urls')),
-	path('', include('session_manager.urls')),
-    path('', include('user_data.urls')),
-    path('', include('friends.urls'))
+    path('friend_list/', views.get_friend_list, name='get_friend_list'),
+    path('friend_requests_list/', views.get_friend_requests_list, name='get_friend_request_list'),
+    path('accept_friend/<int:request_id>', views.accept_friend, name='accept_friend'),
+    path('refuse_friend/<int:request_id>', views.refuse_friend, name='refuse_friend')
 ]

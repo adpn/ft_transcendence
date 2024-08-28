@@ -60,6 +60,7 @@ class PongLogic(game.GameLogic):
 		return {"type": "tick", "b": self.ball_pos, "r": self.racket_pos }
 
 	async def startEvent(self):
+		self.__init__()
 		self.time = time.time()
 		self.date = time.asctime(time.localtime(self.time)) # IT RETURNS UTC I DON'T KNOW WHY
 		return { "type": "start", "ball_size": self.ball_size, "racket_size": self.racket_size, "score": self.score }

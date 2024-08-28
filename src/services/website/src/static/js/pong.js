@@ -64,7 +64,7 @@ function connectGameRoom() {
 		return response.json();
 		})
 	.then(data => {
-		socket = new WebSocket("wss://" + data.ip_address + "/ws/game/pong/" + data.game_room_id);
+		socket = new WebSocket("wss://" + data.ip_address + "/ws/game/pong/" + data.game_room_id + "/?csrf_token=" + getCookie("csrftoken") + "&token=" + localStorage.getItem("auth_token"));
 		if (socket.readyState > socket.OPEN)
 			throw new Error("WebSocket error: " + socket.readyState);
 		socket.addEventListener("close", disconnected);

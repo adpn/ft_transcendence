@@ -32,6 +32,8 @@ services:
       - transcendence
     depends_on:
       - postgresql
+    volumes:
+      - profile-pictures-data:/home/service/media/profile_pictures
     restart: always
 
   website:
@@ -61,10 +63,13 @@ services:
       dockerfile: Dockerfile
     depends_on:
       - users
+      - postgresql
     networks:
       - transcendence
     environment:
       IP_ADDRESS : "${IP_ADDRESS}"
+      POSTGRES_USER : "${POSTGRES_USER}"
+      POSTGRES_PASSWORD : "${POSTGRES_PASSWORD}"
     restart: always
 
   postgresql:
@@ -88,3 +93,4 @@ networks:
 
 volumes:
   postgres-data:
+  profile-pictures-data:
