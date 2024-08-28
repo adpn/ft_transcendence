@@ -32,10 +32,10 @@ class GameSession(object):
 		while self.is_running:
 			await asyncio.gather(
 				self.game_loop(callback),
-				asyncio.sleep(0.017)		# about 60 loops/second
+				asyncio.sleep(0.03)				# about 30 loops/second
 			)
 
-	async def game_loop(self, callback):	# try to shorten maybe when it works
+	async def game_loop(self, callback):
 		data = await self._game_logic.sendEvent()
 		while data:
 			if data["type"] == "win":

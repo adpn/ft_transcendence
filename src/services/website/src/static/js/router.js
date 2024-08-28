@@ -57,7 +57,8 @@ const Pong = () => `
                 <canvas id="gameCanvas" class="w-100 border"></canvas>
             </div>
         </div>
-        <div id="game-button">
+        <div id="game-button-container">
+            <button class="btn btn-succes me-2" id="game-button" type="button">find game</button>
         </div>
     </div>
 `;
