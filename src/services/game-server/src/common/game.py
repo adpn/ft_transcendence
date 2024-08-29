@@ -4,8 +4,6 @@ import asyncio
 import os
 import django
 
-from array import array
-
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 
@@ -52,10 +50,9 @@ class GameSession(object):
 			return
 		async for data in self._game_logic.sendEvent():
 			if data["type"] == "win":
-				del self._game_server._game_sessions[self._session_id]
+				self._game_server.remove_session(self._session_id)
 				for end in self._end_callbacks:
-					await end(data["player"])
-				self.current_players = 0
+					await end(data)
 				await set_in_session(self._game_room, False)
 				self.is_running = False
 				return
@@ -66,6 +63,15 @@ class GameSession(object):
 
 	def on_session_end(self, callback):
 		self._end_callbacks.append(callback)
+	
+	def remove_callback(self, event, callback):
+		try: 
+			if event == 'session-end':
+				self._end_callbacks.remove(callback)
+			elif event == 'connection-lost':
+				self._connection_lost_callbacks.remove(callback)
+		except ValueError:
+			pass
 
 	def on_connection_lost(self, callback):
 		self._connection_lost_callbacks.append(callback)
@@ -83,15 +89,18 @@ class GameServer(object):
 		self._lock = asyncio.Lock()
 		self._game_factory = game_factory
 
-	def get_game_session(self, game_room, pause_timeout=10):
+	def get_game_session(self, game_room, pause_timeout=10) -> GameSession:
 		if game_room.room_name not in self._game_sessions:
 			self._game_sessions[game_room.room_name] = GameSession(
 				self._game_factory(),
 				self,
 				game_room,
 				pause_timeout) # create new game logic for the game room.
-		session = self._game_sessions[game_room.room_name]
-		return session
+		return self._game_sessions[game_room.room_name]
+	
+	def remove_session(self, session_id):
+		if session_id in self._game_sessions:
+			del self._game_sessions[session_id]
 
 	async def __aenter__(self):
 		await self._lock.acquire()
@@ -142,7 +151,8 @@ def get_game_room(player_room):
 @database_sync_to_async
 def set_in_session(game_room, value: bool):
 	game_room.in_session = value
-	# ! important ! need to spefify that this is the only field that needs to be updated
+	# ! important ! it is important to spefify that this is the only field that needs to be updated
+	# otherwise the game room data gets overwritten with old data
 	game_room.save(update_fields=['in_session'])
 
 @database_sync_to_async
@@ -154,13 +164,20 @@ def set_player_count(game_room, value: int):
 def in_session(game_room):
 	return game_room.in_session
 
+@database_sync_to_async
+def get_min_players(game_room):
+	return game_room.game.min_players
+
 class GameConsumer(AsyncWebsocketConsumer):
-	def __init__(self, game_server, *args, **kwargs):
+	def __init__(self, game_server: GameServer, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 		self._game_server = game_server
 		self._game_session = None
 		self.disconnected = False
 		self._lost_connection = False
+	
+	async def send_json(self, data: dict):
+		await self.send(text_data=json.dumps(data))
 
 	async def state_callback(self, data):
 		await self.channel_layer.group_send(
@@ -183,56 +200,46 @@ class GameConsumer(AsyncWebsocketConsumer):
 		if not token and not csrf:
 			# If the room does not exist, close the connection
 			await self.accept()
-			# await self.send({
-			# 	"type": "websocket.close",
-			# 	"code": 4000,  # Custom close code
-			# 	"reason": "Tokens are missing."
-			# })
+			await self.send_json({
+				"type": "websocket.close",
+				"code": 4000,  # Custom close code
+				"reason": "Tokens are missing."
+			})
 			await self.close()
 			return
-
-		# todo: might need to specify csrf ?
 		user = auth.get_user_with_token(token, csrf)
-
-		# todo: send error messages to user.
 		if not user:
 			# If the room does not exist, close the connection
 			await self.accept()
-			# await self.send({
-			# 	"type": "websocket.close",
-			# 	"code": 4000,  # Custom close code
-			# 	"reason": "Invalid tokens."
-			# })
+			await self.send_json({
+				"type": "websocket.close",
+				"code": 4000,  # Custom close code
+				"reason": "Invalid tokens."
+			})
 			self.close()
 			return
 
-		# room_player = RoomPlayer.objects.filter(game_room=game_room,
-		# player=user['user-id']).first()
 		self.player_room = player_room = await get_player_room(user['user_id'], room_name)
-
-		# todo: send error messages to user.
 		if not player_room:
 			await self.accept()
-			# await self.send({
-			# 	"type": "websocket.close",
-			# 	"code": 4000,  # Custom close code
-			# 	"reason": "Player has no game room."
-			# })
+			await self.send_json({
+				"type": "websocket.close",
+				"code": 4000,  # Custom close code
+				"reason": "Player has no game room."
+			})
 			self.close()
 			return
 
 		self.game_room = await get_game_room(self.player_room)
-		expected_players = await get_expected_players(player_room)
+		expected_players = await get_min_players(self.game_room)
 		# create new game session if none exists.
 		async with self._game_server as server:
 			session = server.get_game_session(self.game_room)
 			await self.channel_layer.group_add(self.room_name, self.channel_name)
 			# if the amount of players is met, notify all clients.
 			self.player = await get_player_position(player_room)
-			#await set_player_position(player_room, session.current_players)
 			session.current_players += 1
 			if session.current_players == expected_players:
-				# await set_player_count(self.game_room, expected_players)
 				# keep a reference to the game session.
 				self._game_session = session
 				await self.accept()
@@ -265,21 +272,25 @@ class GameConsumer(AsyncWebsocketConsumer):
 					'message': {'status': 'waiting'}
 				})
 
-	async def flush_game_session(self, player):
-		if self.player == player:
-			data = { "type": "win", "player": 1 }
+	async def flush_game_session(self, data):
+		# 
+		if data['player'] == self.player:
+			data = {'type': 'win'}
 		else:
-			data = { "type": "win", "player": 0 }
+			data = {'type': 'lose'}
 		await self.send(text_data=json.dumps(data))
 		await self.channel_layer.group_discard(self.room_name, self.channel_name)
 
 	async def connection_lost(self):
 		if not self.disconnected:
-			# todo: need a more general approach. -> temporary solution. -> also need to send that a player disconnected.
+			# todo: need a more general approach. 
+			# -> temporary solution. 
+			# -> also need to send that a player disconnected.
 			data = { "type": "win", "player": self.player }
-			await self.send(text_data=json.dumps(data))
+			await self.send_json(data)
 			await self.close()
 		self._lost_connection = True
+		# todo: need to delete the game room...
 		await self.channel_layer.group_discard(self.room_name, self.channel_name)
 
 # is this ft in use ? (also add a del room.on_session_end(self.flush_game_session) type deal)
@@ -290,24 +301,19 @@ class GameConsumer(AsyncWebsocketConsumer):
 			# todo: if both players disconnected, end the game
 			if session.current_players > 0:
 				session.current_players -= 1
-			# todo: find a better implementation for this.
-			try:
-				session._end_callbacks.remove(self.flush_game_session)
-			except ValueError:
-				pass
+			session.remove_callback(
+				'session-end', 
+				self.flush_game_session)
 			session.pause()
 			# todo: send a message to clients when a player disconnects.
 			await self.channel_layer.group_discard(self.room_name, self.channel_name)
 			self.disconnected = True
 
 	# receives data from websocket.
-	# todo: if there are no player a
 	async def receive(self, bytes_data):
 		if self.disconnected:
 			return
 		if self._game_session:
-			# Broadcast to group
-			# todo: if game is not ready update all
 			await self._game_session.update(bytes_data, self.player)
 		else:
 			await self.channel_layer.group_send(

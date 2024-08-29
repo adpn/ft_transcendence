@@ -61,6 +61,7 @@ def create_game(request):
 		pass
 
 	# if the player is not found in any room, either assign it the oldest room that isn't full
+	# or create a new room
 	rooms = GameRoom.objects.filter(
 		game__game_name=game_request['game'].lower(),
 		num_players__lt=game.min_players).order_by('created_at')
@@ -68,8 +69,11 @@ def create_game(request):
 	room = rooms.first()
 	if room:
 		room.num_players += 1
-		room.save()
-		PlayerRoom(player=player, game_room=room, player_position=room.num_players - 1).save()
+		room.save(update_fields=['num_players'])
+		PlayerRoom(
+			player=player, 
+			game_room=room, 
+			player_position=room.num_players - 1).save()
 		return JsonResponse({
 				'ip_address': os.environ.get('IP_ADDRESS'),
 				'game_room_id': room.room_name,
@@ -80,9 +84,12 @@ def create_game(request):
 	# create new room if room does not exist
 	room = GameRoom(room_name=str(uuid.uuid4()), game=game)
 	room.num_players += 1
-	room.expected_players = game.min_players
+	# room.expected_players = game.min_players
 	room.save()
-	PlayerRoom(player=player, game_room=room, player_position=room.num_players - 1).save()
+	PlayerRoom(
+		player=player, 
+		game_room=room, 
+		player_position=room.num_players - 1).save()
 	return JsonResponse({
 		'ip_address': os.environ.get('IP_ADDRESS'),
 		'game_room_id': room.room_name,

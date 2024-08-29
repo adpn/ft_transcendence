@@ -215,10 +215,7 @@ function gameStart() {
 	canvas.focus();
 }
 
-function gameOver(is_winner) {
-	game_status = LOST;
-	if (is_winner)
-		game_status = WON;
+function gameOver() {
 	socket.close();
 	resizeCanvas();
 }
@@ -255,7 +252,13 @@ function update(event) {
 		return ;
 	}
 	if (received_data.type == "win") {
-		gameOver(received_data.player);
+		game_status = WON;
+		gameOver();
+		return ;
+	}
+	if (received_data.type == "lose") {
+		game_status = LOST;
+		gameOver();
 		return ;
 	}
 }

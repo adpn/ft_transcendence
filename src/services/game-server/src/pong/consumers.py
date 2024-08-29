@@ -46,6 +46,7 @@ class PongLogic(game.GameLogic):
 
 	async def update(self, data, player):
 		# give up
+		# self.players[player]
 		if data[0]:
 			await self.game_end(1 - player)
 			return
