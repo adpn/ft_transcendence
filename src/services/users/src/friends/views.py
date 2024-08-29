@@ -4,6 +4,8 @@ from user_data.models import UserProfile
 from .models import Relation
 
 def get_friend_list(request : HttpRequest) -> JsonResponse:
+    if request.method != 'GET':
+        return JsonResponse({'status': 0, 'message': 'Method not allowed'}, status=405)
     if not request.user.is_authenticated:
         return JsonResponse({'status': 0, 'message': 'User not connected'}, status=401)
     user_profile = UserProfile.objects.get(user=request.user)
@@ -17,6 +19,8 @@ def get_friend_list(request : HttpRequest) -> JsonResponse:
     return JsonResponse({'status': 1, 'friends': friend_list_data}, status=200)
 
 def get_friend_requests_list(request : HttpRequest) -> JsonResponse:
+    if request.method != 'GET':
+        return JsonResponse({'status': 0, 'message': 'Method not allowed'}, status=405)
     if not request.user.is_authenticated:
         return JsonResponse({'status': 0, 'message': 'User not connected'}, status=401)
     user_profile = UserProfile.objects.get(user=request.user)
@@ -27,6 +31,8 @@ def get_friend_requests_list(request : HttpRequest) -> JsonResponse:
     return JsonResponse({'status': 1, 'friend_requests': friend_list_data}, status=200)
 
 def accept_friend(request : HttpRequest, request_id : int) -> JsonResponse:
+    if request.method != 'POST':
+        return JsonResponse({'status': 0, 'message': 'Method not allowed'}, status=405)
     if not request.user.is_authenticated:
         return JsonResponse({'status': 0, 'message': 'User not connected'}, status=401)
     user_profile = UserProfile.objects.get(user=request.user)
@@ -38,6 +44,8 @@ def accept_friend(request : HttpRequest, request_id : int) -> JsonResponse:
     return JsonResponse({'status': 1, 'message': 'Friend request accepted'}, status=200)
 
 def refuse_friend(request : HttpRequest, request_id : int) -> JsonResponse:
+    if request.method != 'POST':
+        return JsonResponse({'status': 0, 'message': 'Method not allowed'}, status=405)
     if not request.user.is_authenticated:
         return JsonResponse({'status': 0, 'message': 'User not connected'}, status=401)
     user_profile = UserProfile.objects.get(user=request.user)

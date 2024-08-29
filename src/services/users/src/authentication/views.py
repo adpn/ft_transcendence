@@ -108,8 +108,10 @@ def custom_login(request, username, password):
 		'message': 'Login failed'}, status=401)
 
 def login_view(request) -> JsonResponse:
+	if request.method != 'POST':
+		return JsonResponse({'status': 0, 'message': 'Only POST method is allowed'}, status=405)
 	if request.user.is_authenticated:
-		return JsonResponse({'status': 2, 'message': 'already logged in'}, status=200)
+		return JsonResponse({'status': 0, 'message': 'Already logged in'}, status=200)
 	try:
 		data = json.loads(request.body)
 	except json.decoder.JSONDecodeError:
@@ -120,6 +122,8 @@ def login_view(request) -> JsonResponse:
 	return custom_login(request, username, password)
 
 def logout_view(request) -> JsonResponse:
+	if request.method != 'POST':
+		return JsonResponse({'status': 0, 'message': 'Only POST method is allowed'}, status=405)
 	if not request.user.is_authenticated:
 		return JsonResponse({'status': 0, 'message': 'not logged in'}, status=401)
 	# delete token from database.
@@ -174,6 +178,10 @@ def profile_mini(request, jwt_existing: bool) -> JsonResponse:
 	}, status=200)
 
 def sign_up_view(request) -> JsonResponse:
+	if request.method != 'POST':
+		return JsonResponse({'status': 0, 'message': 'Only POST method is allowed'}, status=405)
+	if request.user.is_authenticated:
+		return JsonResponse({'status': 0, 'message': 'Already logged in'}, status=200)
 	try:
 		data: dict = json.loads(request.body)
 	except json.decoder.JSONDecodeError:
@@ -211,6 +219,8 @@ def sign_up_view(request) -> JsonResponse:
 	return profile_mini(request, False)
 
 def is_authenticated_view(request) -> JsonResponse:
+	if request.method != 'GET':
+		return JsonResponse({'status': 0, 'message': 'Only GET method is allowed'}, status=405)
 	# check if it has a valid token first
 	jwt_existing = False
 	if get_jwt(request):

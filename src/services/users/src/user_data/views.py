@@ -35,7 +35,7 @@ def create_user(request : HttpRequest):
         new_user = UserProfile(user=user, profile_picture=image)
     else:
         new_user = UserProfile(user=user)
-    new_user.save() #using='user_data'
+    new_user.save()
     return HttpResponse(status=201)
 
 @csrf_exempt
@@ -47,6 +47,8 @@ def get_picture_url(request, user_id: int) -> JsonResponse:
     return JsonResponse({'profile_picture': profile_picture}, status=200)
 
 def get_image(request : HttpRequest, filename: str):
+    if request.method != 'GET':
+        return HttpResponse(status=405)
     image_path = request.path
     full_image_path = os.path.join(settings.MEDIA_ROOT, image_path.lstrip('/'))
     if os.path.exists(full_image_path):
@@ -55,10 +57,10 @@ def get_image(request : HttpRequest, filename: str):
        return HttpResponse(status=404)
 
 def change_profile_picture(request : HttpRequest) -> JsonResponse:
-    if not request.user.is_authenticated:
-        return JsonResponse({'status': 0, 'message': 'User not connected'}, status=401)
     if request.method != 'POST':
         return JsonResponse({'status': 0, 'message': 'Only POST method is allowed'}, status=405)
+    if not request.user.is_authenticated:
+        return JsonResponse({'status': 0, 'message': 'User not connected'}, status=401)
     image = request.FILES['profile_picture']
     user = UserProfile.objects.get(user_id=request.user.id)
     user.profile_picture.save(f"{user.user_id}.jpg", image)
@@ -102,11 +104,13 @@ def game_stats_view(request, user_id):
     return JsonResponse(response_data, status=200)
 
 def personal_stats(request : HttpRequest):
-	if not request.user.is_authenticated:
-		return JsonResponse({'status': 0, 'message': 'User not connected'}, status=401)
-	connection = client.HTTPConnection("users:8000")
-	connection.request("GET", f"/game_stats/{request.user.id}/")
-	response = connection.getresponse()
-	data = json.loads(response.read().decode())
-	connection.close()
-	return JsonResponse(data, status=response.status)
+    if request.method != 'GET':
+        return JsonResponse({'status': 0, 'message': 'Only GET method is allowed'}, status=405)
+    if not request.user.is_authenticated:
+        return JsonResponse({'status': 0, 'message': 'User not connected'}, status=401)
+    connection = client.HTTPConnection("users:8000")
+    connection.request("GET", f"/game_stats/{request.user.id}/")
+    response = connection.getresponse()
+    data = json.loads(response.read().decode())
+    connection.close()
+    return JsonResponse(data, status=response.status)
