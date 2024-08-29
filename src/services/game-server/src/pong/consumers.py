@@ -4,10 +4,11 @@ import time
 DEF_BALL_SIZE = 10
 DEF_BALL_SPEED = 20
 MAX_BALL_SPEED = 50
-BALL_ACCELERATION = 1.0015
+BALL_ACCELERATION = 1.0012
 DEF_RACKET_SIZE = 150
 DEF_RACKET_POS = 500 - DEF_RACKET_SIZE / 2
 DEF_RACKET_SPEED = 25
+START_DEVIATION = 0.04
 MAX_DIRY = 0.8
 MAX_DEVIATION = 0.6
 MAX_SCORE = 5
@@ -28,8 +29,8 @@ class PongLogic(game.GameLogic):
 		self.racket_size = [DEF_RACKET_SIZE, DEF_RACKET_SIZE]	# left,right
 		self.score = [0, 0]				# left,right
 		# server data
-		self.ball_dirx = 0.9
-		self.ball_diry = 0.1
+		self.ball_dirx = 1 - START_DEVIATION
+		self.ball_diry = START_DEVIATION
 		self.ball_speed = DEF_BALL_SPEED
 		self.racket_speed = DEF_RACKET_SPEED
 		self.input = [[False, False], [False, False]]	# [player][direction]
@@ -68,10 +69,9 @@ class PongLogic(game.GameLogic):
 	async def sendEvent(self):
 		if self.goalEvent:
 			self.goalEvent = False
-			return { "type": "goal", "score": self.score }
+			yield { "type": "goal", "score": self.score }
 		if self.playerWin != -1:
-			return {"type": "win", "player": self.playerWin }
-		return {}
+			yield { "type": "win", "player": self.playerWin }
 
 	async def update_rackets(self):
 		if self.input[1][1]:
@@ -149,17 +149,17 @@ class PongLogic(game.GameLogic):
 			await self.goal(0)
 
 	async def goal(self, player):
+		self.goalEvent = True
 		self.score[player] += 1
 		if self.score[player] >= MAX_SCORE:
 			await self.game_end(player)
 			return
 		self.pause = START_PAUSE
-		self.goalEvent = True
 		if player == 0:
-			self.ball_dirx = -0.9
+			self.ball_dirx = -(1 - START_DEVIATION)
 		elif player == 1:
-			self.ball_dirx = 0.9
-		self.ball_diry = 0.1
+			self.ball_dirx = (1 - START_DEVIATION)
+		self.ball_diry = START_DEVIATION
 		self.ball_speed = DEF_BALL_SPEED
 		self.ball_pos[0] = 500
 		self.ball_pos[1] = 500
