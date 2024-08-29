@@ -78,7 +78,7 @@ function resetLoginButtons() {
 
 function handleLogout() {
     fetch('/auth/logout/', {
-        method: 'GET',
+        method: 'POST',
         headers: {
             'X-CSRFToken': getCookie('csrftoken'),
             'Authorization': 'Bearer ' + localStorage.getItem('auth_token')
@@ -163,7 +163,7 @@ document.addEventListener("DOMContentLoaded", function() {
         .then(data => {
             if (data.status === 0) {
                 updateAlertPlaceholderError(data.message);
-            } else if (data.status === 1) {
+            } else {
                 successAlertPlaceholder('Welcome!');
                 replaceLoginButtons(data.user);
                 localStorage.setItem('auth_token', data.token);
