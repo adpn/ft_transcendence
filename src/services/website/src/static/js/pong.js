@@ -1,5 +1,3 @@
-// import * as THREE from 'three';
-
 const UP = true;
 const DOWN = false;
 const START = true;
@@ -11,20 +9,18 @@ const PLAYING = 2;
 const WON = 3;
 const LOST = 4;
 const DISCONNECTED = 6;
-
-const BTN_ID = "game-button"
+const ERROR = 7;
 
 // this stuff is relative to a canvas of 1000,1000
 var game_data = {
 	ball_pos: [500, 500],
 	ball_size: 10,
-	racket_pos: [400, 400],
-	racket_size: [200, 200],
+	racket_pos: [425, 425],
+	racket_size: [150, 150],
 	score: [0, 0]
 };
 
 var socket;
-var button;
 var canvas;
 var ctx;
 var is_focus = false;
@@ -40,8 +36,7 @@ function loadPong() {
 	canvas.setAttribute("tabindex", "-1");
 	canvas.addEventListener("focus", function () { is_focus = true; });
 	canvas.addEventListener("blur", function () { is_focus = false; });
-	button = document.getElementById(BTN_ID);
-	ctx = canvas.getContext("2d");
+	ctx = canvas.getContext("2d", { alpha: false });
 	window.addEventListener("resize", resizeCanvas, false);
 	window.addEventListener("keydown", takeInputDown, true);
 	window.addEventListener("keyup", takeInputUp, true);
@@ -80,7 +75,11 @@ function connectGameRoom() {
 			socket.addEventListener("message", waitRoom);
 		});
 	})
-	.catch((error) => { console.log(error); });
+	.catch((error) => {
+		game_status = ERROR
+		resizeCanvas();
+		console.log(error);
+	});
 }
 
 function cancel() {
@@ -101,33 +100,39 @@ function waitRoom(e) {
 }
 
 function changeButton() {
-	button.removeEventListener("click", connectGameRoom);
-	button.removeEventListener("click", cancel);
-	button.removeEventListener("click", GiveUp);
+	switch (game_status) {
+		case NOT_JOINED:
+		case WON:
+		case LOST:
+		case DISCONNECTED:
+			var title = "find game";
+			var btn_class = "success";
+			break ;
+		case CONNECTING:
+			var title = "cancel";
+			var btn_class = "danger";
+			break ;
+		case PLAYING:
+			var title = "give up";
+			var btn_class = "warning";
+	}
+	document.getElementById("game-button-container").innerHTML = `
+		<button class="btn btn-${btn_class} me-2" id="game-button" type="button">${title}</button>
+`;
+	var button = document.getElementById("game-button");
 	switch (game_status) {
 		case NOT_JOINED:
 		case WON:
 		case LOST:
 		case DISCONNECTED:
 			button.addEventListener("click", connectGameRoom);
-			title = "find game";
-			btn_class = "btn-success";
 			break ;
 		case CONNECTING:
 			button.addEventListener("click", cancel);
-			title = "cancel";
-			btn_class = "btn-danger";
 			break ;
 		case PLAYING:
 			button.addEventListener("click", GiveUp);
-			title = "give up";
-			btn_class = "btn-warning";
 	}
-	button.innerHTML = `
-		<div id="${BTN_ID}">
-			<button class="btn ${btn_class} me-2" type="button">${title}</button>
-		</div>
-`;
 }
 
 function takeInputDown(e) {
@@ -180,12 +185,17 @@ function resizeCanvas() {
 			break ;
 		case WON:
 			drawMessage("Victory");
+			drawScore();
 			break ;
 		case LOST:
 			drawMessage("Defeat");
+			drawScore();
 			break ;
 		case DISCONNECTED:
 			drawMessage("Disconnected");
+			break ;
+		case ERROR:
+			drawMessage("Something went wrong");
 	}
 }
 
@@ -227,10 +237,10 @@ function GiveUp() {
 }
 
 function update(event) {
-	received_data = JSON.parse(event.data);
+	var received_data = JSON.parse(event.data);
 	if (received_data.type == "tick") {
-		game_data.ball_pos = received_data.ball_pos;
-		game_data.racket_pos = received_data.racket_pos;
+		game_data.ball_pos = received_data.b;
+		game_data.racket_pos = received_data.r;
 		gameTick();
 		return ;
 	}
@@ -265,12 +275,7 @@ function drawFrame() {
 	// rackets
 	ctx.fillRect(makeXCord(5), makeYCord(game_data.racket_pos[0]), makeXCord(10), makeYCord(game_data.racket_size[0]));
 	ctx.fillRect(canvas.width - makeXCord(15), makeYCord(game_data.racket_pos[1]), makeXCord(10), makeYCord(game_data.racket_size[1]));
-	// scoreboard
-	ctx.font = makeXCord(30) + "px arial";
-	ctx.textBaseline = "top";
-	ctx.textAlign = "center";
-	ctx.fillText(game_data.score[0], makeXCord(480), makeYCord(15));
-	ctx.fillText(game_data.score[1], makeXCord(520), makeYCord(15));
+	drawScore();
 }
 
 function drawMessage(message) {
@@ -283,4 +288,12 @@ function drawMessage(message) {
 	ctx.textBaseline = "middle";
 	ctx.textAlign = "center";
 	ctx.fillText(message, makeXCord(500), makeYCord(500));
+}
+
+function drawScore() {
+	ctx.font = makeXCord(30) + "px arial";
+	ctx.textBaseline = "top";
+	ctx.textAlign = "center";
+	ctx.fillText(game_data.score[0], makeXCord(480), makeYCord(15));
+	ctx.fillText(game_data.score[1], makeXCord(520), makeYCord(15));
 }

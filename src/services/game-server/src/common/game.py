@@ -27,46 +27,53 @@ class GameSession(object):
 		self._pause_event = asyncio.Event()
 		self._pause_event.set()
 		self._timeout = pause_timeout
+		self.is_running = True
 
 	async def update(self, data, player):
 		await self._game_logic.update(data, player)
 
 	async def start(self, callback):
 		await callback(await self._game_logic.startEvent())
-		while True:					# concatanate maybe when it works
-			try:
-				await asyncio.wait_for(self._pause_event.wait(), self._timeout)
-			# todo: maybe the winner should be the one that was connected ?
-			# if player has not reconnected before the timeout stop the loop.
-			except asyncio.TimeoutError:
-				for end in self._connection_lost_callbacks:
-					await end()
+		while self.is_running:
+			await asyncio.gather(
+				self.game_loop(callback),
+				asyncio.sleep(0.03)				# about 30 loops/second
+			)
+
+	async def game_loop(self, callback):
+		try:
+			await asyncio.wait_for(self._pause_event.wait(), self._timeout)
+		# todo: maybe the winner should be the one that was connected ?
+		# if player has not reconnected before the timeout stop the loop.
+		except asyncio.TimeoutError:
+			for end in self._connection_lost_callbacks:
+				await end()
+			await set_in_session(self._game_room, False)
+			return
+		data = await self._game_logic.sendEvent()
+		while data:
+			if data["type"] == "win":
+				del self._game_server._game_sessions[self._session_id]
+				for end in self._end_callbacks:
+					await end(data["player"])
+				self.current_players = 0
 				await set_in_session(self._game_room, False)
+				self.is_running = False
 				return
-			data = await self._game_logic.sendEvent()
-			while data:
-				if data["type"] == "win":
-					del self._game_server._game_sessions[self._session_id]
-					for end in self._end_callbacks:
-						await end(data["player"])
-					self.current_players = 0
-					await set_in_session(self._game_room, False)
-					return
-				await callback(data)
-				data = await self._game_logic.sendEvent()
-			data = await self._game_logic.gameTick()
 			await callback(data)
-			await asyncio.sleep(0.03)
+			data = await self._game_logic.sendEvent()
+		data = await self._game_logic.gameTick()
+		await callback(data)
 
 	def on_session_end(self, callback):
 		self._end_callbacks.append(callback)
-	
+
 	def on_connection_lost(self, callback):
 		self._connection_lost_callbacks.append(callback)
-	
+
 	def pause(self):
 		self._pause_event.clear()
-	
+
 	def resume(self):
 		self._pause_event.set()
 
@@ -80,8 +87,8 @@ class GameServer(object):
 	def get_game_session(self, game_room, pause_timeout=10):
 		if game_room.room_name not in self._game_sessions:
 			self._game_sessions[game_room.room_name] = GameSession(
-				self._game_factory(), 
-				self, 
+				self._game_factory(),
+				self,
 				game_room,
 				pause_timeout) # create new game logic for the game room.
 		session = self._game_sessions[game_room.room_name]
@@ -108,7 +115,7 @@ class GameLogic(abc.ABC):
 @database_sync_to_async
 def get_player_room(user_id, game_room):
     return PlayerRoom.objects.filter(
-        player__player_id=user_id, 
+        player__player_id=user_id,
         game_room__room_name=game_room
     ).first()
 
@@ -169,7 +176,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 		self.room_name = room_name = self.scope['url_route']['kwargs']['room_name']
 
 		room_name = self.scope['url_route']['kwargs']['room_name']
-		
+
 		query_string = self.scope.get('query_string').decode('utf-8')
 		params = dict(param.split('=') for param in query_string.split('&') if '=' in param)
 		token = params.get('token')
@@ -198,9 +205,9 @@ class GameConsumer(AsyncWebsocketConsumer):
 			# 	"reason": "Invalid tokens."
 			# })
 			self.close()
-			return 
+			return
 
-		# room_player = RoomPlayer.objects.filter(game_room=game_room, 
+		# room_player = RoomPlayer.objects.filter(game_room=game_room,
 		# player=user['user-id']).first()
 		self.player_room = player_room = await get_player_room(user['user_id'], room_name)
 
@@ -245,7 +252,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 					session.resume()
 					await set_in_session(self.game_room, True)
 					return
-				# resume game in case it paused. 
+				# resume game in case it paused.
 				session.resume()
 			elif session.current_players < expected_players:
 				session.on_session_end(self.flush_game_session)
@@ -298,7 +305,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 	# todo: if there are no player a
 	async def receive(self, bytes_data):
 		if self.disconnected:
-			return 
+			return
 		if self._game_session:
 			# Broadcast to group
 			# todo: if game is not ready update all
