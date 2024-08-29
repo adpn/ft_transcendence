@@ -139,26 +139,6 @@ const Profile = async () => {
 };
 
 const Friends = async () => {
-    const token = localStorage.getItem('auth_token');
-    const response = await fetch('/auth/is_authenticated/', {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        }
-    });
-    const data = await response.json();
-
-    if (data.status === 0) {
-        return `
-            <div class="text-center">
-                <h1>Access Denied</h1>
-                <p>You need to be logged in to view this page.</p>
-            </div>
-        `;
-    }
-
-    // Render the basic structure of the friends page
     const app_content = 
     `
     <div class="text-center">
@@ -180,6 +160,7 @@ const Friends = async () => {
 
     document.getElementById('app').innerHTML = app_content;
 
+    const token = localStorage.getItem('auth_token');
     const friendsList = await fetch('/friend/friend_list/', {
         method: 'GET',
         headers: {
@@ -189,6 +170,17 @@ const Friends = async () => {
     });
 
     const friendsData = await friendsList.json();
+
+    if (friendsList.status === 401 || friendsData.status === 0) {
+        document.getElementById('app').innerHTML =  `
+            <div class="text-center">
+                <h1>Access Denied</h1>
+                <p>You need to be logged in to view this page.</p>
+            </div>
+        `;
+        return document.getElementById('app').innerHTML;
+    }
+
     if (friendsData.friends.length === 0) {
         document.getElementById('friends').innerHTML = `
             <h2>Friends List</h2>
@@ -200,7 +192,6 @@ const Friends = async () => {
 
         friendsData.friends.forEach(friend => {
             const listItem = document.createElement("div");
-            // listItem.className =';
 
             listItem.innerHTML = `
                 ${friend.username} <img src="${friend.profile_picture}" alt="${friend.username}">
@@ -279,23 +270,6 @@ const handleFriendRequest = async (action, id) => {
 
 const Stats = async () => {
     const token = localStorage.getItem('auth_token');
-    const response = await fetch('/auth/is_authenticated/', {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        }
-    });
-    const data = await response.json();
-
-    if (data.status === 0) {
-        return `
-            <div class="text-center">
-                <h1>Access Denied</h1>
-                <p>You need to be logged in to view this page.</p>
-            </div>
-        `;
-    }
 
     // Render the basic structure of the Stats page
     const app_content = `
@@ -324,6 +298,17 @@ const Stats = async () => {
     });
 
     const statsData = await statsResponse.json();
+
+    if (statsResponse.status === 401 ||statsData.status === 0) {
+        document.getElementById('app').innerHTML = `
+            <div class="text-center">
+                <h1>Access Denied</h1>
+                <p>You need to be logged in to view this page.</p>
+            </div>
+        `;
+        return document.getElementById('app').innerHTML;
+    }
+
     if (statsData.total_games === 0) {
         document.getElementById('app').innerHTML = `
         <div class="text-center">
