@@ -41,8 +41,6 @@ class GameSession(object):
 	async def game_loop(self, callback):
 		try:
 			await asyncio.wait_for(self._pause_event.wait(), self._timeout)
-		# todo: maybe the winner should be the one that was connected ?
-		# if player has not reconnected before the timeout stop the loop.
 		except asyncio.TimeoutError:
 			for end in self._connection_lost_callbacks:
 				await end()
@@ -190,13 +188,12 @@ class GameConsumer(AsyncWebsocketConsumer):
 
 	async def connect(self):
 		self.room_name = room_name = self.scope['url_route']['kwargs']['room_name']
-
 		room_name = self.scope['url_route']['kwargs']['room_name']
-
 		query_string = self.scope.get('query_string').decode('utf-8')
 		params = dict(param.split('=') for param in query_string.split('&') if '=' in param)
 		token = params.get('token')
 		csrf = params.get('csrf_token')
+
 		if not token and not csrf:
 			# If the room does not exist, close the connection
 			await self.accept()
@@ -207,6 +204,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 			})
 			await self.close()
 			return
+
 		user = auth.get_user_with_token(token, csrf)
 		if not user:
 			# If the room does not exist, close the connection
@@ -232,6 +230,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 
 		self.game_room = await get_game_room(self.player_room)
 		expected_players = await get_min_players(self.game_room)
+
 		# create new game session if none exists.
 		async with self._game_server as server:
 			session = server.get_game_session(self.game_room)
@@ -273,27 +272,22 @@ class GameConsumer(AsyncWebsocketConsumer):
 				})
 
 	async def flush_game_session(self, data):
-		# 
 		if data['player'] == self.player:
-			data = {'type': 'win'}
+			data = {'type': 'end', 'status': 'win'}
 		else:
-			data = {'type': 'lose'}
+			data = {'type': 'end', 'status': 'lost'}
 		await self.send(text_data=json.dumps(data))
 		await self.channel_layer.group_discard(self.room_name, self.channel_name)
 
 	async def connection_lost(self):
 		if not self.disconnected:
-			# todo: need a more general approach. 
-			# -> temporary solution. 
-			# -> also need to send that a player disconnected.
-			data = { "type": "win", "player": self.player }
-			await self.send_json(data)
+			# todo: also need to send that a player disconnected.
+			await self.send_json({'type': 'end', 'status': 'win'})
 			await self.close()
 		self._lost_connection = True
 		# todo: need to delete the game room...
 		await self.channel_layer.group_discard(self.room_name, self.channel_name)
 
-# is this ft in use ? (also add a del room.on_session_end(self.flush_game_session) type deal)
 	# todo: notify the game loop to pause the game
 	async def disconnect(self, close_code):
 		async with self._game_server as server:

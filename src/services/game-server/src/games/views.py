@@ -2,11 +2,23 @@ import uuid
 import json
 import os
 
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpRequest
 from django.db.utils import IntegrityError
 
-from .models import GameRoom, PlayerRoom, Player, Game
+from .models import (
+	GameRoom, 
+	PlayerRoom, 
+	Player, 
+	Game, 
+	Tournament, 
+	TournamentRound,
+	Participant
+)
+
 from common import auth_client as auth
+
+MAX_TOURNAMENT_ROOMS = 4
+MAX_TOURNAMENT_PARTICIPANTS = 8
 
 # creates a game and perform matchmaking...
 def create_game(request):
@@ -82,12 +94,13 @@ def create_game(request):
 				}, status=200)
 
 	# create new room if room does not exist
-	room = GameRoom(room_name=str(uuid.uuid4()), game=game)
+	room = GameRoom(
+		room_name=str(uuid.uuid4()), 
+		game=game)
 	room.num_players += 1
-	# room.expected_players = game.min_players
 	room.save()
 	PlayerRoom(
-		player=player, 
+		player=player,
 		game_room=room, 
 		player_position=room.num_players - 1).save()
 	return JsonResponse({
@@ -96,3 +109,139 @@ def create_game(request):
 		'status': 'created',
 		'player_id': player.player_name
 	}, status=201)
+
+def	find_tournament(request: HttpRequest) -> JsonResponse:
+	# add pong game in database
+	PONG = Game(game_name='pong', min_players=2)
+	try:
+		PONG.save()
+	except IntegrityError:
+		pass
+	# todo: put game request handling in a function.
+	try:
+		game_request = json.loads(request.body)
+		if 'game' not in game_request:
+			return JsonResponse({
+			'status': 0,
+			'message': "missing required field: {}".format('game')}, status=500)
+	except json.decoder.JSONDecodeError:
+		return JsonResponse({
+			'status': 0,
+			'message': 'Couldn\'t read input'}, status=500)
+
+	user_data = auth.get_user(request)
+	if not user_data:
+		return JsonResponse({
+			'status': 0, 
+			'message': 'Invalid token'
+		}, status=401)
+
+	# try to create a new player
+	player = Player(
+		player_name=user_data['username'], 
+		player_id=int(user_data['user_id']))
+	try:
+		player.save()
+	except IntegrityError:
+		pass
+
+	game = Game.objects.filter(game_name=game_request['game']).first()
+	if not game:
+		return JsonResponse({
+			'status': 0,
+			'message': f"Game {game_request['game']} does not exist"}, status=404)
+
+	# the player is a participant and is not eliminated, try to join the game room again.
+	# this happens in case of disconnections or when moving to the next round.
+	participant = Participant.objects.filter(player=player).first()
+	if participant:
+		if participant.status == "PLAYING":
+			game_rooms_in_tournament = TournamentRound.objects.filter(
+				tournament=tournament)
+			# todo: if the room does not exist for some reason send an internal server error.
+			player_room = PlayerRoom.objects.filter(
+				player=player, 
+				game_room__in=game_rooms_in_tournament).first()
+			return JsonResponse({
+			'ip_address': os.environ.get('IP_ADDRESS'),
+			'game_room_id': player_room.game_room.room_name,
+			'status': 'joined',
+			'player_id': player_room.player.player_name
+		}, status=200)
+
+	# if the player is not a participant, try to join the oldest tournament that isn't full.
+	tournament = Tournament.objects.filter(
+		game__game_name=game.game_name,
+		participants__lt=MAX_TOURNAMENT_PARTICIPANTS
+	).order_by('created_at').first() # todo: need to setup a maximum amount of players.
+
+	# if there is no tournament, create a new one.
+	if not tournament:
+		tournament = Tournament(game=game, tournament_id=str(uuid.uuid4()))
+		game_room = GameRoom(room_name=str(uuid.uuid4()), game=game)
+		player_room = PlayerRoom(player=player, game_room=game_room)
+		tround = TournamentRound(tournament=tournament, game_room=game_room)
+		tournament.game_room_count += 1
+		tournament.participants += 1
+		game_room.num_players += 1
+		game_room.save()
+		player_room.save()
+		tournament.save()
+		tround.save()
+		return JsonResponse({
+			'ip_address': os.environ.get('IP_ADDRESS'),
+			'game_room_id': game_room.room_name,
+			'status': 'created',
+			'player_id': player.player_name
+		}, status=201)
+
+	# try to find the room the player belongs to.
+	game_rooms_in_tournament = TournamentRound.objects.filter(
+		tournament=tournament)
+	player_room = PlayerRoom.objects.filter(
+		player=player, 
+		game_room__in=game_rooms_in_tournament).first()
+
+	# if player is already in a room return it.
+	if player_room:
+		return JsonResponse({
+			'ip_address': os.environ.get('IP_ADDRESS'),
+			'game_room_id': player_room.game_room.room_name,
+			'status': 'playing',
+			'player_id': player_room.player.player_name
+		}, status=200)
+
+	# get the oldest game_room in the tournament that isn't full
+	game_room = game_rooms_in_tournament.filter(num_players__lt=game.min_players).order_by('create_at').first()
+	if not game_room:
+		# create new room, add the player to it add the game room to the tournament.
+		game_room = GameRoom(room_name=str(uuid.uuid4()), game=game)
+		player_room = PlayerRoom(player=player, game_room=game_room)
+		tround = TournamentRound(tournament=tournament, game_room=game_room)
+		tournament.participants += 1
+		game_room.save()
+		player_room.save()
+		tournament.save()
+		tround.save()
+		return JsonResponse({
+			'ip_address': os.environ.get('IP_ADDRESS'),
+			'game_room_id': game_room.room_name,
+			'status': 'created',
+			'player_id': player.player_name
+		}, status=201)
+
+	# if a game room was found add the player to it.
+	player_room = PlayerRoom(player=player, game_room=game_room)
+	tround = TournamentRound(tournament=tournament, game_room=game_room)
+	game_room.num_players += 1
+	tournament.participants += 1
+	game_room.save()
+	player_room.save()
+	tournament.save()
+	tround.save()
+	return JsonResponse({
+			'ip_address': os.environ.get('IP_ADDRESS'),
+			'game_room_id': game_room.room_name,
+			'status': 'joined',
+			'player_id': player.player_name
+		}, status=200)
