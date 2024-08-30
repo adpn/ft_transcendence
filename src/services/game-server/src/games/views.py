@@ -179,7 +179,11 @@ def	find_tournament(request: HttpRequest) -> JsonResponse:
 	if not tournament:
 		tournament = Tournament(game=game, tournament_id=str(uuid.uuid4()))
 		game_room = GameRoom(room_name=str(uuid.uuid4()), game=game)
-		player_room = PlayerRoom(player=player, game_room=game_room)
+		player_room = PlayerRoom(
+			player=player, 
+			game_room=game_room,
+			player_position=game_room.num_players
+		)
 		tround = TournamentRound(tournament=tournament, game_room=game_room)
 		tournament.game_room_count += 1
 		tournament.participants += 1
@@ -216,9 +220,14 @@ def	find_tournament(request: HttpRequest) -> JsonResponse:
 	if not game_room:
 		# create new room, add the player to it add the game room to the tournament.
 		game_room = GameRoom(room_name=str(uuid.uuid4()), game=game)
-		player_room = PlayerRoom(player=player, game_room=game_room)
+		player_room = PlayerRoom(
+			player=player, 
+			game_room=game_room,
+			player_position=game_room.num_players
+		)
 		tround = TournamentRound(tournament=tournament, game_room=game_room)
 		tournament.participants += 1
+		game_room.num_players += 1
 		game_room.save()
 		player_room.save()
 		tournament.save()
@@ -231,7 +240,12 @@ def	find_tournament(request: HttpRequest) -> JsonResponse:
 		}, status=201)
 
 	# if a game room was found add the player to it.
-	player_room = PlayerRoom(player=player, game_room=game_room)
+	player_room = PlayerRoom(
+		player=player, 
+		game_room=game_room,
+		player_position=game_room.num_players
+	)
+
 	tround = TournamentRound(tournament=tournament, game_room=game_room)
 	game_room.num_players += 1
 	tournament.participants += 1
