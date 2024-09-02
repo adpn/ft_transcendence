@@ -10,9 +10,10 @@
     {% load static %}
 	<link rel="icon" href="{% static 'favicon.ico' %}" type="image/x-icon">
 	<script type="module" src="{% static 'js/pong.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
-    <script src="{% static 'js/profile.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
+    <script src="{% static 'js/settings.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
     <script type="module" src="{% static 'js/auth.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
     <script type="module" src="{% static 'js/router.js' %}"></script>
+    <script src="{% static 'js/friend.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';<</script>
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 </head>
 <body>
@@ -33,7 +34,7 @@
                     <a href="/other-game" class="btn btn-primary me-2" data-link>Other game</a>
                 </li>
                 <li class="nav-item">
-                    <a href="/profile" class="btn btn-primary me-2" data-link>Profile</a>
+                    <a href="/settings" class="btn btn-primary me-2" data-link>Settings</a>
                 </li>
                 <li class="nav-item">
                     <a href="/stats" class="btn btn-primary me-2" data-link>Stats</a>

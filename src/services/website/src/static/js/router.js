@@ -1,6 +1,20 @@
-// router.js
+// Navigate to a new URL and update content
+function getCookie(name) {
+    var cookieValue = null;
+    if (document.cookie && document.cookie != '') {
+        var cookies = document.cookie.split(';');
+        for (var i = 0; i < cookies.length; i++) {
+            var cookie = cookies[i].trim();
+            // Does this cookie string begin with the name we want?
+            if (cookie.substring(0, name.length + 1) == (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
 
-// Function to navigate to a new URL and update content
 export const navigateTo = async url => {
     history.pushState(null, null, url);
     await router();
@@ -16,30 +30,34 @@ const router = async () => {
         { path: "/", view: Home },
         { path: "/pong", view: Pong },
         { path: "/other-game", view: Other_game },
-        { path: "/profile", view: Profile },
+        { path: "/settings", view: Settings },
         { path: "/friends", view: Friends },
-        { path: "/stats", view: Stats }
+        { path: "/stats", view: Stats },
+        { path: "/user/:username", view: UserProfile }
     ];
 
     // Find a matching route or return 404
     const potentialMatches = routes.map(route => {
+        const pathRegex = new RegExp("^" + route.path.replace(/:\w+/g, "(.+)") + "$");
         return {
             route: route,
-            isMatch: location.pathname === route.path
+            result: location.pathname.match(pathRegex)
         };
     });
 
-    let match = potentialMatches.find(potentialMatch => potentialMatch.isMatch);
+    let match = potentialMatches.find(potentialMatch => potentialMatch.result);
 
     if (!match) {
         match = {
             route: { path: "/404", view: () => "<div class=\"text-center\"><h1>404 - Page Not Found</h1><p>Please go back to another page, using the buttons above.</p></div>" },
-            isMatch: true
+            result: [location.pathname]
         };
     }
 
+    const params = match.result.slice(1);
+
     // Render the view
-    document.getElementById('app').innerHTML = await match.route.view();
+    document.getElementById('app').innerHTML = await match.route.view(...params);
 };
 
 // View functions
@@ -73,12 +91,13 @@ const Other_game = () => `
     </div>
 `;
 
-const Profile = async () => {
+const Settings = async () => {
     const token = localStorage.getItem('auth_token');
     const response = await fetch('/auth/is_authenticated/', {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),
             'Authorization': `Bearer ${token}`
         }
     });
@@ -97,8 +116,8 @@ const Profile = async () => {
 
     return`
     <div class="text-center">
-        <h1>Profile Page</h1>
-        <p>Manage your profile here.</p>
+        <h1>Settings Page</h1>
+        <p>Manage your profile settings here.</p>
 
         <!-- Change Profile Picture -->
         <div id="profile-picture-change" class="mb-3">
@@ -166,6 +185,7 @@ const Friends = async () => {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),
             'Authorization': `Bearer ${token}`
         }
     });
@@ -206,6 +226,7 @@ const Friends = async () => {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),
             'Authorization': `Bearer ${token}`
         }
     });
@@ -224,8 +245,8 @@ const Friends = async () => {
             const listItem = document.createElement("div");
             listItem.innerHTML = `
                 ${friendRequest.username} <img src="${friendRequest.profile_picture}" alt="${friendRequest.username}">
-                <button class="btn btn-primary accept-request" data-id="${friendRequest.id}">Accept</button>
-                <button class="btn btn-danger decline-request" data-id="${friendRequest.id}">Decline</button>
+                <button class="btn btn-primary accept-request" data-relation-id="${friendRequest.id}">Accept</button>
+                <button class="btn btn-danger decline-request" data-relation-id="${friendRequest.id}">Decline</button>
             `;
 
         friendRequestsList.appendChild(listItem);
@@ -233,14 +254,14 @@ const Friends = async () => {
 
         document.querySelectorAll('.accept-request').forEach(button => {
             button.addEventListener('click', async (event) => {
-                const requestId = event.target.getAttribute('data-id');
+                const requestId = event.target.getAttribute('data-relation-id');
                 await handleFriendRequest('accept', requestId);
             });
         });
 
         document.querySelectorAll('.decline-request').forEach(button => {
             button.addEventListener('click', async (event) => {
-                const requestId = event.target.getAttribute('data-id');
+                const requestId = event.target.getAttribute('data-relation-id');
                 await handleFriendRequest('refuse', requestId);
             });
         });
@@ -251,13 +272,15 @@ const Friends = async () => {
 const handleFriendRequest = async (action, id) => {
     const token = localStorage.getItem('auth_token');
     const url = action === 'accept' 
-        ? `/friend/accept_request/${id}` 
-        : `/friend/refuse_request/${id}`;
+        ? `/friend/accept_request/${id}/` 
+        : `/friend/refuse_request/${id}/`;
 
     const response = await fetch(url, {
         method: 'POST',
         headers: {
+
             'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),
             'Authorization': `Bearer ${token}`
         }
     });
@@ -294,6 +317,7 @@ const Stats = async () => {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),
             'Authorization': `Bearer ${token}`
         }
     });
@@ -343,6 +367,92 @@ const Stats = async () => {
     }
     return document.getElementById('app').innerHTML;
 };
+
+const UserProfile = async (username) => {
+    const token = localStorage.getItem('auth_token');
+
+    const response = await fetch(`/users/get_profile/${username}/`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Authorization': `Bearer ${token}`
+        }
+    });
+    const data = await response.json();
+
+    if (response.status === 401) {
+        return `
+            <div class="text-center">
+                <h1>Access Denied</h1>
+                <p>You need to be logged in to view this page.</p>
+            </div>
+        `;
+    }
+
+    if (response.status === 404) {
+        console.log('User not found');
+        return `
+            <div class="text-center">
+                <h1>User Not Found</h1>
+                <p>The user ${username} does not exist.</p>
+            </div>
+        `;
+    }
+
+    const app_content = `
+    <div class="text-center">
+        <img src="${data.profile_picture}" alt="${data.username}" class="profile-picture-preview">
+        <h1>${data.username}</h1>
+        <div id="friendship"></div>
+        <h2>Stats</h2>
+        <div id="user-stats"> </div>
+    `;
+    
+    document.getElementById('app').innerHTML = app_content;
+
+    const userStats = document.getElementById('user-stats');
+    const friendship = document.getElementById('friendship');
+    friendship.innerHTML = get_friendship_content(data.friendship, data.id);
+
+    if (data.stats.total_games === 0) {
+        userStats.innerHTML = `
+            <p>No games played yet.</p>
+        `;
+    }
+    else {
+        userStats.innerHTML = `
+            <p>Total Games: ${data.stats.total_games} | Win percentage: ${data.stats.win_percentage}</p>
+        `;
+    }
+
+    return document.getElementById('app').innerHTML;
+};
+
+function get_friendship_content(friendship_data, user_id) {
+    // yourself: 0, not friend: 1, friend: 2, pending request: 3, request received: 4
+    if (friendship_data.status === 2) {
+        return `
+            <p>Friend</p>
+            <button class="btn btn-danger" id="remove-friend" data-relation-id=${friendship_data.id}>Remove Friend</button>
+        `;
+    } else if (friendship_data.status === 1) {
+        return `
+            <button class="btn btn-primary" id="add-friend" data-user-id=${user_id}>Add Friend</button>
+        `;
+    } else if (friendship_data.status === 3) {
+        return `
+            <p>Pending Request</p>
+            <button class="btn btn-danger" id="cancel-request" data-relation-id=${friendship_data.id}>Cancel Request</button>
+        `;
+    } else if (friendship_data.status === 4) {
+        return `
+            <p>Friend Request Received</p>
+            <button class="btn btn-primary accept-request" id="accept-request" data-relation-id=${friendship_data.id}>Accept</button>
+            <button class="btn btn-danger decline-request" id="decline-request" data-relation-id=${friendship_data.id}>Decline</button>
+        `;
+    }
+}
 
 document.addEventListener("click", e => {
     if (e.target.matches("[data-link]")) {

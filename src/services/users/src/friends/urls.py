@@ -21,6 +21,9 @@ from . import views
 urlpatterns = [
     path('friend_list/', views.get_friend_list, name='get_friend_list'),
     path('friend_requests_list/', views.get_friend_requests_list, name='get_friend_request_list'),
-    path('accept_friend/<int:request_id>', views.accept_friend, name='accept_friend'),
-    path('refuse_friend/<int:request_id>', views.refuse_friend, name='refuse_friend')
+    path('accept_friend/<int:request_id>/', views.accept_friend, name='accept_friend'),
+    path('decline_friend/<int:request_id>/', views.decline_friend, name='decline_friend'),
+    path('cancel_friend_request/<int:request_id>/', views.cancel_friend_request, name='cancel_friend_request'),
+    path('remove_friend/<int:request_id>/', views.remove_friend, name='remove_friend'),
+    path('add_friend/<int:friend_id>/', views.add_friend, name='add_friend')
 ]
