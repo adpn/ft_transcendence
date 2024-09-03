@@ -121,9 +121,9 @@ def get_profile(request: HttpRequest, username: str) -> JsonResponse:
         return JsonResponse({'status': 0, 'message': 'Only GET method is allowed'}, status=405)
     if not request.user.is_authenticated:
         return JsonResponse({'status': 0, 'message': 'User not connected'}, status=401)
-    user = User.objects.get(username=username)
-    if not user:
+    if not User.objects.filter(username=username).exists():
         return JsonResponse({'status': 0, 'message': 'User not found'}, status=404)
+    user = User.objects.get(username=username)
     user_profile = UserProfile.objects.get(user=user)
     if not user_profile:
         return JsonResponse({'status': 0, 'message': 'User profile not found'}, status=404)

@@ -18,7 +18,7 @@
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <a class="navbar-brand ms-3"href="/" data-link>ft_transcendence</a>
+        <div class="navbar-brand ms-3">ft_transcendence</div>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarTogglerDemo02" aria-controls="navbarTogglerDemo02" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -34,15 +34,15 @@
                     <a href="/other-game" class="btn btn-primary me-2" data-link>Other game</a>
                 </li>
                 <li class="nav-item">
-                    <a href="/settings" class="btn btn-primary me-2" data-link>Settings</a>
-                </li>
-                <li class="nav-item">
                     <a href="/stats" class="btn btn-primary me-2" data-link>Stats</a>
                 </li>
                 <li class="nav-item">
                     <a href="/friends" class="btn btn-primary me-2" data-link>Friends</a>
                 </li>
             </ul>
+            <form class="d-flex me-auto" id="userSearchForm">
+                <input class="form-control me-2" type="search" placeholder="Search users" aria-label="Search" id="userSearchInput">
+            </form>
             <div id="profile-menu">
                 <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
                     <li class="nav-item">

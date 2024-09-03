@@ -65,7 +65,8 @@ async function handleRemoveFriend(relationId) {
     if (response.ok) {
         friendship = document.getElementById('friendship');
         friendship.innerHTML = `
-            <button class="btn btn-primary" id="add-friend" data-user-id=${user_id}>Add Friend</button>
+            <p>You are not friend !</p>
+            <button class="btn btn-outline-success" id="add-friend" data-user-id=${user_id}>Add Friend</button>
         `;
     } else {
         alert('Failed to remove friend.');
@@ -88,10 +89,9 @@ async function handleAddFriend(userId) {
     if (response.ok) {
         friendship = document.getElementById('friendship');
         friendship.innerHTML = `
-        <p>Pending Request</p>
-        <button class="btn btn-danger" id="cancel-request" data-relation-id=${friendship_id}>Cancel Request</button>
+        <p>You sent them a friend request !</p>
+        <button class="btn btn-outline-danger" id="cancel-request" data-relation-id=${friendship_id}>Cancel Request</button>
     `;
-
     } else {
         alert('Failed to add friend.');
     }
@@ -113,7 +113,8 @@ async function handleCancelRequest(relationId) {
     if (response.ok) {
         friendship = document.getElementById('friendship');
         friendship.innerHTML = `
-            <button class="btn btn-primary" id="add-friend" data-user-id=${user_id}>Add Friend</button>
+            <p>You are not friend !</p>
+            <button class="btn btn-outline-success" id="add-friend" data-user-id=${user_id}>Add Friend</button>
         `;
     } else {
         alert('Failed to cancel the request.');
@@ -135,8 +136,8 @@ async function handleAcceptRequest(relationId) {
     if (response.ok) {
         friendship = document.getElementById('friendship');
         friendship.innerHTML = `
-            <p>Friend</p>
-            <button class="btn btn-danger" id="remove-friend" data-relation-id=${friendship_id}>Remove Friend</button>
+            <p>You are friend already !</p>
+            <button class="btn btn-outline-danger" id="remove-friend" data-relation-id=${friendship_id}>Remove Friend</button>
         `;
     } else {
         alert('Failed to accept the request.');
@@ -160,7 +161,8 @@ async function handleDeclineRequest(relationId) {
     if (response.ok) {
         friendship = document.getElementById('friendship');
         friendship.innerHTML = `
-            <button class="btn btn-primary" id="add-friend" data-user-id=${user_id}>Add Friend</button>
+            <p>You are not friend !</p>
+            <button class="btn btn-outline-success" id="add-friend" data-user-id=${user_id}>Add Friend</button>
         `;
     } else {
         alert('Failed to decline the request.');

@@ -164,13 +164,13 @@ const Friends = async () => {
     <div class="text-center">
         <h1>Friends Page</h1>
         <div id="friend-requests">
-            <h2>Friend Requests</h2>
+            <h3>Friend Requests</h3>
             <ul id="friend-requests-list">
                 <li>Loading friend requests list..</li>
             </ul>
         </div>
         <div id="friends">
-            <h2>Friends List</h2>
+            <h3>Friends List</h3>
             <ul id="friends-list">
                 <li>Loading friends list..</li>
             </ul>
@@ -204,7 +204,7 @@ const Friends = async () => {
 
     if (friendsData.friends.length === 0) {
         document.getElementById('friends').innerHTML = `
-            <h2>Friends List</h2>
+            <h3>Friends List</h3>
             <p>You have no friend. How sad :-( </p>
         `;
     } else {
@@ -215,7 +215,15 @@ const Friends = async () => {
             const listItem = document.createElement("div");
 
             listItem.innerHTML = `
-                ${friend.username} <img src="${friend.profile_picture}" alt="${friend.username}">
+                <div class="friend-item">
+                    <div class="friend-info">
+                        <div class="friend-picture-container">
+                            <a href="/user/${friend.username}" data-link>
+                                <img class="friend-picture" src="${friend.profile_picture}" alt="${friend.username}">
+                            </a>
+                    </div>
+                    <span class="friend-name">${friend.username}</span>
+                </div>
             `;
 
         friendsList.appendChild(listItem);
@@ -234,8 +242,8 @@ const Friends = async () => {
     const friendsRequestsData = await friendRequests.json();
     if (friendsRequestsData.friend_requests.length === 0) {
         document.getElementById('friend-requests').innerHTML = `
-            <h2>Friend Requests</h2>
-            <p>Nobody wants to be your friend.</p>
+            <h3>Friend Requests</h3>
+            <p>Nobody wants to be your friend.</p>  
         `;
     } else {
         const friendRequestsList = document.getElementById("friend-requests-list");
@@ -244,52 +252,25 @@ const Friends = async () => {
         friendsRequestsData.friend_requests.forEach(friendRequest => {
             const listItem = document.createElement("div");
             listItem.innerHTML = `
-                ${friendRequest.username} <img src="${friendRequest.profile_picture}" alt="${friendRequest.username}">
-                <button class="btn btn-primary accept-request" data-relation-id="${friendRequest.id}">Accept</button>
-                <button class="btn btn-danger decline-request" data-relation-id="${friendRequest.id}">Decline</button>
+                <div class="friend-request-item">
+                    <div class="friend-info">
+                        <div class="friend-picture-container">
+                            <a href="/user/${friendRequest.username}" data-link>
+                                <img class="friend-picture" src="${friendRequest.profile_picture}" alt="${friendRequest.username}">
+                            </a>
+                        </div>
+                        <span class="friend-name">${friendRequest.username}</span>
+                    </div>
+                    <div class="friend-action-buttons">
+                        <button class="btn btn-outline-success" id="accept-request-list" data-relation-id="${friendRequest.id}">Accept</button>
+                        <button class="btn btn-outline-danger" id="decline-request-list" data-relation-id="${friendRequest.id}">Decline</button>
+                    </div>
+                </div>
             `;
-
         friendRequestsList.appendChild(listItem);
-        });
-
-        document.querySelectorAll('.accept-request').forEach(button => {
-            button.addEventListener('click', async (event) => {
-                const requestId = event.target.getAttribute('data-relation-id');
-                await handleFriendRequest('accept', requestId);
-            });
-        });
-
-        document.querySelectorAll('.decline-request').forEach(button => {
-            button.addEventListener('click', async (event) => {
-                const requestId = event.target.getAttribute('data-relation-id');
-                await handleFriendRequest('refuse', requestId);
-            });
         });
     }
     return document.getElementById('app').innerHTML;
-};
-
-const handleFriendRequest = async (action, id) => {
-    const token = localStorage.getItem('auth_token');
-    const url = action === 'accept' 
-        ? `/friend/accept_request/${id}/` 
-        : `/friend/refuse_request/${id}/`;
-
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken'),
-            'Authorization': `Bearer ${token}`
-        }
-    });
-
-    if (response.ok) {
-        await Friends();
-    } else {
-        alert('Failed to process the friend request.');
-    }
 };
 
 const Stats = async () => {
@@ -384,17 +365,16 @@ const UserProfile = async (username) => {
     if (response.status === 401) {
         return `
             <div class="text-center">
-                <h1>Access Denied</h1>
+                <h2>Access Denied</h2>
                 <p>You need to be logged in to view this page.</p>
             </div>
         `;
     }
 
     if (response.status === 404) {
-        console.log('User not found');
         return `
             <div class="text-center">
-                <h1>User Not Found</h1>
+                <h2>User Not Found</h2>
                 <p>The user ${username} does not exist.</p>
             </div>
         `;
@@ -405,7 +385,7 @@ const UserProfile = async (username) => {
         <img src="${data.profile_picture}" alt="${data.username}" class="profile-picture-preview">
         <h1>${data.username}</h1>
         <div id="friendship"></div>
-        <h2>Stats</h2>
+        <h3>Stats</h3>
         <div id="user-stats"> </div>
     `;
     
@@ -433,34 +413,91 @@ function get_friendship_content(friendship_data, user_id) {
     // yourself: 0, not friend: 1, friend: 2, pending request: 3, request received: 4
     if (friendship_data.status === 2) {
         return `
-            <p>Friend</p>
-            <button class="btn btn-danger" id="remove-friend" data-relation-id=${friendship_data.id}>Remove Friend</button>
+            <p>You are friend already !</p>
+            <button class="btn btn-outline-danger" id="remove-friend" data-relation-id=${friendship_data.id}>Remove Friend</button>
         `;
     } else if (friendship_data.status === 1) {
         return `
-            <button class="btn btn-primary" id="add-friend" data-user-id=${user_id}>Add Friend</button>
+            <p>You are not friend !</p>
+            <button class="btn btn-outline-success" id="add-friend" data-user-id=${user_id}>Add Friend</button>
         `;
     } else if (friendship_data.status === 3) {
         return `
-            <p>Pending Request</p>
-            <button class="btn btn-danger" id="cancel-request" data-relation-id=${friendship_data.id}>Cancel Request</button>
+            <p>You sent them a friend request !</p>
+            <button class="btn btn-outline-danger" id="cancel-request" data-relation-id=${friendship_data.id}>Cancel Request</button>
         `;
     } else if (friendship_data.status === 4) {
         return `
-            <p>Friend Request Received</p>
-            <button class="btn btn-primary accept-request" id="accept-request" data-relation-id=${friendship_data.id}>Accept</button>
-            <button class="btn btn-danger decline-request" id="decline-request" data-relation-id=${friendship_data.id}>Decline</button>
+            <p>They sen\'t you a friend request !</p>
+            <button class="btn btn-outline-success accept-request" id="accept-request" data-relation-id=${friendship_data.id}>Accept</button>
+            <button class="btn btn-outline-danger decline-request" id="decline-request" data-relation-id=${friendship_data.id}>Decline</button>
         `;
+    } else {
+        return '<p>Your profile</p>';
     }
 }
 
 document.addEventListener("click", e => {
-    if (e.target.matches("[data-link]")) {
+    const link = e.target.closest("a[data-link]");
+    if (link) {
         e.preventDefault();
-        navigateTo(e.target.href);
+        navigateTo(link.href);
     }
 });
 
 window.addEventListener("popstate", router);
 
 document.addEventListener("DOMContentLoaded", router);
+
+document.addEventListener("DOMContentLoaded", () => {
+    document.addEventListener("click", async (event) => {
+        if (event.target.matches("#accept-request-list")) {
+            event.preventDefault();
+            const relationId = event.target.getAttribute('data-relation-id');
+            await handleAcceptRequest(relationId);
+        }
+
+        if (event.target.matches("#decline-request-list")) {
+            event.preventDefault();
+            const relationId = event.target.getAttribute('data-relation-id');
+            await handleDeclineRequest(relationId);
+        }
+
+    });
+});
+
+async function handleAcceptRequest(relationId) {
+    const token = localStorage.getItem('auth_token');
+    const response = await fetch(`/friend/accept_friend/${relationId}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Authorization': `Bearer ${token}`
+        }
+    });
+
+    if (response.ok) {
+        await Friends();
+    } else {
+        alert('Failed to accept the request.');
+    }
+}
+
+async function handleDeclineRequest(relationId) {
+    const token = localStorage.getItem('auth_token');
+    const response = await fetch(`/friend/decline_friend/${relationId}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Authorization': `Bearer ${token}`
+        }
+    });
+
+    if (response.ok) {
+        await Friends();
+    } else {
+        alert('Failed to decline the request.');
+    }
+}
