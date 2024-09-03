@@ -3,6 +3,7 @@ import abc
 import asyncio
 import os
 import django
+import time
 
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
@@ -11,7 +12,71 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'src.settings')
 django.setup()
 
 from common import auth_client as auth
-from games.models import PlayerRoom
+from games.models import PlayerRoom, GameResult
+
+@database_sync_to_async
+def get_player_room(user_id, game_room):
+    return PlayerRoom.objects.filter(
+        player__player_id=user_id,
+        game_room__room_name=game_room
+    ).first()
+
+@database_sync_to_async
+def get_player_room_player(player_room):
+    return player_room.player
+
+@database_sync_to_async
+def get_expected_players(player_room):
+    return player_room.game_room.expected_players
+
+@database_sync_to_async
+def get_player_id(player_room):
+    return player_room.player.player_id
+
+@database_sync_to_async
+def set_player_position(player_room, position):
+	player_room.player_position = position
+	player_room.save()
+
+@database_sync_to_async
+def get_player_position(player_room):
+	return player_room.player_position
+
+@database_sync_to_async
+def get_game_room(player_room):
+	return player_room.game_room
+
+@database_sync_to_async
+def get_game_room_game(game_room):
+	return game_room.game
+
+@database_sync_to_async
+def set_in_session(game_room, value: bool):
+	game_room.in_session = value
+	# ! important ! it is important to spefify that this is the only field that needs to be updated
+	# otherwise the game room data gets overwritten with old data
+	game_room.save(update_fields=['in_session'])
+
+@database_sync_to_async
+def set_player_count(game_room, value: int):
+	game_room.player_count = value
+	game_room.save()
+
+@database_sync_to_async
+def in_session(game_room):
+	return game_room.in_session
+
+@database_sync_to_async
+def get_min_players(game_room):
+	return game_room.game.min_players
+
+@database_sync_to_async
+def delete_game_room(game_room):
+	game_room.delete()
+
+@database_sync_to_async
+def store_game_result(game_result):
+	game_result.save()
 
 class GameSession(object):
 	def __init__(self, game_logic, game_server, game_room, pause_timeout=30):
@@ -26,17 +91,26 @@ class GameSession(object):
 		self._pause_event.set()
 		self._timeout = pause_timeout
 		self.is_running = True
+		self._players = [None, None]
+		self._game_result = GameResult()
+
+	def set_player(self, position, player):
+		self._players[position] = player
 
 	async def update(self, data, player):
 		await self._game_logic.update(data, player)
 
 	async def start(self, callback):
 		await callback(await self._game_logic.startEvent())
+		t0 = time.time()
 		while self.is_running:
 			await asyncio.gather(
 				self.game_loop(callback),
 				asyncio.sleep(0.03)				# about 30 loops/second
 			)
+		self._game_result.game_duration = time.time() - t0
+		await store_game_result(self._game_result)
+		await delete_game_room(self._game_room)
 
 	async def game_loop(self, callback):
 		try:
@@ -45,6 +119,9 @@ class GameSession(object):
 			for end in self._connection_lost_callbacks:
 				await end()
 			await set_in_session(self._game_room, False)
+			# todo: on connection lost, game results should be stored 
+			# by the game consumers.
+			#await store_game_result(game_result)
 			return
 		async for data in self._game_logic.sendEvent():
 			if data["type"] == "win":
@@ -52,6 +129,13 @@ class GameSession(object):
 				for end in self._end_callbacks:
 					await end(data)
 				await set_in_session(self._game_room, False)
+				# todo: store game results and delete the game room
+				self._game_result = GameResult(
+					winner=self._players[data["player"]], 
+					loser=self._players[data["loser"]],
+					winner_score=data["score"][data["player"]],
+					loser_score=data["score"][data["loser"]],
+					game=await get_game_room_game(self._game_room))
 				self.is_running = False
 				return
 			await callback(data)
@@ -117,54 +201,6 @@ class GameLogic(abc.ABC):
 		pass
 	async def sendEvent():
 		pass
-
-@database_sync_to_async
-def get_player_room(user_id, game_room):
-    return PlayerRoom.objects.filter(
-        player__player_id=user_id,
-        game_room__room_name=game_room
-    ).first()
-
-@database_sync_to_async
-def get_expected_players(player_room):
-    return player_room.game_room.expected_players
-
-@database_sync_to_async
-def get_player_id(player_room):
-    return player_room.player.player_id
-
-@database_sync_to_async
-def set_player_position(player_room, position):
-	player_room.player_position = position
-	player_room.save()
-
-@database_sync_to_async
-def get_player_position(player_room):
-	return player_room.player_position
-
-@database_sync_to_async
-def get_game_room(player_room):
-	return player_room.game_room
-
-@database_sync_to_async
-def set_in_session(game_room, value: bool):
-	game_room.in_session = value
-	# ! important ! it is important to spefify that this is the only field that needs to be updated
-	# otherwise the game room data gets overwritten with old data
-	game_room.save(update_fields=['in_session'])
-
-@database_sync_to_async
-def set_player_count(game_room, value: int):
-	game_room.player_count = value
-	game_room.save()
-
-@database_sync_to_async
-def in_session(game_room):
-	return game_room.in_session
-
-@database_sync_to_async
-def get_min_players(game_room):
-	return game_room.game.min_players
 
 class GameConsumer(AsyncWebsocketConsumer):
 	def __init__(self, game_server: GameServer, *args, **kwargs):
@@ -238,6 +274,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 			# if the amount of players is met, notify all clients.
 			self.player = await get_player_position(player_room)
 			session.current_players += 1
+			session.set_player(self.player, await get_player_room_player(player_room))
 			if session.current_players == expected_players:
 				# keep a reference to the game session.
 				self._game_session = session

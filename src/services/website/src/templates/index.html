@@ -27,12 +27,15 @@
                 <li class="nav-item">
                     <a href="/" class="btn btn-primary me-2" data-link>Home</a>
                 </li>
-                <li class="nav-item">
-                    <a href="/pong" class="btn btn-primary me-2" data-link>Pong</a>
-                </li>
-                <li class="nav-item">
-                    <a href="/other-game" class="btn btn-primary me-2" data-link>Other game</a>
-                </li>
+                <li class="nav-item dropdown">
+					<a class="btn btn-primary dropdown-toggle me-2" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+						Games
+					</a>
+					<ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+						<li><a class="dropdown-item" href="/pong" data-link>Pong</a></li>
+						<li><a class="dropdown-item" href="/other-game" data-link>Other game</a></li>
+					</ul>
+				</li>
                 <li class="nav-item">
                     <a href="/settings" class="btn btn-primary me-2" data-link>Settings</a>
                 </li>

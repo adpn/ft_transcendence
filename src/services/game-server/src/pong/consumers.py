@@ -72,7 +72,7 @@ class PongLogic(game.GameLogic):
 			self.goalEvent = False
 			yield { "type": "goal", "score": self.score }
 		if self.playerWin != -1:
-			yield { "type": "win", "player": self.playerWin }
+			yield { "type": "win", "player": self.playerWin, "loser": 1 - self.playerWin, "score": self.score }
 
 	async def update_rackets(self):
 		if self.input[1][1]:
