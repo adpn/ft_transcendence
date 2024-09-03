@@ -53,7 +53,7 @@ function replaceLoginButtons(user) {
                 </div>
             </a>
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
-                <li><a href="/profile" class="dropdown-item" data-link>Profile</a></li>
+                <li><a href="/user/${user.username}" class="dropdown-item" data-link>Profile</a></li>
                 <li><a href="/settings" class="dropdown-item" data-link>Settings</a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item" onclick="handleLogout()">Logout</a></li>
@@ -92,30 +92,6 @@ function handleLogout() {
         navigateTo('/');
     });
 }
-
-// Function coming from signup.js, idk what it does
-// async function makeAuthenticatedRequest(url, method = 'GET', body = null) {
-//     const token = localStorage.getItem('jwt'); // or sessionStorage.getItem('jwt')
-
-//     const headers = {
-//         'Authorization': `Bearer ${token}`, // Include token in the Authorization header
-//         'Content-Type': 'application/json' // Optional, depending on the request type
-//     };
-
-//     return fetch(url, {
-//         method: method,
-//         headers: headers,
-//         body: body ? JSON.stringify(body) : null
-//     })
-//     .then(response => response.json())
-//     .then(data => {
-//         console.log('Response Data:', data);
-//         return data;
-//     })
-//     .catch(error => {
-//         console.error('Request Error:', error);
-//     });
-// }
 
 document.addEventListener("DOMContentLoaded", function() {
 
