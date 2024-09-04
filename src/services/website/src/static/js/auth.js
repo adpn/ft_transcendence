@@ -53,10 +53,10 @@ function replaceLoginButtons(user) {
                 </div>
             </a>
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
-                <li><a href="/user/${user.username}" class="dropdown-item" data-link>Profile</a></li>
-                <li><a href="/settings" class="dropdown-item" data-link>Settings</a></li>
+                <li><a href="/user/${user.username}" class="dropdown-item btn btn-outline-light" data-link>Profile</a></li>
+                <li><a href="/settings" class="dropdown-item btn btn-outline-light" data-link>Settings</a></li>
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item" onclick="handleLogout()">Logout</a></li>
+                <li><a class="dropdown-item btn btn-outline-light" onclick="handleLogout()">Logout</a></li>
             </ul>
         </div>
     `;
@@ -67,10 +67,10 @@ function resetLoginButtons() {
     profileMenu.innerHTML = `
         <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
             <li class="nav-item">
-                <button class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#loginModal">Log in</button>
+                <button class="btn btn-outline-light me-2" data-bs-toggle="modal" data-bs-target="#loginModal">Log in</button>
             </li>
             <li class="nav-item">
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#signUpModal">Sign up</button>
+                <button class="btn btn-outline-light" data-bs-toggle="modal" data-bs-target="#signUpModal">Sign up</button>
             </li>
         </ul>
     `;
