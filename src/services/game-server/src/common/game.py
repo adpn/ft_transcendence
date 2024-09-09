@@ -50,6 +50,8 @@ class GameSession(object):
 				await end()
 			await set_in_session(self._game_room, False)
 			return
+		data = await self._game_logic.gameTick()
+		await callback(data)
 		async for data in self._game_logic.sendEvent():
 			if data["type"] == "win":
 				del self._game_server._game_sessions[self._session_id]
@@ -61,8 +63,6 @@ class GameSession(object):
 				return
 			await callback(data)
 			await asyncio.sleep(0.001)
-		data = await self._game_logic.gameTick()
-		await callback(data)
 
 	def on_session_end(self, callback):
 		self._end_callbacks.append(callback)
