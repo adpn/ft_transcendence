@@ -13,7 +13,7 @@
     <script src="{% static 'js/settings.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
     <script type="module" src="{% static 'js/auth.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
     <script type="module" src="{% static 'js/router.js' %}"></script>
-    <script src="{% static 'js/friend.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';<</script>
+    <script type="module" src="{% static 'js/friend.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 </head>
 <body>
