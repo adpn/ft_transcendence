@@ -10,45 +10,49 @@
     {% load static %}
 	<link rel="icon" href="{% static 'favicon.ico' %}" type="image/x-icon">
 	<script type="module" src="{% static 'js/pong.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
-    <script src="{% static 'js/profile.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
+    <script src="{% static 'js/settings.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
     <script type="module" src="{% static 'js/auth.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
     <script type="module" src="{% static 'js/router.js' %}"></script>
+    <script type="module" src="{% static 'js/friend.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <a class="navbar-brand ms-3"href="/" data-link>ft_transcendence</a>
+        <div class="navbar-brand ms-3">ft_transcendence</div>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarTogglerDemo02" aria-controls="navbarTogglerDemo02" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarTogglerDemo02">
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                 <li class="nav-item">
-                    <a href="/" class="btn btn-primary me-2" data-link>Home</a>
+                    <a href="/" class="btn btn-outline-light me-2" data-link>Home</a>
+                </li>
+                <li class="nav-item dropdown">
+					<a class="btn btn-outline-light dropdown-toggle me-2" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+						Games
+					</a>
+					<ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+						<li><a class="dropdown-item btn btn-outline-light" href="/pong" data-link>Pong</a></li>
+						<li><a class="dropdown-item btn btn-outline-light" href="/other-game" data-link>Other game</a></li>
+					</ul>
+				</li>
+                <li class="nav-item">
+                    <a href="/stats" class="btn btn-outline-light me-2" data-link>Stats</a>
                 </li>
                 <li class="nav-item">
-                    <a href="/pong" class="btn btn-primary me-2" data-link>Pong</a>
-                </li>
-                <li class="nav-item">
-                    <a href="/other-game" class="btn btn-primary me-2" data-link>Other game</a>
-                </li>
-                <li class="nav-item">
-                    <a href="/profile" class="btn btn-primary me-2" data-link>Profile</a>
-                </li>
-                <li class="nav-item">
-                    <a href="/stats" class="btn btn-primary me-2" data-link>Stats</a>
-                </li>
-                <li class="nav-item">
-                    <a href="/friends" class="btn btn-primary me-2" data-link>Friends</a>
+                    <a href="/friends" class="btn btn-outline-light me-2" data-link>Friends</a>
                 </li>
             </ul>
+            <form class="d-flex me-auto" id="userSearchForm">
+                <input class="form-control me-2" type="search" placeholder="Search users" aria-label="Search" id="userSearchInput">
+            </form>
             <div id="profile-menu">
                 <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
                     <li class="nav-item">
-                        <button class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#loginModal">Log in</button>
+                        <button class="btn btn-outline-light me-2" data-bs-toggle="modal" data-bs-target="#loginModal">Log in</button>
                     </li>
                     <li class="nav-item">
-                        <button class="btn btn-primary me-3" data-bs-toggle="modal" data-bs-target="#signUpModal">Sign up</button>
+                        <button class="btn btn-outline-light me-3" data-bs-toggle="modal" data-bs-target="#signUpModal">Sign up</button>
                     </li>
                 </ul>
             </div>
@@ -85,9 +89,9 @@
                             <label for="loginPassword" class="form-label">Password</label>
                             <input type="password" class="form-control" id="login-password" name="password" required>
                         </div>
-                        <button type="submit" class="btn btn-primary">Log In</button>
+                        <button type="submit" class="btn btn-outline-dark">Log In</button>
                     </form>
-					<a class="btn btn-primary w-100 mt-3" href="https://api.intra.42.fr/oauth/authorize?client_id=u-s4t2ud-da67bd33b552506b9d65c73ab83783a4f4d9c9c73c30db86ee1cb8f544f0f45f&redirect_uri=https%3A%2F%2F{{ip_address}}%2Fauth%2Fauth42%2F&response_type=code">Log In with 42auth</a>
+					<a class="btn btn-outline-dark w-100 mt-3" href="https://api.intra.42.fr/oauth/authorize?client_id=u-s4t2ud-da67bd33b552506b9d65c73ab83783a4f4d9c9c73c30db86ee1cb8f544f0f45f&redirect_uri=https%3A%2F%2F{{ip_address}}%2Fauth%2Fauth42%2F&response_type=code">Log In with 42auth</a>
                 </div>
             </div>
         </div>
@@ -115,7 +119,7 @@
                             <label for="signup-confirm-password" class="form-label">Confirm Password</label>
                             <input type="password" class="form-control" id="signup-confirm-password" name="confirm_password" required>
                         </div>
-                        <button type="submit" class="btn btn-primary">Sign Up</button>
+                        <button type="submit" class="btn btn-outline-dark">Sign Up</button>
                     </form>
                 </div>
             </div>

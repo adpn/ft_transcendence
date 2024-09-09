@@ -45,6 +45,7 @@ class PongLogic(game.GameLogic):
 
 	async def update(self, data, player):
 		# give up
+		# self.players[player]
 		if data[0]:
 			await self.game_end(1 - player)
 			return
@@ -70,7 +71,7 @@ class PongLogic(game.GameLogic):
 			self.goalEvent = False
 			yield { "type": "goal", "score": self.score }
 		if self.playerWin != -1:
-			yield { "type": "win", "player": self.playerWin }
+			yield { "type": "win", "player": self.playerWin, "loser": 1 - self.playerWin, "score": self.score }
 
 	async def update_rackets(self):
 		if self.input[1][1]:

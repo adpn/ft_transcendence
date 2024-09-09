@@ -10,6 +10,7 @@ const WON = 3;
 const LOST = 4;
 const DISCONNECTED = 6;
 const ERROR = 7;
+const NOT_LOGGED = 8;
 
 // this stuff is relative to a canvas of 1000,1000
 var game_data = {
@@ -59,8 +60,11 @@ function connectGameRoom() {
 			})
 	})
 	.then((response) => {
-		if(!response.ok)
-			throw new Error(response.status);
+		if(!response.ok) {
+			const error = new Error();
+			error.status = response.status;
+			throw error;
+		}
 		return response.json();
 		})
 	.then(data => {
@@ -77,8 +81,9 @@ function connectGameRoom() {
 	})
 	.catch((error) => {
 		game_status = ERROR
+		if (error.status === 401)
+			game_status = NOT_LOGGED;
 		resizeCanvas();
-		console.log(error);
 	});
 }
 
@@ -194,6 +199,9 @@ function resizeCanvas() {
 		case DISCONNECTED:
 			drawMessage("Disconnected");
 			break ;
+		case NOT_LOGGED:
+			drawMessage("You are not logged in");
+			break ;
 		case ERROR:
 			drawMessage("Something went wrong");
 	}
@@ -215,10 +223,11 @@ function gameStart() {
 	canvas.focus();
 }
 
-function gameOver(is_winner) {
-	game_status = LOST;
-	if (is_winner)
-		game_status = WON;
+function gameOver(gameStatus) {
+	if (gameStatus == 'win')
+		game_status = WON
+	else
+		game_status = LOST
 	socket.close();
 	resizeCanvas();
 }
@@ -254,8 +263,8 @@ function update(event) {
 		game_data.score = received_data.score;
 		return ;
 	}
-	if (received_data.type == "win") {
-		gameOver(received_data.player);
+	if (received_data.type == "end") {
+		gameOver(received_data.status);
 		return ;
 	}
 }

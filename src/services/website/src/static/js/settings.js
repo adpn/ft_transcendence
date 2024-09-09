@@ -1,9 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
-    // Delegate form submission events to the document
     document.addEventListener("submit", async (event) => {
         if (event.target.matches("#profile-picture-form")) {
             event.preventDefault();
-            console.log("Profile Picture Form Submitted");
             const formData = new FormData(event.target);
             
             try {
