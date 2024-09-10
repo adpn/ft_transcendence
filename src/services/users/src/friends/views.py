@@ -36,9 +36,9 @@ def accept_friend(request : HttpRequest, request_id : int) -> JsonResponse:
     if not request.user.is_authenticated:
         return JsonResponse({'status': 0, 'message': 'User not connected'}, status=401)
     user_profile = UserProfile.objects.get(user=request.user)
-    friend_request = Relation.objects.get(id=request_id)
-    if not friend_request:
+    if not Relation.objects.filter(id=request_id).exists():
         return JsonResponse({'status': 0, 'message': 'Friend request not found'}, status=404)
+    friend_request = Relation.objects.get(id=request_id)
     if friend_request.friend != user_profile:
         return JsonResponse({'status': 0, 'message': 'You are not the recipient of this request'}, status=403)
     friend_request.status = True
@@ -51,9 +51,9 @@ def decline_friend(request : HttpRequest, request_id : int) -> JsonResponse:
     if not request.user.is_authenticated:
         return JsonResponse({'status': 0, 'message': 'User not connected'}, status=401)
     user_profile = UserProfile.objects.get(user=request.user)
-    friend_request = Relation.objects.get(id=request_id)
-    if not friend_request:
+    if not Relation.objects.filter(id=request_id).exists():
         return JsonResponse({'status': 0, 'message': 'Friend request not found'}, status=404)
+    friend_request = Relation.objects.get(id=request_id)
     if friend_request.friend != user_profile:
         return JsonResponse({'status': 0, 'message': 'You are not the recipient of this request'}, status=403)
     user_id = friend_request.user.user.id
@@ -66,9 +66,9 @@ def cancel_friend_request(request: HttpRequest, request_id: int) -> JsonResponse
     if not request.user.is_authenticated:
         return JsonResponse({'status': 0, 'message': 'User not connected'}, status=401)
     user_profile = UserProfile.objects.get(user=request.user)
-    friend_request = Relation.objects.get(id=request_id)
-    if not friend_request:
+    if not Relation.objects.filter(id=request_id).exists():
         return JsonResponse({'status': 0, 'message': 'Friend request not found'}, status=404)
+    friend_request = Relation.objects.get(id=request_id)
     if friend_request.user.user != request.user and friend_request.friend.user != request.user:
         return JsonResponse({'status': 0, 'message': 'You are not part of this friend request'}, status=403)
     if friend_request.status == True:
@@ -84,9 +84,9 @@ def remove_friend(request: HttpRequest, request_id: int) -> JsonResponse:
         return JsonResponse({'status': 0, 'message': 'Method not allowed'}, status=405)
     if not request.user.is_authenticated:
         return JsonResponse({'status': 0, 'message': 'User not connected'}, status=401)
+    if not Relation.objects.filter(id=request_id).exists():
+        return JsonResponse({'status': 0, 'message': 'Friend request not found'}, status=404)
     friendship = Relation.objects.get(id=request_id)
-    if not friendship:
-        return JsonResponse({'status': 0, 'message': 'Friend not found'}, status=404)
     if friendship.user.user != request.user and friendship.friend.user != request.user:
         return JsonResponse({'status': 0, 'message': 'You are not part of this friendship'}, status=403)
     if friendship.status == False:
@@ -101,9 +101,9 @@ def add_friend(request: HttpRequest, friend_id: int) -> JsonResponse:
     if not request.user.is_authenticated:
         return JsonResponse({'status': 0, 'message': 'User not connected'}, status=401)
     user_profile = UserProfile.objects.get(user=request.user)
-    friend_profile = UserProfile.objects.get(id=friend_id)
-    if not friend_profile:
+    if not UserProfile.objects.filter(id=friend_id).exists():
         return JsonResponse({'status': 0, 'message': 'User does not exist'}, status=404)
+    friend_profile = UserProfile.objects.get(id=friend_id)
     if Relation.objects.filter(user=user_profile, friend=friend_profile).exists() or Relation.objects.filter(user=friend_profile, friend=user_profile).exists():
         return JsonResponse({'status': 0, 'message': 'Can\'t send a friend request to this user'}, status=403)
     new_relation = Relation(user=user_profile, friend=friend_profile)
