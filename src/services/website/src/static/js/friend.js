@@ -1,18 +1,5 @@
-function getCookie(name) {
-    var cookieValue = null;
-    if (document.cookie && document.cookie != '') {
-        var cookies = document.cookie.split(';');
-        for (var i = 0; i < cookies.length; i++) {
-            var cookie = cookies[i].trim();
-            // Does this cookie string begin with the name we want?
-            if (cookie.substring(0, name.length + 1) == (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-}
+import { navigateTo } from './router.js';
+import { getCookie } from './auth.js';
 
 document.addEventListener("DOMContentLoaded", () => {
     document.addEventListener("click", async (event) => {
@@ -47,6 +34,17 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
     });
+
+    const form = document.getElementById('userSearchForm');
+    const input = document.getElementById('userSearchInput');
+
+    form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        if (input.value) {
+            navigateTo(`/user/${input.value}`);
+        }
+        input.value = '';
+    });
 });
 
 async function handleRemoveFriend(relationId) {
@@ -59,11 +57,11 @@ async function handleRemoveFriend(relationId) {
             'Authorization': `Bearer ${token}`
         }
     });
-    data = await response.json();
-    user_id = data['user_id'];
+    const data = await response.json();
+    const user_id = data['user_id'];
 
     if (response.ok) {
-        friendship = document.getElementById('friendship');
+        const friendship = document.getElementById('friendship');
         friendship.innerHTML = `
             <p>You are not friend !</p>
             <button class="btn btn-outline-success" id="add-friend" data-user-id=${user_id}>Add Friend</button>
@@ -83,11 +81,11 @@ async function handleAddFriend(userId) {
             'Authorization': `Bearer ${token}`
         }
     });
-    data = await response.json();
-    friendship_id = data['friendship_id'];
+    const data = await response.json();
+    const friendship_id = data['friendship_id'];
 
     if (response.ok) {
-        friendship = document.getElementById('friendship');
+        const friendship = document.getElementById('friendship');
         friendship.innerHTML = `
         <p>You sent them a friend request !</p>
         <button class="btn btn-outline-danger" id="cancel-request" data-relation-id=${friendship_id}>Cancel Request</button>
@@ -107,11 +105,11 @@ async function handleCancelRequest(relationId) {
             'Authorization': `Bearer ${token}`
         }
     });
-    data = await response.json();
-    user_id = data['user_id'];
+    const data = await response.json();
+    const user_id = data['user_id'];
 
     if (response.ok) {
-        friendship = document.getElementById('friendship');
+        const friendship = document.getElementById('friendship');
         friendship.innerHTML = `
             <p>You are not friend !</p>
             <button class="btn btn-outline-success" id="add-friend" data-user-id=${user_id}>Add Friend</button>
@@ -131,10 +129,10 @@ async function handleAcceptRequest(relationId) {
             'Authorization': `Bearer ${token}`
         }
     });
-    data = await response.json();
-    friendship_id = data['friendship_id'];
+    const data = await response.json();
+    const friendship_id = data['friendship_id'];
     if (response.ok) {
-        friendship = document.getElementById('friendship');
+        const friendship = document.getElementById('friendship');
         friendship.innerHTML = `
             <p>You are friend already !</p>
             <button class="btn btn-outline-danger" id="remove-friend" data-relation-id=${friendship_id}>Remove Friend</button>
@@ -155,11 +153,11 @@ async function handleDeclineRequest(relationId) {
         }
     });
 
-    data = await response.json();
-    user_id = data['user_id'];
+    const data = await response.json();
+    const user_id = data['user_id'];
 
     if (response.ok) {
-        friendship = document.getElementById('friendship');
+        const friendship = document.getElementById('friendship');
         friendship.innerHTML = `
             <p>You are not friend !</p>
             <button class="btn btn-outline-success" id="add-friend" data-user-id=${user_id}>Add Friend</button>
@@ -167,20 +165,4 @@ async function handleDeclineRequest(relationId) {
     } else {
         alert('Failed to decline the request.');
     }
-}
-
-function getCookie(name) {
-    var cookieValue = null;
-    if (document.cookie && document.cookie != '') {
-        var cookies = document.cookie.split(';');
-        for (var i = 0; i < cookies.length; i++) {
-            var cookie = cookies[i].trim();
-            // Does this cookie string begin with the name we want?
-            if (cookie.substring(0, name.length + 1) == (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
 }
