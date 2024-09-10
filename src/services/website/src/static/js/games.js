@@ -26,7 +26,7 @@ class GameEndedState {
 		const button = document.createElement('button');
 		button.textContent = "Replay";
 		button.style.display = 'block';
-		button.className = 'btn btn-primary mb-2';
+		button.className = "btn btn-outline-light mb-2";
 
 		// Attach the replay method to the button's click event
 		button.addEventListener('click', () => this.replay());
@@ -39,7 +39,7 @@ class GameEndedState {
 		const button = document.createElement('button');
 		button.textContent = "Give Up";
 		button.style.display = 'block';
-		button.className = 'btn btn-primary mb-2';
+		button.className = "btn btn-outline-light mb-2";
 
 		// Attach the replay method to the button's click event
 		button.addEventListener('click', () => this.giveUp());
@@ -131,7 +131,7 @@ class QuickGame {
 		this.prevState = prevState;
 		this.cancelBtn = document.createElement('button');
 		this.cancelBtn.textContent = 'Cancel';
-		this.cancelBtn.className = 'btn btn-primary mb-2';
+		this.cancelBtn.className = "btn btn-outline-light mb-2";
 		this.cancelBtn.addEventListener('click', () => this.cancel());
 
 		this.socket = null;
@@ -183,6 +183,7 @@ class QuickGame {
 		.then((response) => {
 			if(!response.ok) {
 				// todo: display error message in the loading window
+				// then go back game menu.
 				this.cancel();
 				console.log(response.json());
 				throw new Error(response.status);
@@ -220,7 +221,7 @@ class Tournament {
 		this.prevState = prevState;
 		this.cancelBtn = document.createElement('button');
 		this.cancelBtn.textContent = 'Cancel';
-		this.cancelBtn.className = 'btn btn-primary mb-2';
+		this.cancelBtn.className = "btn btn-outline-light mb-2";
 
 		this.cancelBtn.addEventListener('click', () => this.cancel());
 	};
@@ -244,19 +245,19 @@ class GameModes {
 
 		this.quickGameBtn = document.createElement('button');
 		this.quickGameBtn.textContent = 'Quick Game';
-		this.quickGameBtn.className = 'btn btn-primary mb-2';
+		this.quickGameBtn.className = "btn btn-outline-light mb-2";
 
 		this.quickGameBtn.addEventListener('click', () => this.quickGame());
 
 		this.tournamentBtn = document.createElement('button');
 		this.tournamentBtn.textContent = 'Tournament';
-		this.tournamentBtn.className = 'btn btn-primary mb-2';
+		this.tournamentBtn.className = "btn btn-outline-light mb-2";
 
 		this.tournamentBtn.addEventListener('click', () => this.joinTournament());
 
 		this.backBtn = document.createElement('button');
 		this.backBtn.textContent = 'Back';
-		this.backBtn.className = 'btn btn-primary mb-2';
+		this.backBtn.className = "btn btn-outline-light mb-2";
 
 		this.backBtn.addEventListener('click', () => this.goBack());
 
@@ -293,15 +294,15 @@ class GameMenu {
 		this.pongState = new GameModes("pong", this);
 		this.pongButton = document.createElement('button');
 		this.pongButton.textContent = 'Pong';
-		this.pongButton.className = 'btn btn-primary mb-2';
+		this.pongButton.className = "btn btn-outline-light mb-2";
 
 		this.otherButton = document.createElement('button');
 		this.otherButton.textContent = 'Other Game';
-		this.otherButton.className = 'btn btn-primary mb-2';
+		this.otherButton.className = "btn btn-outline-light mb-2";
 
 		this.backButton = document.createElement('button');
 		this.backButton.textContent = 'Back';
-		this.backButton.className = 'btn btn-primary mb-2';
+		this.backButton.className = "btn btn-outline-light mb-2";
 
 		this.pongButton.addEventListener('click', () => this.launch_game("pong"));
 		this.otherButton.addEventListener('click', () => this.launch_game("other"));
