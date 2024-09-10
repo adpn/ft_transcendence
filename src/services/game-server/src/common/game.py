@@ -124,6 +124,8 @@ class GameSession(object):
 			# by the game consumers.
 			#await store_game_result(game_result)
 			return
+		data = await self._game_logic.gameTick()
+		await callback(data)
 		async for data in self._game_logic.sendEvent():
 			if data["type"] == "win":
 				self._game_server.remove_session(self._session_id)
@@ -140,8 +142,6 @@ class GameSession(object):
 				return
 			await callback(data)
 			await asyncio.sleep(0.001)
-		data = await self._game_logic.gameTick()
-		await callback(data)
 
 	def on_session_end(self, callback):
 		self._end_callbacks.append(callback)

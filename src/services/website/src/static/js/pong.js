@@ -10,6 +10,7 @@ const WON = 3;
 const LOST = 4;
 const DISCONNECTED = 6;
 const ERROR = 7;
+const NOT_LOGGED = 8;
 
 // this stuff is relative to a canvas of 1000,1000
 var game_data = {
@@ -155,6 +156,9 @@ function resizeCanvas() {
 			break ;
 		case DISCONNECTED:
 			drawMessage("Disconnected");
+			break ;
+		case NOT_LOGGED:
+			drawMessage("You are not logged in");
 			break ;
 		case ERROR:
 			drawMessage("Something went wrong");
