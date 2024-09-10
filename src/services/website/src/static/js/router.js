@@ -28,8 +28,7 @@ export const navigateTo = async url => {
 const router = async () => {
     const routes = [
         { path: "/", view: Home },
-        { path: "/pong", view: Pong },
-        { path: "/other-game", view: Other_game },
+        { path: "/game", view: Games },
         { path: "/settings", view: Settings },
         { path: "/friends", view: Friends },
         { path: "/stats", view: Stats },
@@ -69,26 +68,50 @@ const Home = () => `
 `;
 
 const Pong = () => `
-    <div class="row">
-        <div class="col text-center">
-            <div class="canvas-container">
-                <canvas id="gameCanvas" class="w-100 border"></canvas>
-            </div>
-        </div>
-        <div id="game-button-container">
-            <button class="btn btn-succes me-2" id="game-button" type="button">find game</button>
-        </div>
-    </div>
+<div class="row">
+<div class="row text-center">
+	<div class="canvas-container position-relative">
+		<canvas id="gameCanvas" class="w-100 border"></canvas>
+		<div id="game-menu" class="position-absolute top-50 start-50 translate-middle">
+			<button class="btn btn-primary mb-2" id="quick-game-button" type="button">Quick Game</button>
+		<br>
+			<button class="btn btn-secondary" id="tournament-button" type="button">Tournament</button>
+		</div>
+	</div>
+</div>
+<div id="game-button-container" class="text-center mt-3">
+	<button class="btn btn-success me-2" id="game-button" type="button">Find Game</button>
+</div>
+</div>
 `;
 
-const Other_game = () => `
-    <div class="row">
-    <div class="col text-center">
-        <div class="canvas-container">
-            <canvas id="gameCanvas" class="w-100 border"></canvas>
-        </div>
-    </div>
-    </div>
+const Games = () => `
+<div class="row">
+<div class="row text-center">
+	<div class="canvas-container position-relative">
+		<canvas id="gameCanvas" class="w-100 border"></canvas>
+		<div id="game-menu" class="position-absolute top-50 start-50 translate-middle" aria-hidden="true">
+		</div>
+		<div class="modal " id="loadingModal" tabindex="-1" aria-labelledby="loadingModalLabel" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered">
+		  <div class="modal-content">
+			<div class="modal-body text-center" id="loading-screen">
+			  <!-- Spinner -->
+			  <div class="spinner-border text-primary" role="status">
+				<span class="visually-hidden">Loading...</span>
+			  </div>
+			  <p class="mt-3">Please wait, loading...</p>
+			</div>
+		  </div>
+		</div>
+	</div>
+	</div>
+	</div>
+</div>
+<div id="game-button-container" class="text-center mt-3">
+	<button class="btn btn-success me-2" id="game-button" type="button">Find Game</button>
+</div>
+</div>
 `;
 
 const Settings = async () => {

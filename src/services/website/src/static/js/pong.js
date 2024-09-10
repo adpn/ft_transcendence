@@ -25,17 +25,14 @@ var canvas;
 var ctx;
 var is_focus = false;
 var game_status = NOT_JOINED;
+var canvas_loaded = false;
 
 
-document.addEventListener("DOMContentLoaded", function () {
-	window.addEventListener("pong", loadPong);
-});
-
-function loadPong() {
-	canvas = document.getElementById("gameCanvas");
+function loadPong(canv) {
+	canvas = canv
 	canvas.setAttribute("tabindex", "-1");
-	canvas.addEventListener("focus", function () { is_focus = true; });
-	canvas.addEventListener("blur", function () { is_focus = false; });
+	canvas.addEventListener("focus", () => { is_focus = true; });
+	canvas.addEventListener("blur", () => { is_focus = false; });
 	ctx = canvas.getContext("2d", { alpha: false });
 	window.addEventListener("resize", resizeCanvas, false);
 	window.addEventListener("keydown", takeInputDown, true);
@@ -44,42 +41,6 @@ function loadPong() {
 		game_status = NOT_JOINED;
 	changeButton();
 	resizeCanvas();
-}
-
-function connectGameRoom() {
-	fetch("/games/create_game/", {
-		method: "POST",
-		headers: {
-			"X-CSRFToken": getCookie("csrftoken"),
-			"Authorization": "Bearer " + localStorage.getItem("auth_token")
-		},
-		credentials: "include",
-			body: JSON.stringify({
-				"game": "pong"
-			})
-	})
-	.then((response) => {
-		if(!response.ok)
-			throw new Error(response.status);
-		return response.json();
-		})
-	.then(data => {
-		socket = new WebSocket("wss://" + data.ip_address + "/ws/game/pong/" + data.game_room_id + "/?csrf_token=" + getCookie("csrftoken") + "&token=" + localStorage.getItem("auth_token"));
-		if (socket.readyState > socket.OPEN)
-			throw new Error("WebSocket error: " + socket.readyState);
-		socket.addEventListener("close", disconnected);
-		socket.addEventListener("open", function () {
-			game_status = CONNECTING;
-			resizeCanvas();
-			changeButton();
-			socket.addEventListener("message", waitRoom);
-		});
-	})
-	.catch((error) => {
-		game_status = ERROR
-		resizeCanvas();
-		console.log(error);
-	});
 }
 
 function cancel() {
@@ -121,13 +82,14 @@ function changeButton() {
 `;
 	var button = document.getElementById("game-button");
 	switch (game_status) {
-		case NOT_JOINED:
-		case WON:
-		case LOST:
-		case DISCONNECTED:
-			button.addEventListener("click", connectGameRoom);
-			break ;
+		// case NOT_JOINED:
+		// case WON:
+		// case LOST:
+		// case DISCONNECTED:
+		// 	button.addEventListener("click", connectGameRoom);
+		// 	break ;
 		case CONNECTING:
+			// todo: put a spinning animation
 			button.addEventListener("click", cancel);
 			break ;
 		case PLAYING:
@@ -206,9 +168,9 @@ function makeYCord(number) {
 	return number * (canvas.height / 1000);
 }
 
-function gameStart() {
-	socket.removeEventListener("message", waitRoom);
-	socket.addEventListener("message", update);
+function gameStart(sockt) {
+	socket = sockt;
+	sockt.addEventListener("message", updatePong);
 	game_status = PLAYING;
 	changeButton();
 	resizeCanvas();
@@ -237,7 +199,7 @@ function GiveUp() {
 	socket.send(new Uint8Array([true, false, false]));
 }
 
-function update(event) {
+function updatePong(event) {
 	var received_data = JSON.parse(event.data);
 	if (received_data.type == "tick") {
 		game_data.ball_pos = received_data.b;
@@ -298,3 +260,4 @@ function drawScore() {
 	ctx.fillText(game_data.score[0], makeXCord(480), makeYCord(15));
 	ctx.fillText(game_data.score[1], makeXCord(520), makeYCord(15));
 }
+// });

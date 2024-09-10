@@ -119,6 +119,7 @@ class GameSession(object):
 			for end in self._connection_lost_callbacks:
 				await end()
 			await set_in_session(self._game_room, False)
+			# todo: handle results storage on connection lost.
 			# todo: on connection lost, game results should be stored 
 			# by the game consumers.
 			#await store_game_result(game_result)
@@ -130,12 +131,11 @@ class GameSession(object):
 					await end(data)
 				await set_in_session(self._game_room, False)
 				# todo: store game results and delete the game room
-				self._game_result = GameResult(
-					winner=self._players[data["player"]], 
-					loser=self._players[data["loser"]],
-					winner_score=data["score"][data["player"]],
-					loser_score=data["score"][data["loser"]],
-					game=await get_game_room_game(self._game_room))
+				self._game_result.winner = self._players[data["player"]] 
+				self._game_result.loser = self._players[data["loser"]]
+				self._game_result.winner_score = data["score"][data["player"]]
+				self._game_result.loser_score = data["score"][data["loser"]]
+				self._game_result.game = await get_game_room_game(self._game_room)
 				self.is_running = False
 				return
 			await callback(data)

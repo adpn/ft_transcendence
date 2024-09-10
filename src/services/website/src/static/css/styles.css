@@ -12,6 +12,28 @@ html, body {
     padding-top: 60%;
 }
 
+
+#game-menu {
+    text-align: center;
+    padding: 10px;
+    background-color: rgba(0, 0, 0, 1);
+    border-radius: 10px;
+}
+
+#game-menu button {
+	display: block;
+    width: 200px;
+    margin-top: 10px;
+	text-align: center;
+}
+
+/* Optional: Center the spinner */
+.modal-dialog-centered {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+  }
+
 #gameCanvas {
     position: absolute;
     top: 0;
