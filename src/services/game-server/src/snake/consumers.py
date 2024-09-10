@@ -18,7 +18,7 @@ DIR_DOWN = 1
 DIR_LEFT = 2
 DIR_RIGHT = 3
 
-class PongLogic(game.GameLogic):
+class SnakeLogic(game.GameLogic):
 	def __init__(self):
 		# client data
 		# server data
