@@ -222,6 +222,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 				}
 			)
 
+	#TODO: BUG when the same player joins the from two windows it still works ???
 	async def connect(self):
 		self.room_name = room_name = self.scope['url_route']['kwargs']['room_name']
 		room_name = self.scope['url_route']['kwargs']['room_name']

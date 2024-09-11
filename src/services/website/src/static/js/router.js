@@ -75,21 +75,13 @@ const Games = () => `
 <div class="row text-center">
 	<div class="canvas-container position-relative">
 		<canvas id="gameCanvas" class="w-100 border"></canvas>
-		<div id="game-menu" class="position-absolute top-50 start-50 translate-middle" aria-hidden="true">
+		<div id="game-ui" class="position-absolute top-0 start-0 w-100 h-100 flex-column align-items-center justify-content-center bg-dark">
+		<div id="loading-overlay" class="loading-overlay position-absolute top-0 start-0 w-100 h-100 flex-column align-items-center justify-content-center bg-dark" aria-hidden="true">
+        <div class="spinner"></div>
+        <p class="text-light mt-3">Waiting for opponent...</p>
+    	</div>
+		<div id="game-menu" class="position-absolute top-50 start-50 translate-middle bg-dark" aria-hidden="true"></div>
 		</div>
-		<div class="modal " id="loadingModal" tabindex="-1" aria-labelledby="loadingModalLabel" aria-hidden="true">
-		<div class="modal-dialog modal-dialog-centered">
-		  <div class="modal-content">
-			<div class="modal-body text-center" id="loading-screen">
-			  <!-- Spinner -->
-			  <div class="spinner-border text-primary" role="status">
-				<span class="visually-hidden">Loading...</span>
-			  </div>
-			  <p class="mt-3">Please wait, loading...</p>
-			</div>
-		  </div>
-		</div>
-	</div>
 	</div>
 	</div>
 </div>

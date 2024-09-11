@@ -4,6 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
 var gameMenu;
 var canvas;
+var loadingOverlay;
+var	game_ui;
 let	state = null;
 
 class GameEndedState {
@@ -60,6 +62,7 @@ class GameEndedState {
 	}
 
 	execute() {
+		game_ui.style.display = 'flex'
 		gameMenu.innerHTML = '';
 		gameMenu.style.display = 'block';
 		gameMenu.appendChild(this.replayButton);
@@ -123,10 +126,10 @@ class QuickGame {
 		this.playingState = new PlayingState(game, prevState, this);
 
 		this.loadingBody = document.getElementById('loading-screen');
-		this.loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'), {
-			backdrop: 'static',  // Prevents closing on clicking outside
-			keyboard: false      // Prevents closing on pressing the escape key
-		});
+		// this.loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'), {
+		// 	backdrop: 'static',  // Prevents closing on clicking outside
+		// 	keyboard: false      // Prevents closing on pressing the escape key
+		// });
 		this.game = game;
 		this.prevState = prevState;
 		this.cancelBtn = document.createElement('button');
@@ -137,21 +140,26 @@ class QuickGame {
 		this.socket = null;
 
 	};
+
 	cancel() {
 		if (this.socket)
 			this.socket.close();
-		if (this.loadingModal)
-			this.loadingModal.hide();
+		// if (this.loadingModal)
+		// 	this.loadingModal.hide();
+		loadingOverlay.style.display = 'none';
+		game_ui.style.display = 'flex'
 		// put the menu back.
-		gameMenu.style.display = 'block'
 		state = this.prevState;
 		state.execute();
 	}
+
 	execute() {
 		// Clear the game menu content
 		gameMenu.style.display = 'none';
-		this.loadingBody.appendChild(this.cancelBtn);
-		this.loadingModal.show();
+		// this.loadingBody.appendChild(this.cancelBtn);
+		// this.loadingModal.show();
+		loadingOverlay.style.display = 'flex';
+		loadingOverlay.appendChild(this.cancelBtn);
 		this.connectGameRoom();
 	};
 
@@ -160,8 +168,10 @@ class QuickGame {
 			// todo: if a player was found, display his profile and move to PlayingState.
 			// move to playing state.
 			// todo: wait for players to be ready. (click on button?)
-			this.loadingModal.hide();
+			// this.loadingModal.hide();
+			loadingOverlay.style.display = 'none';
 			state = this.playingState;
+			game_ui.style.display = 'none';
 			gameStart(this.socket);
 			state.execute();
 		}
@@ -182,10 +192,6 @@ class QuickGame {
 		})
 		.then((response) => {
 			if(!response.ok) {
-				// todo: display error message in the loading window
-				// then go back game menu.
-				this.cancel();
-				console.log(response.json());
 				throw new Error(response.status);
 			}
 			return response.json();
@@ -207,8 +213,11 @@ class QuickGame {
 		.catch((error) => {
 			// stop game_menu animations display error in menu.
 			// todo: display error message in the loading window
+			// todo: display error message in the loading window
+			// then go back game menu.
 			this.cancel();
 			// resizeCanvas();
+			console.log("CAUGHT ERROR!!!");
 			console.log(error); // maybe display the error message in the window
 		});
 	}
@@ -332,6 +341,9 @@ function load_games()
 	canvas = document.getElementById("gameCanvas");
 	gameMenu = document.getElementById('game-menu');
 	gameMenu.style.display = 'none';
+	loadingOverlay = document.getElementById('loading-overlay');
+	game_ui = document.getElementById('game-ui');
+	// todo: check if the user is signed-in first ?
 	if (state == null)
 		state = new GameMenu();
 	state.execute();
