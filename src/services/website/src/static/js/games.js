@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", function () {
 var gameMenu;
 var canvas;
 var loadingOverlay;
-var	game_ui;
+var	gameUI;
 let	state = null;
 
 class GameEndedState {
@@ -62,7 +62,7 @@ class GameEndedState {
 	}
 
 	execute() {
-		game_ui.style.display = 'flex'
+		gameUI.style.display = 'flex'
 		gameMenu.innerHTML = '';
 		gameMenu.style.display = 'block';
 		gameMenu.appendChild(this.replayButton);
@@ -117,6 +117,8 @@ class PlayingState {
 			//this.game.start(this.socket);
 			// canvas.focus();
 		}
+		console.log("PLAYING!");
+		gameUI.style.display = 'none';
 		loadPong(canvas);
 	}
 }
@@ -147,7 +149,7 @@ class QuickGame {
 		// if (this.loadingModal)
 		// 	this.loadingModal.hide();
 		loadingOverlay.style.display = 'none';
-		game_ui.style.display = 'flex'
+		gameUI.style.display = 'flex'
 		// put the menu back.
 		state = this.prevState;
 		state.execute();
@@ -171,7 +173,7 @@ class QuickGame {
 			// this.loadingModal.hide();
 			loadingOverlay.style.display = 'none';
 			state = this.playingState;
-			game_ui.style.display = 'none';
+			gameUI.style.display = 'none';
 			gameStart(this.socket);
 			state.execute();
 		}
@@ -342,7 +344,7 @@ function load_games()
 	gameMenu = document.getElementById('game-menu');
 	gameMenu.style.display = 'none';
 	loadingOverlay = document.getElementById('loading-overlay');
-	game_ui = document.getElementById('game-ui');
+	gameUI = document.getElementById('game-ui');
 	// todo: check if the user is signed-in first ?
 	if (state == null)
 		state = new GameMenu();

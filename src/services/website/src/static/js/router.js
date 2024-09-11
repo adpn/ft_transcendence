@@ -3,10 +3,10 @@ import { getCookie } from "./auth.js";
 export const navigateTo = async url => {
     history.pushState(null, null, url);
     await router();
-    const matches = url.match('https://[^/]*/');
-    if (matches && matches.length) {
-        window.dispatchEvent(new Event(url.substr(matches[0].length)));
-    }
+    // const matches = url.match('https://[^/]*/');
+    // if (matches && matches.length) {
+    //     window.dispatchEvent(new Event(url.substr(matches[0].length)));
+    // }
 };
 
 // Router function to handle routes
@@ -39,9 +39,11 @@ const router = async () => {
     }
 
     const params = match.result.slice(1);
-
     // Render the view
     document.getElementById('app').innerHTML = await match.route.view(...params);
+
+	if (match.route.path == "/game")
+		window.dispatchEvent(new Event("game"));
 };
 
 // View functions
@@ -70,7 +72,7 @@ const Pong = () => `
 </div>
 `;
 
-const Games = () => `
+const Games = async () => `
 <div class="row">
 <div class="row text-center">
 	<div class="canvas-container position-relative">
