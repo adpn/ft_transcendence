@@ -9,7 +9,8 @@
     <script type="importmap"> { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@v0.167.1/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.167.1/examples/jsm/" } } </script>
     {% load static %}
 	<link rel="icon" href="{% static 'favicon.ico' %}" type="image/x-icon">
-	<script type="module" src="{% static 'js/pong.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
+	<script src="{% static 'js/pong.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
+	<script type="module" src="{% static 'js/games.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
     <script src="{% static 'js/settings.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
     <script type="module" src="{% static 'js/auth.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
     <script type="module" src="{% static 'js/router.js' %}"></script>
@@ -27,15 +28,9 @@
                 <li class="nav-item">
                     <a href="/" class="btn btn-outline-light me-2" data-link>Home</a>
                 </li>
-                <li class="nav-item dropdown">
-					<a class="btn btn-outline-light dropdown-toggle me-2" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-						Games
-					</a>
-					<ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-						<li><a class="dropdown-item btn btn-outline-light" href="/pong" data-link>Pong</a></li>
-						<li><a class="dropdown-item btn btn-outline-light" href="/other-game" data-link>Other game</a></li>
-					</ul>
-				</li>
+				<li class="nav-item">
+                    <a href="/game" class="btn btn-outline-light me-2" data-link>Games</a>
+                </li>
                 <li class="nav-item">
                     <a href="/stats" class="btn btn-outline-light me-2" data-link>Stats</a>
                 </li>

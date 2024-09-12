@@ -3,18 +3,17 @@ import { getCookie } from "./auth.js";
 export const navigateTo = async url => {
     history.pushState(null, null, url);
     await router();
-    const matches = url.match('https://[^/]*/');
-    if (matches && matches.length) {
-        window.dispatchEvent(new Event(url.substr(matches[0].length)));
-    }
+    // const matches = url.match('https://[^/]*/');
+    // if (matches && matches.length) {
+    //     window.dispatchEvent(new Event(url.substr(matches[0].length)));
+    // }
 };
 
 // Router function to handle routes
 const router = async () => {
     const routes = [
         { path: "/", view: Home },
-        { path: "/pong", view: Pong },
-        { path: "/other-game", view: Other_game },
+        { path: "/game", view: Games },
         { path: "/settings", view: Settings },
         { path: "/friends", view: Friends },
         { path: "/stats", view: Stats },
@@ -40,9 +39,11 @@ const router = async () => {
     }
 
     const params = match.result.slice(1);
-
     // Render the view
     document.getElementById('app').innerHTML = await match.route.view(...params);
+
+	if (match.route.path == "/game")
+		window.dispatchEvent(new Event("game"));
 };
 
 // View functions
@@ -54,26 +55,42 @@ const Home = () => `
 `;
 
 const Pong = () => `
-    <div class="row">
-        <div class="col text-center">
-            <div class="canvas-container">
-                <canvas id="gameCanvas" class="w-100 border"></canvas>
-            </div>
-        </div>
-        <div id="game-button-container">
-            <button class="btn btn-succes me-2" id="game-button" type="button">find game</button>
-        </div>
-    </div>
+<div class="row">
+<div class="row text-center">
+	<div class="canvas-container position-relative">
+		<canvas id="gameCanvas" class="w-100 border"></canvas>
+		<div id="game-menu" class="position-absolute top-50 start-50 translate-middle">
+			<button class="btn btn-primary mb-2" id="quick-game-button" type="button">Quick Game</button>
+		<br>
+			<button class="btn btn-secondary" id="tournament-button" type="button">Tournament</button>
+		</div>
+	</div>
+</div>
+<div id="game-button-container" class="text-center mt-3">
+	<button class="btn btn-success me-2" id="game-button" type="button">Find Game</button>
+</div>
+</div>
 `;
 
-const Other_game = () => `
-    <div class="row">
-    <div class="col text-center">
-        <div class="canvas-container">
-            <canvas id="gameCanvas" class="w-100 border"></canvas>
-        </div>
-    </div>
-    </div>
+const Games = async () => `
+<div class="row">
+<div class="row text-center">
+	<div class="canvas-container position-relative">
+		<canvas id="gameCanvas" class="w-100 border"></canvas>
+		<div id="game-ui" class="position-absolute top-0 start-0 w-100 h-100 flex-column align-items-center justify-content-center bg-dark">
+		<div id="loading-overlay" class="loading-overlay position-absolute top-0 start-0 w-100 h-100 flex-column align-items-center justify-content-center bg-dark" aria-hidden="true">
+        <div class="spinner"></div>
+        <p class="text-light mt-3">Waiting for opponent...</p>
+    	</div>
+		<div id="game-menu" class="position-absolute top-50 start-50 translate-middle bg-dark" aria-hidden="true"></div>
+		</div>
+	</div>
+	</div>
+</div>
+<div id="game-button-container" class="text-center mt-3">
+	<button class="btn btn-success me-2" id="game-button" type="button">Find Game</button>
+</div>
+</div>
 `;
 
 const Settings = async () => {
