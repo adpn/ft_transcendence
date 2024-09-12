@@ -29,25 +29,6 @@ var game_status = NOT_JOINED;
 var canvas_loaded = false;
 
 
-function loadPong(canv) {
-	canvas = canv
-	canvas.setAttribute("tabindex", "-1");
-	canvas.addEventListener("focus", () => { is_focus = true; });
-	canvas.addEventListener("blur", () => { is_focus = false; });
-	ctx = canvas.getContext("2d", { alpha: false });
-	window.addEventListener("resize", resizeCanvas, false);
-	window.addEventListener("keydown", takeInputDown, true);
-	window.addEventListener("keyup", takeInputUp, true);
-	if (game_status >= WON)
-		game_status = NOT_JOINED;
-	changeButton();
-	resizeCanvas();
-}
-
-function cancel() {
-	socket.close();
-}
-
 function disconnected() {
 	if (game_status <= PLAYING)
 		game_status = DISCONNECTED;
@@ -55,25 +36,19 @@ function disconnected() {
 	changeButton();
 }
 
-function waitRoom(e) {
-	if (JSON.parse(e.data).status != "ready")
-		return ;
-	gameStart();
-}
-
 function changeButton() {
 	switch (game_status) {
-		case NOT_JOINED:
-		case WON:
-		case LOST:
-		case DISCONNECTED:
-			var title = "find game";
-			var btn_class = "success";
-			break ;
-		case CONNECTING:
-			var title = "cancel";
-			var btn_class = "danger";
-			break ;
+		// case NOT_JOINED:
+		// case WON:
+		// case LOST:
+		// case DISCONNECTED:
+		// 	var title = "find game";
+		// 	var btn_class = "success";
+		// 	break ;
+		// case CONNECTING:
+		// 	var title = "cancel";
+		// 	var btn_class = "danger";
+		// 	break ;
 		case PLAYING:
 			var title = "give up";
 			var btn_class = "warning";
@@ -81,21 +56,21 @@ function changeButton() {
 	document.getElementById("game-button-container").innerHTML = `
 		<button class="btn btn-${btn_class} me-2" id="game-button" type="button">${title}</button>
 `;
-	var button = document.getElementById("game-button");
-	switch (game_status) {
-		// case NOT_JOINED:
-		// case WON:
-		// case LOST:
-		// case DISCONNECTED:
-		// 	button.addEventListener("click", connectGameRoom);
-		// 	break ;
-		case CONNECTING:
-			// todo: put a spinning animation
-			button.addEventListener("click", cancel);
-			break ;
-		case PLAYING:
-			button.addEventListener("click", GiveUp);
-	}
+	// var button = document.getElementById("game-button");
+	// switch (game_status) {
+	// 	// case NOT_JOINED:
+	// 	// case WON:
+	// 	// case LOST:
+	// 	// case DISCONNECTED:
+	// 	// 	button.addEventListener("click", connectGameRoom);
+	// 	// 	break ;
+	// 	// case CONNECTING:
+	// 	// 	// todo: put a spinning animation
+	// 	// 	button.addEventListener("click", cancel);
+	// 	// 	break ;
+	// 	case PLAYING:
+	// 		button.addEventListener("click", GiveUp);
+	// }
 }
 
 function takeInputDown(e) {
@@ -135,40 +110,40 @@ function takeInputUp(e) {
 function resizeCanvas() {
 	canvas.width = canvas.scrollWidth;
 	canvas.height = canvas.scrollHeight;
-	clearCanvas();
+	clearCanvas(canvas, ctx);
 	switch (game_status) {
 		case NOT_JOINED:
-			drawMessage("Welcome");
+			drawMessage("Welcome", canvas, ctx);
 			break ;
 		case CONNECTING:
-			drawMessage("Connecting...");
+			drawMessage("Connecting...", canvas, ctx);
 			break ;
 		case PLAYING:
-			drawFrame();
+			drawFrame(canvas, ctx, game_data);
 			break ;
 		case WON:
-			drawMessage("Victory");
-			drawScore();
+			drawMessage("Victory", canvas, ctx);
+			drawScore(canvas, game_data);
 			break ;
 		case LOST:
-			drawMessage("Defeat");
-			drawScore();
+			drawMessage("Defeat", canvas, ctx);
+			drawScore(canvas, game_data);
 			break ;
 		case DISCONNECTED:
-			drawMessage("Disconnected");
+			drawMessage("Disconnected", canvas, ctx);
 			break ;
 		case NOT_LOGGED:
-			drawMessage("You are not logged in");
+			drawMessage("You are not logged in", canvas, ctx);
 			break ;
 		case ERROR:
-			drawMessage("Something went wrong");
+			drawMessage("Something went wrong", canvas, ctx);
 	}
 }
 
-function makeXCord(number) {
+function makeXCord(number, canvas) {
 	return number * (canvas.width / 1000);
 }
-function makeYCord(number) {
+function makeYCord(number, canvas) {
 	return number * (canvas.height / 1000);
 }
 
@@ -190,78 +165,100 @@ function gameOver(gameStatus) {
 	resizeCanvas();
 }
 
-function gameTick() {
-	clearCanvas();
-	drawFrame();
+function gameTick(canvas, ctx, game_data) {
+	clearCanvas(canvas, ctx);
+	drawFrame(canvas, ctx, game_data);
 }
 
 function submitInput(dir, action) {
 	socket.send(new Uint8Array([false, dir, action]));
 }
 
-function GiveUp() {
-	socket.send(new Uint8Array([true, false, false]));
-}
-
-function updatePong(event) {
-	var received_data = JSON.parse(event.data);
-	if (received_data.type == "tick") {
-		game_data.ball_pos = received_data.b;
-		game_data.racket_pos = received_data.r;
-		gameTick();
-		return ;
-	}
-	if (received_data.type == "goal") {
-		game_data.score = received_data.score;
-		return ;
-	}
-	if (received_data.type == "start") {
-		game_data.ball_size = received_data.ball_size;
-		game_data.racket_size = received_data.racket_size;
-		game_data.score = received_data.score;
-		return ;
-	}
-	if (received_data.type == "end") {
-		gameOver(received_data.status);
-		return ;
-	}
-}
-
-function clearCanvas() {
+function clearCanvas(canvas, ctx) {
 	ctx.fillStyle = "black";
 	ctx.fillRect(0, 0, canvas.width, canvas.height);
 }
 
-function drawFrame() {
+function drawFrame(canvas, ctx, game_data) {
 	ctx.fillStyle = "white";
 	// centerline
-	ctx.fillRect(canvas.width / 2 - makeXCord(1), 0, makeXCord(2), canvas.height);
+	ctx.fillRect(canvas.width / 2 - makeXCord(1, canvas), 0, makeXCord(2, canvas), canvas.height);
 	// ball
-	ctx.fillRect(makeXCord(game_data.ball_pos[0]) - makeXCord(game_data.ball_size / 2), makeYCord(game_data.ball_pos[1]) - makeYCord(game_data.ball_size / 2),
-			makeXCord(game_data.ball_size), makeXCord(game_data.ball_size));
+	ctx.fillRect(makeXCord(game_data.ball_pos[0], canvas) - makeXCord(game_data.ball_size / 2, canvas), makeYCord(game_data.ball_pos[1], canvas) - makeYCord(game_data.ball_size / 2, canvas),
+			makeXCord(game_data.ball_size, canvas), makeXCord(game_data.ball_size, canvas));
 	// rackets
-	ctx.fillRect(makeXCord(5), makeYCord(game_data.racket_pos[0]), makeXCord(10), makeYCord(game_data.racket_size[0]));
-	ctx.fillRect(canvas.width - makeXCord(15), makeYCord(game_data.racket_pos[1]), makeXCord(10), makeYCord(game_data.racket_size[1]));
-	drawScore();
+	ctx.fillRect(makeXCord(5, canvas), makeYCord(game_data.racket_pos[0], canvas), makeXCord(10, canvas), makeYCord(game_data.racket_size[0], canvas));
+	ctx.fillRect(canvas.width - makeXCord(15, canvas), makeYCord(game_data.racket_pos[1], canvas), makeXCord(10, canvas), makeYCord(game_data.racket_size[1], canvas));
+	drawScore(canvas, ctx, game_data);
 }
 
-function drawMessage(message) {
+function drawMessage(message, canvas, ctx, game_data) {
 	ctx.fillStyle = "white";
 	// rackets
-	ctx.fillRect(makeXCord(5), makeYCord(game_data.racket_pos[0]), makeXCord(10), makeYCord(game_data.racket_size[0]));
-	ctx.fillRect(canvas.width - makeXCord(15), makeYCord(game_data.racket_pos[1]), makeXCord(10), makeYCord(game_data.racket_size[1]));
+	ctx.fillRect(makeXCord(5, canvas), makeYCord(game_data.racket_pos[0]), makeXCord(10, canvas), makeYCord(game_data.racket_size[0], canvas));
+	ctx.fillRect(canvas.width - makeXCord(15, canvas), makeYCord(game_data.racket_pos[1], canvas), makeXCord(10, canvas), makeYCord(game_data.racket_size[1], canvas));
 	// message
-	ctx.font = makeXCord(40) + "px arial";
+	ctx.font = makeXCord(40, canvas) + "px arial";
 	ctx.textBaseline = "middle";
 	ctx.textAlign = "center";
-	ctx.fillText(message, makeXCord(500), makeYCord(500));
+	ctx.fillText(message, makeXCord(500, canvas), makeYCord(500, canvas));
 }
 
-function drawScore() {
-	ctx.font = makeXCord(30) + "px arial";
+function drawScore(canvas, ctx, game_data) {
+	ctx.font = makeXCord(30, canvas) + "px arial";
 	ctx.textBaseline = "top";
 	ctx.textAlign = "center";
-	ctx.fillText(game_data.score[0], makeXCord(480), makeYCord(15));
-	ctx.fillText(game_data.score[1], makeXCord(520), makeYCord(15));
+	ctx.fillText(game_data.score[0], makeXCord(480, canvas), makeYCord(15, canvas));
+	ctx.fillText(game_data.score[1], makeXCord(520, canvas), makeYCord(15, canvas));
 }
 // });
+
+var Pong = ( function () {
+	return { 
+		load: function (canv) {
+			canvas = canv;
+			window.addEventListener("keydown", takeInputDown, true);
+			window.addEventListener("keyup", takeInputUp, true);
+			window.addEventListener("resize", resizeCanvas, false);
+			canvas.setAttribute("tabindex", "-1");
+			canvas.addEventListener("focus", () => { is_focus = true; });
+			canvas.addEventListener("blur", () => { is_focus = false; });
+			ctx = canvas.getContext("2d", { alpha: false });
+			game_status = PLAYING;
+			changeButton();
+			resizeCanvas();
+			canvas.focus();
+	},
+	start: function (sockt) {
+		socket = sockt;
+		game_status = PLAYING;
+		changeButton();
+		resizeCanvas();
+		canvas.focus();
+	},
+	update: function (data) {
+		if (data.type == "tick") {
+			game_data.ball_pos = data.b;
+			game_data.racket_pos = data.r;
+			gameTick(canvas, ctx, game_data);
+			return ;
+		}
+		if (data.type == "goal") {
+			game_data.score = data.score;
+			return ;
+		}
+		if (data.type == "start") {
+			game_data.ball_size = data.ball_size;
+			game_data.racket_size = data.racket_size;
+			game_data.score = data.score;
+			return ;
+		}
+		if (data.type == "end") {
+			gameOver(data.status);
+			return ;
+		}
+	},
+	giveUp: function (socket) {
+		socket.send(new Uint8Array([true, false, false]));
+	}};
+})();

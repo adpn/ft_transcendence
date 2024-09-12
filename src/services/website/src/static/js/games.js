@@ -79,6 +79,7 @@ class PlayingState {
 		this.socket = null;
 		this.gameStatus = "playing"
 		this.gameEndState = new GameEndedState(game, gameModeState, prevState);
+		this.game = game;
 	}
 	bindSocket(socket) {
 		this.socket = socket;
@@ -98,11 +99,13 @@ class PlayingState {
 				this.gameEndState.setMessage("You Won!", true);
 			else
 				this.gameEndState.setMessage("You Lost!", false);
+			if (this.socket)
+				this.socket.close();
 			state = this.gameEndState;
 			state.execute();
 			return;
 		}
-		updatePong(event);
+		this.game.update(received_data);
 	}
 	disconnected() {
 		if (this.gameStatus != "ended") {
@@ -119,7 +122,7 @@ class PlayingState {
 		}
 		console.log("PLAYING!");
 		gameUI.style.display = 'none';
-		loadPong(canvas);
+		this.game.load(canvas);
 	}
 }
 
@@ -174,7 +177,7 @@ class QuickGame {
 			loadingOverlay.style.display = 'none';
 			state = this.playingState;
 			gameUI.style.display = 'none';
-			gameStart(this.socket);
+			this.game.start(this.socket);
 			state.execute();
 		}
 	}
@@ -295,14 +298,14 @@ class GameModes {
 		gameMenu.appendChild(this.tournamentBtn);
 		gameMenu.appendChild(this.backBtn);
 		// todo: abstract this away : game.load(canvas);
-		loadPong(canvas);
+		this.game.load(canvas);
 	}
 }
 
 class GameMenu {
 	constructor()
 	{
-		this.pongState = new GameModes("pong", this);
+		this.pongState = new GameModes(Pong, this);
 		this.pongButton = document.createElement('button');
 		this.pongButton.textContent = 'Pong';
 		this.pongButton.className = "btn btn-outline-light mb-2";
