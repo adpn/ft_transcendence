@@ -1,7 +1,7 @@
 import uuid
 import json
 import os
-
+from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse, HttpRequest
 from django.db.utils import IntegrityError
 
@@ -265,37 +265,49 @@ def	find_tournament(request: HttpRequest) -> JsonResponse:
 			'player_id': player.player_name
 		}, status=200)
 
-def game_stats_view(request : HttpRequest, user_id : int) -> JsonResponse:
-    if request.method != 'GET':
-        return JsonResponse({'status': 0, 'message': 'Only GET method is allowed'}, status=405)
-    player = Player.objects.get(user_id=user_id)
-    if not player:
-        return JsonResponse({'status': 0, 'message': 'Player not found'}, status=404)
-    games_won = GameResult.objects.filter(winner=player)
-    games_lost = GameResult.objects.filter(loser=player)
+@csrf_exempt
+def game_stats(request: HttpRequest, user_id : int) -> JsonResponse:
+	if request.method != 'GET':
+		return JsonResponse({'status': 0, 'message': 'Only GET method is allowed'}, status=405)
 
-    win_count = games_won.count()
-    loss_count = games_lost.count()
-    if win_count + loss_count == 0:
-        return JsonResponse({'status': 1, 'total_games': 0}, status=200)
+	# the player never played a game
+	if not Player.objects.filter(player_id=user_id).exists():
+		return JsonResponse({'status': 0, 'message': 'Player never played'}, status=200)
 
-    games_data = []
-    for game in games_won.union(games_lost):
-        games_data.append({
-            'is_winner': game.winner == player,
-            'opponent': game.loser.user.username if game.winner == player else game.winner.user.username,
-            'personal_score': game.winner_score if game.winner == player else game.loser_score,
-            'opponent_score': game.loser_score if game.winner == player else game.winner_score,
-            'game_date': game.game_date,
-            'game_duration': game.game_duration,
-        })
+	player = Player.objects.get(player_id=user_id)
 
-    response_data = {
-        'status': 1,
-        'total_games': win_count + loss_count,
-        'total_wins': win_count,
-        'win_percentage': round(win_count / (win_count + loss_count) * 100, 1),
-        'games': games_data
-    }
+	list_games = Game.objects.all()
+	if list_games.count() == 0:
+		return JsonResponse({'status': 0, 'message': 'No game found'}, status=500)
+	response_data = {'status': 1}
+	for game in list_games:
+		games_won = GameResult.objects.filter(winner=player, game=game)
+		games_lost = GameResult.objects.filter(loser=player, game=game)
 
-    return JsonResponse(response_data, status=200)
+		win_count = games_won.count()
+		loss_count = games_lost.count()
+		if win_count + loss_count == 0:
+			response_data[game.game_name] = {
+				'total_games': 0
+			}
+			continue
+
+		games_data = []
+		for result in games_won.union(games_lost):
+			games_data.append({
+				'is_winner': result.winner == player,
+				'opponent_id': result.loser.player_id if result.winner == player else result.winner.player_id,
+				'personal_score': result.winner_score if result.winner == player else result.loser_score,
+				'opponent_score': result.loser_score if result.winner == player else result.winner_score,
+				'game_date': result.game_date,
+				'game_duration': result.game_duration,
+			})
+		
+		response_data[game.game_name] = {
+			'total_games': win_count + loss_count,
+			'total_wins': win_count,
+			'win_percentage': round(win_count / (win_count + loss_count) * 100, 1),
+			'games': games_data
+		}
+
+	return JsonResponse(response_data, status=200)
