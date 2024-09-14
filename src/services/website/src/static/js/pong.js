@@ -211,10 +211,10 @@ function drawScore(canvas, ctx, game_data) {
 	ctx.fillText(game_data.score[0], makeXCord(480, canvas), makeYCord(15, canvas));
 	ctx.fillText(game_data.score[1], makeXCord(520, canvas), makeYCord(15, canvas));
 }
-// });
 
 var Pong = ( function () {
-	return { 
+	return {
+		name: "pong", 
 		load: function (canv) {
 			canvas = canv;
 			window.addEventListener("keydown", takeInputDown, true);
@@ -228,37 +228,38 @@ var Pong = ( function () {
 			changeButton();
 			resizeCanvas();
 			canvas.focus();
-	},
-	start: function (sockt) {
-		socket = sockt;
-		game_status = PLAYING;
-		changeButton();
-		resizeCanvas();
-		canvas.focus();
-	},
-	update: function (data) {
-		if (data.type == "tick") {
-			game_data.ball_pos = data.b;
-			game_data.racket_pos = data.r;
-			gameTick(canvas, ctx, game_data);
-			return ;
+		},
+		start: function (sockt) {
+			socket = sockt;
+			game_status = PLAYING;
+			changeButton();
+			resizeCanvas();
+			canvas.focus();
+		},
+		update: function (data) {
+			if (data.type == "tick") {
+				game_data.ball_pos = data.b;
+				game_data.racket_pos = data.r;
+				gameTick(canvas, ctx, game_data);
+				return ;
+			}
+			if (data.type == "goal") {
+				game_data.score = data.score;
+				return ;
+			}
+			if (data.type == "start") {
+				game_data.ball_size = data.ball_size;
+				game_data.racket_size = data.racket_size;
+				game_data.score = data.score;
+				return ;
+			}
+			if (data.type == "end") {
+				gameOver(data.status);
+				return ;
+			}
+		},
+		giveUp: function (socket) {
+			socket.send(new Uint8Array([true, false, false]));
 		}
-		if (data.type == "goal") {
-			game_data.score = data.score;
-			return ;
-		}
-		if (data.type == "start") {
-			game_data.ball_size = data.ball_size;
-			game_data.racket_size = data.racket_size;
-			game_data.score = data.score;
-			return ;
-		}
-		if (data.type == "end") {
-			gameOver(data.status);
-			return ;
-		}
-	},
-	giveUp: function (socket) {
-		socket.send(new Uint8Array([true, false, false]));
-	}};
+	};
 })();
