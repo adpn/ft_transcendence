@@ -1,9 +1,7 @@
 import uuid
 import json
 import os
-
-import django
-
+from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse, HttpRequest
 from django.db.utils import IntegrityError
 
@@ -279,37 +277,107 @@ def	find_tournament(request: HttpRequest) -> JsonResponse:
 
 	return join_tournament(game, player, tournament)
 
-def game_stats_view(request : HttpRequest, user_id : int) -> JsonResponse:
+	# if player is already in a room return it. also means he is already a participant
+	if player_room:
+		return JsonResponse({
+			'ip_address': os.environ.get('IP_ADDRESS'),
+			'game_room_id': player_room.game_room.room_name,
+			'status': 'playing',
+			'player_id': player_room.player.player_name
+		}, status=200)
+
+	# get the oldest game_room in the tournament that isn't full
+	game_room = game_rooms_in_tournament.filter(num_players__lt=game.min_players).order_by('create_at').first()
+	if not game_room:
+		# create new room, add the player to it add the game room to the tournament.
+		game_room = GameRoom(room_name=str(uuid.uuid4()), game=game)
+		player_room = PlayerRoom(
+			player=player, 
+			game_room=game_room,
+			player_position=game_room.num_players
+		)
+		tround = TournamentRound(tournament=tournament, game_room=game_room)
+		tournament.participants += 1
+		game_room.num_players += 1
+		game_room.save()
+		player_room.save()
+		tournament.save()
+		tround.save()
+		return JsonResponse({
+			'ip_address': os.environ.get('IP_ADDRESS'),
+			'game_room_id': game_room.room_name,
+			'status': 'created',
+			'player_id': player.player_name
+		}, status=201)
+
+	# if a game room was found add the player to it.
+	participant = Participant(
+		player=player, 
+		tournament=tournament, 
+		status="PLAYING")
+	player_room = PlayerRoom(
+		player=player, 
+		game_room=game_room,
+		player_position=game_room.num_players
+	)
+	tround = TournamentRound(tournament=tournament, game_room=game_room)
+	game_room.num_players += 1
+	tournament.participants += 1
+	game_room.save()
+	player_room.save()
+	participant.save()
+	tournament.save()
+	tround.save()
+	return JsonResponse({
+			'ip_address': os.environ.get('IP_ADDRESS'),
+			'game_room_id': game_room.room_name,
+			'status': 'joined',
+			'player_id': player.player_name
+		}, status=200)
+
+@csrf_exempt
+def game_stats(request: HttpRequest, user_id : int) -> JsonResponse:
 	if request.method != 'GET':
 		return JsonResponse({'status': 0, 'message': 'Only GET method is allowed'}, status=405)
-	player = Player.objects.get(user_id=user_id)
-	if not player:
-		return JsonResponse({'status': 0, 'message': 'Player not found'}, status=404)
-	games_won = GameResult.objects.filter(winner=player)
-	games_lost = GameResult.objects.filter(loser=player)
 
-	win_count = games_won.count()
-	loss_count = games_lost.count()
-	if win_count + loss_count == 0:
-		return JsonResponse({'status': 1, 'total_games': 0}, status=200)
+	# the player never played a game
+	if not Player.objects.filter(player_id=user_id).exists():
+		return JsonResponse({'status': 0, 'message': 'Player never played'}, status=200)
 
-	games_data = []
-	for game in games_won.union(games_lost):
-		games_data.append({
-			'is_winner': game.winner == player,
-			'opponent': game.loser.user.username if game.winner == player else game.winner.user.username,
-			'personal_score': game.winner_score if game.winner == player else game.loser_score,
-			'opponent_score': game.loser_score if game.winner == player else game.winner_score,
-			'game_date': game.game_date,
-			'game_duration': game.game_duration,
-		})
+	player = Player.objects.get(player_id=user_id)
 
-	response_data = {
-		'status': 1,
-		'total_games': win_count + loss_count,
-		'total_wins': win_count,
-		'win_percentage': round(win_count / (win_count + loss_count) * 100, 1),
-		'games': games_data
-	}
+	list_games = Game.objects.all()
+	if list_games.count() == 0:
+		return JsonResponse({'status': 0, 'message': 'No game found'}, status=500)
+	response_data = {'status': 1}
+	for game in list_games:
+		games_won = GameResult.objects.filter(winner=player, game=game)
+		games_lost = GameResult.objects.filter(loser=player, game=game)
+
+		win_count = games_won.count()
+		loss_count = games_lost.count()
+		if win_count + loss_count == 0:
+			response_data[game.game_name] = {
+				'total_games': 0
+			}
+			continue
+
+		games_data = []
+		for result in games_won.union(games_lost):
+			games_data.append({
+				'is_winner': result.winner == player,
+				'opponent_id': result.loser.player_id if result.winner == player else result.winner.player_id,
+				'personal_score': result.winner_score if result.winner == player else result.loser_score,
+				'opponent_score': result.loser_score if result.winner == player else result.winner_score,
+				'game_date': result.game_date,
+				'game_duration': result.game_duration,
+			})
+		
+		response_data[game.game_name] = {
+			'total_games': win_count + loss_count,
+			'total_wins': win_count,
+			'win_percentage': round(win_count / (win_count + loss_count) * 100, 1),
+			'games': games_data
+		}
 
 	return JsonResponse(response_data, status=200)

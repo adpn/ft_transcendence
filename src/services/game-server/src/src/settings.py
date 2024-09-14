@@ -28,7 +28,7 @@ SECRET_KEY = 'django-insecure-nij_k$4=6(3r15srht9)0$)!44nn4@7=m)lcp(2c8fo_zjb*d8
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = [str(os.environ.get('IP_ADDRESS')), 'localhost']
+ALLOWED_HOSTS = [str(os.environ.get('IP_ADDRESS')), 'localhost', 'game-server']
 CSRF_TRUSTED_ORIGINS = ['https://localhost', 'https://127.0.0.1', 'http://users', 'https://' + str(os.environ.get('IP_ADDRESS'))]
 
 # Application definition

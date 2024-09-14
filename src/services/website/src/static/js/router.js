@@ -275,6 +275,7 @@ const Friends = async () => {
     return document.getElementById('app').innerHTML;
 };
 
+// change so that it manages two games, snake and pong
 const Stats = async () => {
     const token = localStorage.getItem('auth_token');
 
@@ -307,7 +308,7 @@ const Stats = async () => {
 
     const statsData = await statsResponse.json();
 
-    if (statsResponse.status === 401 ||statsData.status === 0) {
+    if (statsResponse.status === 401) {
         document.getElementById('app').innerHTML = `
             <div class="text-center">
                 <h1>Access Denied</h1>
@@ -317,37 +318,38 @@ const Stats = async () => {
         return document.getElementById('app').innerHTML;
     }
 
-    if (statsData.total_games === 0) {
+    if (statsData.status === 0) {
         document.getElementById('app').innerHTML = `
-        <div class="text-center">
-            <h1>Stats Page</h1>
-            <p>No games played yet.</p>
-        </div>
+            <div class="text-center">
+                <h1>Stats Page</h1>
+                <p>No games played yet.</p>
+            </div>
         `;
-    } else {
-        document.getElementById("total-stats-content").textContent =
-            `Total Games: ${statsData.total_games} | Win percentage: ${statsData.win_percentage}`;
+        return document.getElementById('app').innerHTML;
+    } 
 
-        const gameHistoryList = document.getElementById("game-history-list");
-        gameHistoryList.innerHTML = '';
+    document.getElementById("total-stats-content").textContent =
+        `Total Games: ${statsData.pong.total_games} | Win percentage: ${statsData.pong.win_percentage}%`;
 
-        statsData.games.forEach(game => {
-            const listItem = document.createElement("div");
-            listItem.className = `game-stat ${game.is_winner ? 'victory' : 'defeat'}`;
+    const gameHistoryList = document.getElementById("game-history-list");
+    gameHistoryList.innerHTML = '';
 
-            const resultText = game.is_winner ? 'Victory' : 'Defeat';
-            listItem.innerHTML = `
-                <strong>${resultText}</strong> -
-                Opponent: ${game.opponent} |
-                Your Score: ${game.personal_score} |
-                Opponent's Score: ${game.opponent_score} |
-                Duration: ${game.game_duration} |
-                Date: ${new Date(game.game_date).toLocaleString()}
+    statsData.pong.games.forEach(game => {
+        const listItem = document.createElement("div");
+        listItem.className = `game-stat ${game.is_winner ? 'victory' : 'defeat'}`;
+
+        const resultText = game.is_winner ? 'Victory' : 'Defeat';
+        listItem.innerHTML = `
+            <strong>${resultText}</strong>&nbsp;| 
+            Opponent:&nbsp;<a href="/user/${game.opponent}" class="text-white" data-link>${game.opponent}</a>&nbsp;|
+            Score: ${game.personal_score} - ${game.opponent_score} |
+            Duration: ${game.game_duration}sec |
+            Date: ${new Date(game.game_date).toLocaleString()}
             `;
 
             gameHistoryList.appendChild(listItem);
         });
-    }
+
     return document.getElementById('app').innerHTML;
 };
 
@@ -397,14 +399,15 @@ const UserProfile = async (username) => {
     const friendship = document.getElementById('friendship');
     friendship.innerHTML = get_friendship_content(data.friendship, data.id);
 
-    if (data.stats.total_games === 0) {
+    if (Object.keys(data.stats).length === 0) {
         userStats.innerHTML = `
             <p>No games played yet.</p>
         `;
     }
     else {
+        // need to add another check to differentiate between snake and pong
         userStats.innerHTML = `
-            <p>Total Games: ${data.stats.total_games} | Win percentage: ${data.stats.win_percentage}</p>
+            <p>Total Games: ${data.stats.pong.total_games} | Win percentage: ${data.stats.pong.win_percentage}%</p>
         `;
     }
 
