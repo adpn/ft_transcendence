@@ -7,6 +7,7 @@ var canvas;
 var loadingOverlay;
 var	gameUI;
 let	state = null;
+var overlayBody;
 
 class GameEndedState {
 	constructor(game, gameModeState, prevState) {
@@ -150,8 +151,11 @@ class QuickGame {
 		gameMenu.style.display = 'none';
 		// this.loadingBody.appendChild(this.cancelBtn);
 		// this.loadingModal.show();
+		//loadingOverlay.innerHTML = '';
+		// overlayBody.innerHTML = '';
 		loadingOverlay.style.display = 'flex';
-		loadingOverlay.appendChild(this.cancelBtn);
+		overlayBody.innerHTML = '';
+		overlayBody.appendChild(this.cancelBtn);
 		this.connectGameRoom();
 	};
 
@@ -217,6 +221,7 @@ class QuickGame {
 class Tournament {
 	constructor(game, prevState)
 	{
+		this.playingState = new PlayingState(game, prevState, this);
 		this.game = game;
 		this.prevState = prevState;
 		this.cancelBtn = document.createElement('button');
@@ -231,6 +236,12 @@ class Tournament {
 	}
 	execute() {
 		//todo launch loading screen and animations.
+		// Clear the game menu content
+		gameMenu.style.display = 'none';
+		overlayBody.innerHTML = '';
+		loadingOverlay.style.display = 'flex';
+		overlayBody.appendChild(this.cancelBtn);
+		this.joinTournament();
 	};
 
 	handleEvent(event) {
@@ -265,6 +276,7 @@ class Tournament {
 		}
 		if (received_data.type == "round") {
 			// move to next round
+			// TODO: maybe put a confirmation to move to the next round.
 			this.joinTournament();
 			return ;
 		}
@@ -414,6 +426,7 @@ function load_games()
 	gameMenu = document.getElementById('game-menu');
 	gameMenu.style.display = 'none';
 	loadingOverlay = document.getElementById('loading-overlay');
+	overlayBody = document.getElementById('overlay-body');
 	gameUI = document.getElementById('game-ui');
 	// todo: check if the user is signed-in first ?
 	if (state == null)

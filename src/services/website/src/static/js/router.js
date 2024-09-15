@@ -80,7 +80,9 @@ const Games = async () => `
 		<div id="game-ui" class="position-absolute top-0 start-0 w-100 h-100 flex-column align-items-center justify-content-center bg-dark">
 		<div id="loading-overlay" class="loading-overlay position-absolute top-0 start-0 w-100 h-100 flex-column align-items-center justify-content-center bg-dark" aria-hidden="true">
         <div class="spinner"></div>
-        <p class="text-light mt-3">Waiting for opponent...</p>
+		<p class="text-light mt-3">Waiting for opponent...</p>
+		<div id="overlay-body" class=text-center>
+		</div>
     	</div>
 		<div id="game-menu" class="position-absolute top-50 start-50 translate-middle bg-dark" aria-hidden="true"></div>
 		</div>

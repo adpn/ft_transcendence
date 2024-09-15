@@ -118,13 +118,14 @@ def add_player_to_room(player: Player, game_room: GameRoom) -> PlayerRoom:
 		player_position=game_room.num_players)
 
 	game_room.num_players += 1
-	game_room.save()
+	game_room.save(update_fields=['num_players'])
 	player_room.save()
 	return player_room
 
 def create_game_room(player: Player, game: Game) -> GameRoom:
 	# create new room, add the player to it
 	game_room = GameRoom(room_name=str(uuid.uuid4()), game=game)
+	game_room.save()
 	# map player to game room.
 	add_player_to_room(player, game_room)
 	return game_room
@@ -142,7 +143,7 @@ def add_participant(
 
 	participant.tournament_position = tournament.participants
 	tournament.participants += 1
-	tournament.save(update_fields=['participants'])
+	tournament.save()
 	participant.save()
 	return participant
 
@@ -154,7 +155,7 @@ def join_tournament(
 
 	# join the tournament by either reconnecting, joining a room or create a nes room.
 	game_rooms_in_tournament = TournamentGameRoom.objects.filter(
-		tournament=tournament)
+		tournament=tournament).values_list('game_room', flat=True)
 
 	player_room = PlayerRoom.objects.filter(
 		player=player, 
@@ -162,6 +163,7 @@ def join_tournament(
 
 	# if player is already in a room return it (reconnecting him to the room)
 	if player_room:
+		print("RECONNECTION", player_room, flush=True)
 		return JsonResponse({
 			'ip_address': os.environ.get('IP_ADDRESS'),
 			'game_room_id': player_room.game_room.room_name,
@@ -174,11 +176,14 @@ def join_tournament(
 
 	# get the oldest game_room in the tournament that isn't full 
 	# TODO: (Maybe select the game room at a certain position given the participant position ?) (if in tournament)
-	game_room = game_rooms_in_tournament.filter(
-		num_players__lt=game.min_players).order_by('create_at').first()
+	game_room = GameRoom.objects.filter(
+		room_name__in=game_rooms_in_tournament, 
+		num_players__lt=game.min_players
+		).order_by('created_at').first()
 
 	if not game_room:
 		game_room = create_game_room(player, game)
+		print("NEW GAME ROOM", game_room.room_name, flush=True)
 		if tournament:
 			# map game room to tournament.
 			tgame_room = TournamentGameRoom(tournament=tournament, game_room=game_room)
@@ -190,6 +195,7 @@ def join_tournament(
 			'player_id': player.player_name
 		}, status=201)
 	add_player_to_room(player, game_room)
+	print("HERE!!!", game_room.room_name, flush=True)
 	return JsonResponse({
 		'ip_address': os.environ.get('IP_ADDRESS'),
 		'game_room_id': game_room.room_name,
@@ -204,7 +210,9 @@ def create_tournament(player: Player, game:Game, max_participants=8) -> GameRoom
 	game_room = create_game_room(player, game)
 	add_participant(player, tournament, True)
 	# map game room to tournament
-	tgame_room = TournamentGameRoom(tournament=tournament, game_room=game_room)
+	tgame_room = TournamentGameRoom(
+		tournament=tournament,
+		game_room=game_room)
 	tgame_room.save()
 	return game_room
 
@@ -252,13 +260,16 @@ def	find_tournament(request: HttpRequest) -> JsonResponse:
 	participant = TournamentParticipant.objects.filter(player=player).first()
 	# ================== RECONNECT OR MOVE TO THE NEXT ROUND ========================
 	if participant:
+		print("PARTICIPANT", participant, flush=True)
 		if participant.status == "ELIMINATED":
-			return JsonResponse({'status': 'eliminated'})
+			return JsonResponse({
+				'status': 'eliminated'
+				}, status=405)
 		elif participant.status == "PLAYING":
-			# if the participant is not eliminated it's a new round request.
-			return join_tournament(game, player, participant, tournament)
+			# if the participant is not eliminated then 
+			return join_tournament(game, player, participant.tournament, participant)
 
-		
+	print("NEW PARTICIPANT", flush=True)
 	# if the player is not a participant, 
 	# try to join the oldest tournament that isn't full.
 	tournament = Tournament.objects.filter(
@@ -268,72 +279,15 @@ def	find_tournament(request: HttpRequest) -> JsonResponse:
 	# if there is no tournament, create a new one and a new game room.
 	if not tournament:
 		game_room = create_tournament(player, game)
+		print("NEW TOURNAMENT", game_room, flush=True)
 		return JsonResponse({
 			'ip_address': os.environ.get('IP_ADDRESS'),
 			'game_room_id': game_room.room_name,
 			'status': 'created',
 			'player_id': player.player_name
 			}, status=201)
-
+	print("NEW PARTICIPANT JOIN", flush=True)
 	return join_tournament(game, player, tournament)
-
-	# if player is already in a room return it. also means he is already a participant
-	if player_room:
-		return JsonResponse({
-			'ip_address': os.environ.get('IP_ADDRESS'),
-			'game_room_id': player_room.game_room.room_name,
-			'status': 'playing',
-			'player_id': player_room.player.player_name
-		}, status=200)
-
-	# get the oldest game_room in the tournament that isn't full
-	game_room = game_rooms_in_tournament.filter(num_players__lt=game.min_players).order_by('create_at').first()
-	if not game_room:
-		# create new room, add the player to it add the game room to the tournament.
-		game_room = GameRoom(room_name=str(uuid.uuid4()), game=game)
-		player_room = PlayerRoom(
-			player=player, 
-			game_room=game_room,
-			player_position=game_room.num_players
-		)
-		tround = TournamentRound(tournament=tournament, game_room=game_room)
-		tournament.participants += 1
-		game_room.num_players += 1
-		game_room.save()
-		player_room.save()
-		tournament.save()
-		tround.save()
-		return JsonResponse({
-			'ip_address': os.environ.get('IP_ADDRESS'),
-			'game_room_id': game_room.room_name,
-			'status': 'created',
-			'player_id': player.player_name
-		}, status=201)
-
-	# if a game room was found add the player to it.
-	participant = Participant(
-		player=player, 
-		tournament=tournament, 
-		status="PLAYING")
-	player_room = PlayerRoom(
-		player=player, 
-		game_room=game_room,
-		player_position=game_room.num_players
-	)
-	tround = TournamentRound(tournament=tournament, game_room=game_room)
-	game_room.num_players += 1
-	tournament.participants += 1
-	game_room.save()
-	player_room.save()
-	participant.save()
-	tournament.save()
-	tround.save()
-	return JsonResponse({
-			'ip_address': os.environ.get('IP_ADDRESS'),
-			'game_room_id': game_room.room_name,
-			'status': 'joined',
-			'player_id': player.player_name
-		}, status=200)
 
 @csrf_exempt
 def game_stats(request: HttpRequest, user_id : int) -> JsonResponse:

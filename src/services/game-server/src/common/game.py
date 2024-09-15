@@ -12,7 +12,14 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'src.settings')
 django.setup()
 
 from common import auth_client as auth
-from games.models import PlayerRoom, GameResult, TournamentGameRoom
+from games.models import (
+	Player,
+	PlayerRoom, 
+	GameResult, 
+	TournamentGameRoom, 
+	GameRoom, 
+	Tournament, 
+	TournamentParticipant)
 
 @database_sync_to_async
 def get_player_room(user_id, game_room):
@@ -81,17 +88,40 @@ def delete_game_room(game_room):
 def store_game_result(game_result):
 	game_result.save()
 
+@database_sync_to_async
+def get_tournament_room(game_room: GameRoom) -> TournamentGameRoom:
+	return TournamentGameRoom.objects.filter(game_room=game_room).first()
+
+@database_sync_to_async
+def get_tournament_room_tournament(tournament_room: TournamentGameRoom) -> Tournament:
+	return tournament_room.tournament
+
+@database_sync_to_async
+def get_remaining_participants() -> int:
+	return TournamentParticipant.objects.filter(status="PLAYING").count()
+
+@database_sync_to_async
+def eliminate_player(player: Player, tournament: Tournament) -> TournamentParticipant:
+	participant = TournamentParticipant.objects.filter(player=player, tournament=tournament).first()
+	participant.status = "ELIMINATED"
+	participant.save(update_fields=["status"])
+	return participant
+
 class TournamentMode(object):
-	def __init__(self, tournament) -> None:
+	def __init__(self, tournament: Tournament) -> None:
 		self._tournament = tournament
-	# at the end of game, store the game result, remove loser from tournament (from the participants),
-	# move winner to the next round. if the number of participants is 2 the tournament ends.
-	def handle_end_game(self, data, game_result):
-		return
+	async def handle_end_game(self, data: dict, game_result: GameResult):
+		await eliminate_player(game_result.loser)
+		remaining_players = await get_remaining_participants()
+		if remaining_players == 1:
+			# this is the winner -> tournament ends.
+			return data
+		data["type"] = "round"
+		return data
 
 class QuickGameMode(object):
-	def handle_end_game(self):
-		pass
+	async def handle_end_game(self, data, game_result):
+		return data
 
 class GameSession(object):
 	def __init__(self, game_logic, game_server, game_room, game_mode=None, pause_timeout=60):
@@ -124,8 +154,7 @@ class GameSession(object):
 		while self.is_running:
 			await asyncio.gather(
 				self.game_loop(callback),
-				asyncio.sleep(0.03)				# about 30 loops/second
-			)
+				asyncio.sleep(0.03))				# about 30 loops/second
 		self._game_result.game_duration = time.time() - t0
 		await store_game_result(self._game_result)
 		await delete_game_room(self._game_room)
@@ -137,8 +166,8 @@ class GameSession(object):
 			for end in self._connection_lost_callbacks:
 				await end()
 			await set_in_session(self._game_room, False)
-			# todo: handle results storage on connection lost.
-			# todo: on connection lost, game results should be stored 
+			# TODO: handle results storage on connection lost.
+			# TODO: on connection lost, game results should be stored 
 			# by the game consumers.
 			#await store_game_result(game_result)
 			return
@@ -244,7 +273,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 				}
 			)
 
-	# TODO: BUG when the same player joins the from two windows it still works ???
+	# TODO: BUG when the same player joins the game from two windows it still works !!!
 	async def connect(self):
 		self.room_name = room_name = self.scope['url_route']['kwargs']['room_name']
 		query_string = self.scope.get('query_string').decode('utf-8')
@@ -290,13 +319,14 @@ class GameConsumer(AsyncWebsocketConsumer):
 		expected_players = await get_min_players(self.game_room)
 
 		# check if the game room is in a tournament room.
-		# tournament_room = TournamentGameRoom.objects.get(game_room=self.game_room)
-		# if tournament_room:
-		# 	game_mode = TournamentMode()
-		# else:
-		# 	game_mode = QuickGameMode()
-		self._game_mode = game_mode = None
-
+		tournament_room = await get_tournament_room(self.game_room)
+		game_mode = None
+		if tournament_room:
+			game_mode = TournamentMode(
+				await get_tournament_room_tournament(tournament_room))
+		else:
+			game_mode = QuickGameMode()
+		self_game_mode = game_mode
 		await self.channel_layer.group_add(self.room_name, self.channel_name)
 		# TODO: (fix for same player reconnection )store the channel name in the database. along with the player_id.
 		# if there is match, close the previous channel. decrement current players.
