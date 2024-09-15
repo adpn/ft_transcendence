@@ -115,12 +115,6 @@ class PlayingState {
 	}
 
 	execute() {
-		if (this.socket)
-		{
-			//this.game.start(this.socket);
-			// canvas.focus();
-		}
-		console.log("PLAYING!");
 		gameUI.style.display = 'none';
 		this.game.load(canvas);
 	}
@@ -130,11 +124,6 @@ class QuickGame {
 	constructor(game, prevState) {
 		this.playingState = new PlayingState(game, prevState, this);
 
-		this.loadingBody = document.getElementById('loading-screen');
-		// this.loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'), {
-		// 	backdrop: 'static',  // Prevents closing on clicking outside
-		// 	keyboard: false      // Prevents closing on pressing the escape key
-		// });
 		this.game = game;
 		this.prevState = prevState;
 		this.cancelBtn = document.createElement('button');
@@ -149,8 +138,6 @@ class QuickGame {
 	cancel() {
 		if (this.socket)
 			this.socket.close();
-		// if (this.loadingModal)
-		// 	this.loadingModal.hide();
 		loadingOverlay.style.display = 'none';
 		gameUI.style.display = 'flex'
 		// put the menu back.
@@ -168,17 +155,17 @@ class QuickGame {
 		this.connectGameRoom();
 	};
 
-	waitRoom(event) {
+	handleEvent(event) {
 		if (JSON.parse(event.data).status == "ready") {
 			// todo: if a player was found, display his profile and move to PlayingState.
 			// move to playing state.
 			// todo: wait for players to be ready. (click on button?)
 			// this.loadingModal.hide();
 			loadingOverlay.style.display = 'none';
-			state = this.playingState;
 			gameUI.style.display = 'none';
-			this.game.start(this.socket);
+			state = this.playingState;
 			state.execute();
+			this.game.start(this.socket);
 		}
 	}
 
@@ -192,7 +179,7 @@ class QuickGame {
 			},
 			credentials: "include",
 				body: JSON.stringify({
-					"game": "pong"
+					"game": this.game.name
 				})
 		})
 		.then((response) => {
@@ -211,7 +198,7 @@ class QuickGame {
 			this.socket.addEventListener("open", () => {
 				this.playingState.bindSocket(this.socket);
 				this.socket.addEventListener("message", (event) => {
-					this.waitRoom(event);
+					this.handleEvent(event);
 				});
 			});
 		})
@@ -222,7 +209,6 @@ class QuickGame {
 			// then go back game menu.
 			this.cancel();
 			// resizeCanvas();
-			console.log("CAUGHT ERROR!!!");
 			console.log(error); // maybe display the error message in the window
 		});
 	}
@@ -246,6 +232,91 @@ class Tournament {
 	execute() {
 		//todo launch loading screen and animations.
 	};
+
+	handleEvent(event) {
+		if (JSON.parse(event.data).status == "ready") {
+			// todo: if a player was found, display his profile and move to PlayingState.
+			// move to playing state.
+			// todo: wait for players to be ready. (click on button?)
+			// this.loadingModal.hide();
+			loadingOverlay.style.display = 'none';
+			gameUI.style.display = 'none';
+			state = this.playingState;
+			state.execute();
+			this.game.start(this.socket);
+		}
+	}
+
+	update(event) {
+		var received_data = JSON.parse(event.data);
+		// TODO: wins the tournament.
+		if (received_data.type == "end") {
+			// todo: move to result state
+			this.gameStatus = "ended";
+			if (this.gameStatus == "win")
+				this.gameEndState.setMessage("You Won!", true);
+			else
+				this.gameEndState.setMessage("You Lost!", false);
+			if (this.socket)
+				this.socket.close();
+			state = this.gameEndState;
+			state.execute();
+			return;
+		}
+		if (received_data.type == "round") {
+			// move to next round
+			this.joinTournament();
+			return ;
+		}
+		if (received_data.type == "participant") {
+			//new participant joined.
+		}
+		this.game.update(received_data);
+	}
+
+	joinTournament() {
+		
+		// create a game and connect to socket.
+		fetch("/games/join_tournament/", {
+			method: "POST",
+			headers: {
+				"X-CSRFToken": getCookie("csrftoken"),
+				"Authorization": "Bearer " + localStorage.getItem("auth_token")
+			},
+			credentials: "include",
+				body: JSON.stringify({
+					"game": this.game.name
+				})
+		})
+		.then((response) => {
+			if(!response.ok) {
+				throw new Error(response.status);
+			}
+			return response.json();
+		})
+		.then(data => {
+			this.socket = new WebSocket("wss://" + data.ip_address + "/ws/game/pong/" +  data.game_room_id + "/?csrf_token=" + getCookie("csrftoken") + "&token=" + localStorage.getItem("auth_token"));
+			if (this.socket.readyState > this.socket.OPEN) {
+				// todo: display error message in the loading window.
+				this.cancel();
+				throw new Error("WebSocket error: " + this.socket.readyState);
+			}
+			this.socket.addEventListener("open", () => {
+				this.playingState.bindSocket(this.socket);
+				this.socket.addEventListener("message", (event) => {
+					this.handleEvent(event);
+				});
+			});
+		})
+		.catch((error) => {
+			// stop game_menu animations display error in menu.
+			// todo: display error message in the loading window
+			// todo: display error message in the loading window
+			// then go back game menu.
+			this.cancel();
+			console.log(error); // maybe display the error message in the window
+		});
+	}
 }
 
 class GameModes {
@@ -297,7 +368,6 @@ class GameModes {
 		gameMenu.appendChild(this.quickGameBtn);
 		gameMenu.appendChild(this.tournamentBtn);
 		gameMenu.appendChild(this.backBtn);
-		// todo: abstract this away : game.load(canvas);
 		this.game.load(canvas);
 	}
 }
@@ -310,24 +380,21 @@ class GameMenu {
 		this.pongButton.textContent = 'Pong';
 		this.pongButton.className = "btn btn-outline-light mb-2";
 
-		this.otherButton = document.createElement('button');
-		this.otherButton.textContent = 'Other Game';
-		this.otherButton.className = "btn btn-outline-light mb-2";
+		this.snakeButton = document.createElement('button');
+		this.snakeButton.textContent = 'Snake';
+		this.snakeButton.className = "btn btn-outline-light mb-2";
 
 		this.backButton = document.createElement('button');
 		this.backButton.textContent = 'Back';
 		this.backButton.className = "btn btn-outline-light mb-2";
 
 		this.pongButton.addEventListener('click', () => this.launch_game("pong"));
-		this.otherButton.addEventListener('click', () => this.launch_game("other"));
+		this.snakeButton.addEventListener('click', () => this.launch_game("snake"));
 
 	};
 
 	launch_game(game) {
-		// todo: need to store and previous state...
-	
-		if (game == "pong")
-		{
+		if (game == "pong") {
 			state = this.pongState;
 			state.execute()
 		}
@@ -337,7 +404,7 @@ class GameMenu {
 		gameMenu.style.display = 'block';
 		gameMenu.innerHTML = '';
 		gameMenu.appendChild(this.pongButton);
-		gameMenu.appendChild(this.otherButton);
+		gameMenu.appendChild(this.snakeButton);
 	}
 }
 

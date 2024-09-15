@@ -12,18 +12,21 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'src.settings')
 django.setup()
 
 from common import auth_client as auth
-from games.models import PlayerRoom, GameResult
+from games.models import PlayerRoom, GameResult, TournamentGameRoom
 
 @database_sync_to_async
 def get_player_room(user_id, game_room):
     return PlayerRoom.objects.filter(
         player__player_id=user_id,
-        game_room__room_name=game_room
-    ).first()
+        game_room__room_name=game_room).first()
 
 @database_sync_to_async
 def get_player_room_player(player_room):
     return player_room.player
+
+@database_sync_to_async
+def get_player_room_player_id(player_room):
+    return player_room.player.player_id
 
 @database_sync_to_async
 def get_expected_players(player_room):
@@ -43,7 +46,7 @@ def get_player_position(player_room):
 	return player_room.player_position
 
 @database_sync_to_async
-def get_game_room(player_room):
+def get_player_game_room(player_room):
 	return player_room.game_room
 
 @database_sync_to_async
@@ -78,8 +81,20 @@ def delete_game_room(game_room):
 def store_game_result(game_result):
 	game_result.save()
 
+class TournamentMode(object):
+	def __init__(self, tournament) -> None:
+		self._tournament = tournament
+	# at the end of game, store the game result, remove loser from tournament (from the participants),
+	# move winner to the next round. if the number of participants is 2 the tournament ends.
+	def handle_end_game(self, data, game_result):
+		return
+
+class QuickGameMode(object):
+	def handle_end_game(self):
+		pass
+
 class GameSession(object):
-	def __init__(self, game_logic, game_server, game_room, pause_timeout=30):
+	def __init__(self, game_logic, game_server, game_room, game_mode=None, pause_timeout=60):
 		self._game_logic = game_logic
 		self.current_players = 0
 		self._game_room = game_room
@@ -96,6 +111,9 @@ class GameSession(object):
 
 	def set_player(self, position, player):
 		self._players[position] = player
+	
+	def get_player(self, position):
+		return self._players[position]
 
 	async def update(self, data, player):
 		await self._game_logic.update(data, player)
@@ -129,15 +147,18 @@ class GameSession(object):
 		async for data in self._game_logic.sendEvent():
 			if data["type"] == "win":
 				self._game_server.remove_session(self._session_id)
-				for end in self._end_callbacks:
-					await end(data)
 				await set_in_session(self._game_room, False)
 				# todo: store game results and delete the game room
-				self._game_result.winner = self._players[data["player"]] 
+				self._game_result.winner = self._players[data["player"]]
 				self._game_result.loser = self._players[data["loser"]]
 				self._game_result.winner_score = data["score"][data["player"]]
 				self._game_result.loser_score = data["score"][data["loser"]]
 				self._game_result.game = await get_game_room_game(self._game_room)
+				# TODO: if in tournament mode, send "next round" instead of win
+				# if the tournament has not ended. -> data["type"] = "round"
+				# data = self._game_mode.handle_data(data, self._game_result) -> overwrite data.
+				for end in self._end_callbacks:
+					await end(data)
 				self.is_running = False
 				return
 			await callback(data)
@@ -147,7 +168,7 @@ class GameSession(object):
 		self._end_callbacks.append(callback)
 	
 	def remove_callback(self, event, callback):
-		try: 
+		try:
 			if event == 'session-end':
 				self._end_callbacks.remove(callback)
 			elif event == 'connection-lost':
@@ -171,12 +192,13 @@ class GameServer(object):
 		self._lock = asyncio.Lock()
 		self._game_factory = game_factory
 
-	def get_game_session(self, game_room, pause_timeout=10) -> GameSession:
+	def get_game_session(self, game_room, game_mode, pause_timeout=10) -> GameSession:
 		if game_room.room_name not in self._game_sessions:
 			self._game_sessions[game_room.room_name] = GameSession(
 				self._game_factory(),
 				self,
 				game_room,
+				game_mode,
 				pause_timeout) # create new game logic for the game room.
 		return self._game_sessions[game_room.room_name]
 	
@@ -222,10 +244,9 @@ class GameConsumer(AsyncWebsocketConsumer):
 				}
 			)
 
-	#TODO: BUG when the same player joins the from two windows it still works ???
+	# TODO: BUG when the same player joins the from two windows it still works ???
 	async def connect(self):
 		self.room_name = room_name = self.scope['url_route']['kwargs']['room_name']
-		room_name = self.scope['url_route']['kwargs']['room_name']
 		query_string = self.scope.get('query_string').decode('utf-8')
 		params = dict(param.split('=') for param in query_string.split('&') if '=' in param)
 		token = params.get('token')
@@ -265,17 +286,46 @@ class GameConsumer(AsyncWebsocketConsumer):
 			self.close()
 			return
 
-		self.game_room = await get_game_room(self.player_room)
+		self.game_room = await get_player_game_room(self.player_room)
 		expected_players = await get_min_players(self.game_room)
+
+		# check if the game room is in a tournament room.
+		# tournament_room = TournamentGameRoom.objects.get(game_room=self.game_room)
+		# if tournament_room:
+		# 	game_mode = TournamentMode()
+		# else:
+		# 	game_mode = QuickGameMode()
+		self._game_mode = game_mode = None
+
+		await self.channel_layer.group_add(self.room_name, self.channel_name)
+		# TODO: (fix for same player reconnection )store the channel name in the database. along with the player_id.
+		# if there is match, close the previous channel. decrement current players.
+		# previous_channel_name = await self.get_channel(self.client_id)
+        # if previous_channel_name:
+        #     # If a previous connection exists, send a disconnect message
+        #     await self.channel_layer.send(
+        #         previous_channel_name,
+        #         {
+        #             "type": "disconnect.old_connection",
+        #         }
+        #     )
+
+        # # Store this connection's channel_name for the client
+        # await self.set_channel(self.client_id, self.channel_name)
+
+        # # Accept the new connection
+        # await self.accept()
 
 		# create new game session if none exists.
 		async with self._game_server as server:
-			session = server.get_game_session(self.game_room)
-			await self.channel_layer.group_add(self.room_name, self.channel_name)
+			session = server.get_game_session(self.game_room, game_mode)
 			# if the amount of players is met, notify all clients.
-			self.player = await get_player_position(player_room)
+			self.player_position = await get_player_position(player_room)
+			# if session.get_player(self.player_position):
+			# 	pass
 			session.current_players += 1
-			session.set_player(self.player, await get_player_room_player(player_room))
+			session.set_player(self.player_position, await get_player_room_player(player_room))
+			# TODO: also check against num_players in the game room (if it is one there is an issue)
 			if session.current_players == expected_players:
 				# keep a reference to the game session.
 				self._game_session = session
@@ -310,7 +360,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 				})
 
 	async def flush_game_session(self, data):
-		if data['player'] == self.player:
+		if data['player'] == self.player_position:
 			data = {'type': 'end', 'status': 'win'}
 		else:
 			data = {'type': 'end', 'status': 'lost'}
@@ -329,7 +379,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 	# todo: notify the game loop to pause the game
 	async def disconnect(self, close_code):
 		async with self._game_server as server:
-			session = server.get_game_session(self.game_room)
+			session = server.get_game_session(self.game_room, self._game_mode)
 			# todo: if both players disconnected, end the game
 			if session.current_players > 0:
 				session.current_players -= 1
@@ -346,7 +396,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 		if self.disconnected:
 			return
 		if self._game_session:
-			await self._game_session.update(bytes_data, self.player)
+			await self._game_session.update(bytes_data, self.player_position)
 		else:
 			await self.channel_layer.group_send(
 				self.room_name,
