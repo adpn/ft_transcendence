@@ -48,6 +48,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (result.status === 1) {
                     successAlertPlaceholder(result.message);
                     document.querySelector("#profileDropdown span").textContent = newUsername;
+                    const profileLink = document.querySelector("a[href^='/user/']");
+                    if (profileLink) {
+                        profileLink.href = `/user/${newUsername}`;
+                    }
+
                 } else {
                     updateAlertPlaceholderError(result.message);
                 }

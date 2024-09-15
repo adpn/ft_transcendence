@@ -192,3 +192,19 @@ footer {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+.online_status {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-left: 10px;
+}
+
+.online_status.online {
+    background-color: green;
+}
+
+.online_status.offline {
+    background-color: red;
+}

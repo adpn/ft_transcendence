@@ -7,7 +7,6 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model, login, logout
 from django.http import JsonResponse, HttpResponse
 from django.db.utils import IntegrityError, DataError
-# from django.db import models
 
 import os
 import json

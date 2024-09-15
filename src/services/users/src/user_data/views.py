@@ -84,6 +84,8 @@ def personal_stats(request : HttpRequest) -> JsonResponse:
     for game in data:
         if game == 'status':
             continue
+        if not 'games' in data[game]:
+            continue
         for result in data[game]["games"]:
             name = UserProfile.objects.get(user_id=result["opponent_id"]).user.username
             result["opponent"] = name

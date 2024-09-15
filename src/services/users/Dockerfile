@@ -1,12 +1,9 @@
-FROM		alpine:3.20
+FROM		python:3.11-slim
 
-RUN			apk update && apk upgrade && apk add \
-			python3-dev \
-			build-base \
-			jpeg-dev \
-			zlib-dev \
-			py3-django \
-			py3-psycopg-c
+RUN			apt-get update && apt-get install -y netcat-traditional && apt-get clean
+RUN			pip install django channels uvicorn[standard]
+RUN			pip install "psycopg[binary]"
+RUN         pip install channels_redis
 
 COPY		src /home/service
 COPY		tools/run_service.sh /bin/run_service.sh

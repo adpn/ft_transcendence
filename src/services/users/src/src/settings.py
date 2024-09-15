@@ -37,6 +37,7 @@ INSTALLED_APPS = [
 	'session_manager',
     'user_data',
     'friends',
+    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -74,7 +75,13 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'src.wsgi.application'
+ASGI_APPLICATION = 'src.asgi.application'
 
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
@@ -137,3 +144,4 @@ AUTH_USER_MODEL = 'authentication.User'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True

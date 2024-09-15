@@ -303,7 +303,9 @@ def game_stats(request: HttpRequest, user_id : int) -> JsonResponse:
 	list_games = Game.objects.all()
 	if list_games.count() == 0:
 		return JsonResponse({'status': 0, 'message': 'No game found'}, status=500)
+
 	response_data = {'status': 1}
+	nb_games = 0
 	for game in list_games:
 		games_won = GameResult.objects.filter(winner=player, game=game)
 		games_lost = GameResult.objects.filter(loser=player, game=game)
@@ -315,7 +317,8 @@ def game_stats(request: HttpRequest, user_id : int) -> JsonResponse:
 				'total_games': 0
 			}
 			continue
-
+		nb_games += 1
+		
 		games_data = []
 		for result in games_won.union(games_lost):
 			games_data.append({
@@ -327,6 +330,7 @@ def game_stats(request: HttpRequest, user_id : int) -> JsonResponse:
 				'game_duration': result.game_duration,
 			})
 		
+		# maybe add average score, average duration
 		response_data[game.game_name] = {
 			'total_games': win_count + loss_count,
 			'total_wins': win_count,
@@ -334,4 +338,6 @@ def game_stats(request: HttpRequest, user_id : int) -> JsonResponse:
 			'games': games_data
 		}
 
+	if nb_games == 0:
+		return JsonResponse({'status': 0, 'message': 'Player never played'}, status=200)
 	return JsonResponse(response_data, status=200)

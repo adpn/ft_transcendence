@@ -49,14 +49,14 @@ function replaceLoginButtons(user) {
             <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="profileDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 <span class="ms-2 me-2 text-white">${user.username}</span>
                 <div class="profile-picture-container">
-                    <img src="${user.profile_picture}" alt="${user.username}" class="profile-picture">
+                    <img src="${user.profile_picture}" class="profile-picture">
                 </div>
             </a>
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
                 <li><a href="/user/${user.username}" class="dropdown-item btn btn-outline-light" data-link>Profile</a></li>
                 <li><a href="/settings" class="dropdown-item btn btn-outline-light" data-link>Settings</a></li>
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item btn btn-outline-light" onclick="handleLogout()">Logout</a></li>
+                <li><a class="dropdown-item btn btn-outline-light" id="logout">Logout</a></li>
             </ul>
         </div>
     `;
@@ -76,24 +76,8 @@ function resetLoginButtons() {
     `;
 }
 
-function handleLogout() {
-    fetch('/auth/logout/', {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': getCookie('csrftoken'),
-            'Authorization': 'Bearer ' + localStorage.getItem('auth_token')
-        },
-        credentials: 'include'
-    })
-    .then(response => response.json())
-    .then(data => {
-        successAlertPlaceholder('You have been logged out! Bye bye!');
-        resetLoginButtons();
-        navigateTo('/');
-    });
-}
-
 document.addEventListener("DOMContentLoaded", function() {
+    var socket = null;
 
     fetch('/auth/is_authenticated/', {
         method: 'GET',
@@ -108,6 +92,8 @@ document.addEventListener("DOMContentLoaded", function() {
         if (data.status === 1) {
             localStorage.setItem('auth_token', data.token);
             replaceLoginButtons(data.user);
+            console.log("HOST", window.location.host);
+            socket = new WebSocket('wss://' + window.location.host + '/users/status/');
         }
     });
 
@@ -144,6 +130,10 @@ document.addEventListener("DOMContentLoaded", function() {
                 replaceLoginButtons(data.user);
                 localStorage.setItem('auth_token', data.token);
                 navigateTo('/');
+                if (socket != null) {
+                    socket.close();
+                }
+                socket = new WebSocket('wss://' + window.location.host + '/users/status/');
             }
             const loginModalElement = document.getElementById('loginModal');
             const loginModal = bootstrap.Modal.getInstance(loginModalElement);
@@ -186,6 +176,10 @@ document.addEventListener("DOMContentLoaded", function() {
                 replaceLoginButtons(data.user);
                 localStorage.setItem('auth_token', data.token);
                 navigateTo('/');
+                if (socket != null) {
+                    socket.close();
+                }
+                socket = new WebSocket('wss://' + window.location.host + '/users/status/');
             }
             const signUpModalElement = document.getElementById('signUpModal');
             const signUpModal = bootstrap.Modal.getInstance(signUpModalElement);
@@ -194,6 +188,41 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         });
     });
-});
 
-window.handleLogout = handleLogout;
+    document.addEventListener("click", function(event) {
+        if (event.target.matches("#logout")) {
+            event.preventDefault();
+            fetch('/auth/logout/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Authorization': 'Bearer ' + localStorage.getItem('auth_token')
+                },
+                credentials: 'include'
+            })
+            .then(response => response.json())
+            .then(data => {
+                successAlertPlaceholder('You have been logged out! Bye bye!');
+                resetLoginButtons();
+                navigateTo('/');
+                if (socket != null) {
+                    socket.close();
+                }
+            });
+        }
+    });
+
+    if (socket != null) {
+        socket.onopen = function(e) {
+            console.log("Connection established");
+        };
+        
+        socket.onclose = function(e) {
+            console.log("Connection closed");
+        };
+        
+        socket.onerror = function(error) {
+            console.error("WebSocket Error:", error);
+        };
+    }
+});

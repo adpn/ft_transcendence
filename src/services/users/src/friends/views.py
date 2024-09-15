@@ -13,9 +13,9 @@ def get_friend_list(request : HttpRequest) -> JsonResponse:
     friend_list_data = []
     for item in friends:
         if item.user == user_profile:
-            friend_list_data.append({'username': item.friend.user.username, 'profile_picture': item.friend.profile_picture.url})
+            friend_list_data.append({'username': item.friend.user.username, 'profile_picture': item.friend.profile_picture.url, 'is_online': item.friend.online_status})
         else:
-            friend_list_data.append({'username': item.user.user.username, 'profile_picture': item.user.profile_picture.url})
+            friend_list_data.append({'username': item.user.user.username, 'profile_picture': item.user.profile_picture.url, 'is_online': item.user.online_status})
     return JsonResponse({'status': 1, 'friends': friend_list_data}, status=200)
 
 def get_friend_requests_list(request : HttpRequest) -> JsonResponse:
