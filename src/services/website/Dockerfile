@@ -1,12 +1,11 @@
-FROM		alpine:3.19
+FROM		alpine:3.20
 
 RUN			apk update && apk upgrade && apk add \
 			python3-dev \
 			build-base \
 			jpeg-dev \
 			zlib-dev \
-			py3-django \
-			py3-psycopg-c
+			py3-django 
 
 COPY		src /home/service
 COPY		tools/run_service.sh /bin/run_service.sh

@@ -225,6 +225,7 @@ const Friends = async () => {
                             </a>
                     </div>
                     <span class="friend-name">${friend.username}</span>
+                    <div class="online_status ${friend.is_online ? 'online' : 'offline'}"></div>
                 </div>
             `;
 
