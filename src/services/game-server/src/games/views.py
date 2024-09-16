@@ -18,10 +18,9 @@ from .models import (
 
 from common import auth_client as auth
 
-MAX_TOURNAMENT_ROOMS = 4
 MAX_TOURNAMENT_PARTICIPANTS = 8
-
-# creates a game and perform matchmaking...
+# creates a game and performs matchmaking...
+# TODO: handle local games
 def create_game(request):
 	# add pong game in database
 	PONG = Game(game_name='pong', min_players=2)
@@ -36,12 +35,13 @@ def create_game(request):
 			'status': 0, 
 			'message': 'Invalid token'
 		}, status=401)
+	# TODO: check if the game is a local game.
 	try:
 		game_request = json.loads(request.body)
 		if 'game' not in game_request:
 			return JsonResponse({
-			'status': 0,
-			'message': "missing required field: {}".format('game')}, status=500)
+				'status': 0,
+				'message': "missing required field: {}".format('game')}, status=500)
 	except json.decoder.JSONDecodeError:
 		return JsonResponse({
 			'status': 0,
@@ -58,11 +58,11 @@ def create_game(request):
 	# the player is already into a game room so do nothing.
 	if room_player:
 		return JsonResponse({
-				'ip_address': os.environ.get('IP_ADDRESS'),
-				'game_room_id': room_player.game_room.room_name,
-				'status': 'playing',
-				'player_id': room_player.player.player_name
-				}, status=200)
+			'ip_address': os.environ.get('IP_ADDRESS'),
+			'game_room_id': room_player.game_room.room_name,
+			'status': 'playing',
+			'player_id': room_player.player.player_name
+			}, status=200)
 
 	# try to create a new player
 	player = Player(
@@ -88,11 +88,11 @@ def create_game(request):
 			game_room=room, 
 			player_position=room.num_players - 1).save()
 		return JsonResponse({
-				'ip_address': os.environ.get('IP_ADDRESS'),
-				'game_room_id': room.room_name,
-				'status': 'joined',
-				'player_id': player.player_name
-				}, status=200)
+			'ip_address': os.environ.get('IP_ADDRESS'),
+			'game_room_id': room.room_name,
+			'status': 'joined',
+			'player_id': player.player_name
+			}, status=200)
 
 	# create new room if room does not exist
 	room = GameRoom(
@@ -147,6 +147,10 @@ def add_participant(
 	participant.save()
 	return participant
 
+# TODO: api call for adding a guest to the database
+def add_guests(request: HttpRequest) -> JsonResponse:
+	pass
+
 def join_tournament(
 	game: Game,
 	player:Player,
@@ -154,8 +158,16 @@ def join_tournament(
 	participant: TournamentParticipant = None):
 
 	# join the tournament by either reconnecting, joining a room or create a nes room.
-	game_rooms_in_tournament = TournamentGameRoom.objects.filter(
-		tournament=tournament).values_list('game_room', flat=True)
+	if not participant:
+		game_rooms_in_tournament = TournamentGameRoom.objects.filter(
+			tournament=tournament
+			).values_list('game_room', flat=True)
+	else:
+		# the tournament room that matches the round of the participant.
+		game_rooms_in_tournament = TournamentGameRoom.objects.filter(
+			tournament=tournament,
+			tournament_round=participant.tournament_round,
+			).values_list('game_room', flat=True)
 
 	player_room = PlayerRoom.objects.filter(
 		player=player, 
@@ -175,9 +187,9 @@ def join_tournament(
 		add_participant(player, tournament)
 
 	# get the oldest game_room in the tournament that isn't full 
-	# TODO: (Maybe select the game room at a certain position given the participant position ?) (if in tournament)
+	# TODO: (Maybe select the game room at a certain position given the participant position ?)
 	game_room = GameRoom.objects.filter(
-		room_name__in=game_rooms_in_tournament, 
+		room_name__in=game_rooms_in_tournament,
 		num_players__lt=game.min_players
 		).order_by('created_at').first()
 
@@ -195,7 +207,6 @@ def join_tournament(
 			'player_id': player.player_name
 		}, status=201)
 	add_player_to_room(player, game_room)
-	print("HERE!!!", game_room.room_name, flush=True)
 	return JsonResponse({
 		'ip_address': os.environ.get('IP_ADDRESS'),
 		'game_room_id': game_room.room_name,
@@ -216,59 +227,7 @@ def create_tournament(player: Player, game:Game, max_participants=8) -> GameRoom
 	tgame_room.save()
 	return game_room
 
-def	find_tournament(request: HttpRequest) -> JsonResponse:
-	# add pong game in database
-	PONG = Game(game_name='pong', min_players=2)
-	try:
-		PONG.save()
-	except IntegrityError:
-		pass
-	# todo: put game request handling in a function.
-	try:
-		game_request = json.loads(request.body)
-		if 'game' not in game_request:
-			return JsonResponse({
-			'status': 0,
-			'message': "missing required field: {}".format('game')}, status=500)
-	except json.decoder.JSONDecodeError:
-		return JsonResponse({
-			'status': 0,
-			'message': 'Couldn\'t read input'}, status=500)
-
-	user_data = auth.get_user(request)
-	if not user_data:
-		return JsonResponse({
-			'status': 0, 
-			'message': 'Invalid token'
-		}, status=401)
-
-	# try to create a new player
-	player = Player(
-		player_name=user_data['username'], 
-		player_id=int(user_data['user_id']))
-	try:
-		player.save()
-	except IntegrityError:
-		pass
-
-	game = Game.objects.filter(game_name=game_request['game']).first()
-	if not game:
-		return JsonResponse({
-			'status': 0,
-			'message': f"Game {game_request['game']} does not exist"}, status=404)
-
-	participant = TournamentParticipant.objects.filter(player=player).first()
-	# ================== RECONNECT OR MOVE TO THE NEXT ROUND ========================
-	if participant:
-		print("PARTICIPANT", participant, flush=True)
-		if participant.status == "ELIMINATED":
-			return JsonResponse({
-				'status': 'eliminated'
-				}, status=405)
-		elif participant.status == "PLAYING":
-			# if the participant is not eliminated then 
-			return join_tournament(game, player, participant.tournament, participant)
-
+def create_or_join_tournament(player: Player, game:Game, max_participants=8) -> JsonResponse:
 	print("NEW PARTICIPANT", flush=True)
 	# if the player is not a participant, 
 	# try to join the oldest tournament that isn't full.
@@ -288,6 +247,68 @@ def	find_tournament(request: HttpRequest) -> JsonResponse:
 			}, status=201)
 	print("NEW PARTICIPANT JOIN", flush=True)
 	return join_tournament(game, player, tournament)
+
+def	find_tournament(request: HttpRequest) -> JsonResponse:
+	# add pong game in database
+	PONG = Game(game_name='pong', min_players=2)
+	try:
+		PONG.save()
+	except IntegrityError:
+		pass
+	# todo: put game request handling in a function.
+	# TODO: check if it local.
+	try:
+		game_request = json.loads(request.body)
+		if 'game' not in game_request:
+			return JsonResponse({
+			'status': 0,
+			'message': "missing required field: {}".format('game')}, status=500)
+	except json.decoder.JSONDecodeError:
+		return JsonResponse({
+			'status': 0,
+			'message': 'Couldn\'t read input'}, status=500)
+
+	user_data = auth.get_user(request)
+	if not user_data:
+		return JsonResponse({
+			'status': 0, 
+			'message': 'Invalid token'
+		}, status=401)
+
+	''' TODO:
+		----
+		if the game is in local mode, get the PARTICIPANT in the json file, check if it is a guest or the host then proceed as usual ?
+		this would mean that we make two calls for finding a tournament for each participant. the client is responsible for making the proper
+		request, but the server knows who's eliminated.
+	'''
+
+	# try to create a new player
+	player = Player(
+		player_name=user_data['username'], 
+		player_id=int(user_data['user_id']))
+	try:
+		player.save()
+	except IntegrityError:
+		pass
+
+	game = Game.objects.filter(game_name=game_request['game']).first()
+	if not game:
+		return JsonResponse({
+			'status': 0,
+			'message': f"Game {game_request['game']} does not exist"}, status=404)
+
+	participant = TournamentParticipant.objects.filter(player=player).first()
+	# ================== RECONNECT OR MOVE TO THE NEXT ROUND ========================
+	if participant:
+		'''
+		TODO: if the participant is eliminated, create or join another tournament.
+		'''
+		if participant.status == "ELIMINATED" or participant.status == "WINNER":
+			return create_or_join_tournament(player, game)
+		elif participant.status == "PLAYING":
+			# if the participant is not eliminated then 
+			return join_tournament(game, player, participant.tournament, participant)
+	return create_or_join_tournament(player, game)
 
 @csrf_exempt
 def game_stats(request: HttpRequest, user_id : int) -> JsonResponse:

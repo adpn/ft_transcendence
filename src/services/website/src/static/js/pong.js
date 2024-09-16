@@ -112,31 +112,31 @@ function resizeCanvas() {
 	canvas.height = canvas.scrollHeight;
 	clearCanvas(canvas, ctx);
 	switch (game_status) {
-		case NOT_JOINED:
-			drawMessage("Welcome", canvas, ctx);
-			break ;
-		case CONNECTING:
-			drawMessage("Connecting...", canvas, ctx);
-			break ;
-		case PLAYING:
-			drawFrame(canvas, ctx, game_data);
-			break ;
-		case WON:
-			drawMessage("Victory", canvas, ctx);
-			drawScore(canvas, game_data);
-			break ;
-		case LOST:
-			drawMessage("Defeat", canvas, ctx);
-			drawScore(canvas, game_data);
-			break ;
-		case DISCONNECTED:
-			drawMessage("Disconnected", canvas, ctx);
-			break ;
-		case NOT_LOGGED:
-			drawMessage("You are not logged in", canvas, ctx);
-			break ;
-		case ERROR:
-			drawMessage("Something went wrong", canvas, ctx);
+	// 	case NOT_JOINED:
+	// 		drawMessage("Welcome", canvas, ctx);
+	// 		break ;
+	// 	case CONNECTING:
+	// 		drawMessage("Connecting...", canvas, ctx);
+	// 		break ;
+	case PLAYING:
+		drawFrame(canvas, ctx, game_data);
+		break ;
+	// 	case WON:
+	// 		drawMessage("Victory", canvas, ctx);
+	// 		drawScore(canvas, game_data);
+	// 		break ;
+	// 	case LOST:
+	// 		drawMessage("Defeat", canvas, ctx);
+	// 		drawScore(canvas, game_data);
+	// 		break ;
+	// 	case DISCONNECTED:
+	// 		drawMessage("Disconnected", canvas, ctx);
+	// 		break ;
+	// 	case NOT_LOGGED:
+	// 		drawMessage("You are not logged in", canvas, ctx);
+	// 		break ;
+	// 	case ERROR:
+	// 		drawMessage("Something went wrong", canvas, ctx);
 	}
 }
 
