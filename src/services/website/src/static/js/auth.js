@@ -79,6 +79,17 @@ function resetLoginButtons() {
 document.addEventListener("DOMContentLoaded", function() {
     var socket = null;
 
+    if (window.location.pathname.startsWith("/auth/auth42/")) {
+        const status = document.getElementById('status');
+        if (status.innerHTML === "0") {
+            const message = document.getElementById('message');
+            updateAlertPlaceholderError(message.innerHTML);
+        } else {
+            successAlertPlaceholder('Welcome!');
+        }
+        navigateTo('/');
+    }
+
     fetch('/auth/is_authenticated/', {
         method: 'GET',
         headers: {

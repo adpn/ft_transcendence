@@ -122,7 +122,7 @@ STATICFILES_DIRS = (
     os.path.join(BASE_DIR, "static"),
 )
 
-print("BASE DIR", os.path.join(BASE_DIR, "static"))
+# print("BASE DIR", os.path.join(BASE_DIR, "static"))
 
 STATIC_URL = 'static/'
 

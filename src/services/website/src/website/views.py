@@ -1,13 +1,17 @@
 from django.shortcuts import render
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, HttpRequest
 from django.views import View
 
 import json
 import os
 from http import client
 
-def index(request):
-	return render(request, 'index.html', {'ip_address': os.getenv("IP_ADDRESS")})
+def index(request : HttpRequest):
+	elements = {'ip_address': os.getenv("IP_ADDRESS")}
+	if request.headers.get("status"):
+		elements['status'] = request.headers.get("status")
+		elements['message'] = request.headers.get("message")
+	return render(request, 'index.html', elements)
 
 #relays request to a backend service.
 class ServiceClient(object):
