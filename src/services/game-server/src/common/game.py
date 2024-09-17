@@ -7,6 +7,7 @@ import time
 
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
+from channels.layers import BaseChannelLayer
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'src.settings')
 django.setup()
@@ -120,26 +121,23 @@ def set_tournament_winner(player: Player, tournament: Tournament) -> TournamentP
 	participant.save(update_fields=["status"])
 	return participant
 
-class TournamentMode(object):
-	def __init__(self, tournament: Tournament) -> None:
-		self._tournament = tournament
+@database_sync_to_async
+def delete_tournament(tournament: Tournament) -> None:
+	tournament.delete()
 
-	async def handle_end_game(self, data: dict, game_result: GameResult):
-		await eliminate_player(game_result.loser, self._tournament)
-		remaining_players = await get_remaining_participants()
-		# TODO: maybe use a better approach for checking if the tournament has ended.
-		if remaining_players == 1:
-			set_tournament_winner(game_result.winner, self._tournament)
-			# this is the winner -> tournament ends.
-			data["type"] = "win"
-			return data
-		await qualify_player(game_result.winner, self._tournament)
-		data["type"] = "round"
-		return data
+@database_sync_to_async
+def close_tournament(tournament: Tournament) -> Tournament:
+	tournament.closed = True
+	tournament.save(update_fields=['closed'])
 
-class QuickGameMode(object):
-	async def handle_end_game(self, data, game_result):
-		return data
+@database_sync_to_async
+def tournament_is_closed(tournament: Tournament) -> bool:
+	tournament = Tournament.objects.filter(tournament_id=tournament.tournament_id).first()
+	return tournament.closed
+
+@database_sync_to_async
+def get_tournament_room_tournament_id(tournament_room: TournamentGameRoom) -> str:
+	return tournament_room.tournament.tournament_id
 
 class GameSession(object):
 	def __init__(self, game_logic, game_server, game_room, game_mode=None, pause_timeout=60):
@@ -232,6 +230,84 @@ class GameSession(object):
 	def resume(self):
 		self._pause_event.set()
 
+class QuickGameMode(object):
+	def __init__(self, channel_layer: BaseChannelLayer) -> None:
+		self.channel_layer = channel_layer
+
+	async def ready(self, session: GameSession, room_name: str, game_room: GameRoom, state_callback) -> None:
+		await self.channel_layer.group_send(
+		room_name,
+		{
+			'type': 'game_status',
+			'message': {
+				'status': 'ready'
+				}
+		})
+		if not await in_session(game_room):
+			asyncio.create_task(session.start(state_callback))
+			session.resume()
+			await set_in_session(game_room, True)
+			return
+		# resume game in case it paused.
+		session.resume()
+
+	async def handle_end_game(self, data, game_result):
+		return data
+
+class TournamentMode(object):
+	def __init__(self, tournament: Tournament, channel_layer: BaseChannelLayer) -> None:
+		self._tournament = tournament
+		self.channel_layer = channel_layer
+		self._ready = False
+
+	# TODO: temporary implementation, need to wait until the tournament is closed.
+	async def ready(self, session: GameSession, room_name: str, game_room: GameRoom, state_callback) -> None:
+		'''
+		TODO:
+		need a better check for ready players
+		'''
+		closed = await tournament_is_closed(self._tournament)
+		if not closed:
+			await self.channel_layer.group_send(
+				room_name,
+				{
+					'type': 'game_status',
+					'message': {
+						'status': 'waiting'
+						}
+				})
+			return
+		await self.channel_layer.group_send(
+			room_name,
+			{
+				'type': 'game_status',
+				'message': {
+					'status': 'ready'
+					}
+			})
+
+		if not await in_session(game_room):
+			print("LAUNCH!!!", room_name, flush=True)
+			asyncio.create_task(session.start(state_callback))
+			session.resume()
+			await set_in_session(game_room, True)
+			return
+		# resume game in case it paused.
+		session.resume()
+
+	async def handle_end_game(self, data: dict, game_result: GameResult):
+		await eliminate_player(game_result.loser, self._tournament)
+		remaining_players = await get_remaining_participants()
+		# TODO: maybe use a better approach for checking if the tournament has ended.
+		if remaining_players == 1:
+			await set_tournament_winner(game_result.winner, self._tournament)
+			await delete_tournament(self._tournament)
+			data["type"] = "win"
+			return data
+		await qualify_player(game_result.winner, self._tournament)
+		data["type"] = "round"
+		return data
+
 class GameServer(object):
 	def __init__(self, game_factory):
 		self._game_sessions = {}
@@ -284,7 +360,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 
 	async def state_callback(self, data):
 		await self.channel_layer.group_send(
-				self.room_name,
+				self.room_name, 
 				{
 					'type': 'game_state',
 					'message': data
@@ -292,7 +368,6 @@ class GameConsumer(AsyncWebsocketConsumer):
 			)
 
 	# TODO: BUG when the same player joins the game from two windows it still works !!!
-	# TODO: 
 	async def connect(self):
 		self.room_name = room_name = self.scope['url_route']['kwargs']['room_name']
 		query_string = self.scope.get('query_string').decode('utf-8')
@@ -347,15 +422,32 @@ class GameConsumer(AsyncWebsocketConsumer):
 		BUG:
 			somehow we still have a tournament mode even though we are in quick-game
 		'''
-		game_mode = None
 		if tournament_room:
 			print("TOURNAMENT MODE", self.game_room, flush=True)
-			game_mode = TournamentMode(
-				await get_tournament_room_tournament(tournament_room))
+			# add channel to tournament group.
+			tournament_id = await get_tournament_room_tournament_id(tournament_room)
+			self._game_mode = game_mode = TournamentMode(
+				await get_tournament_room_tournament(tournament_room),
+				self.channel_layer
+			)
+			# notify all consumers that there is a new participant.
+			await self.channel_layer.group_send(
+				tournament_id,
+				{
+					'type': 'tournament_message',
+					'message': {
+						'subject': 'participant'
+					}
+				}
+			)
+			# add this channel to the group.
+			await self.channel_layer.group_add(
+				tournament_id,
+				self.channel_name
+			)
 		else:
 			print("QUICK GAME", flush=True)
-			game_mode = QuickGameMode()
-		self._game_mode = game_mode
+			self._game_mode = game_mode = QuickGameMode(self.channel_layer)
 		await self.channel_layer.group_add(self.room_name, self.channel_name)
 		# TODO: (fix for same player reconnection )store the channel name in the database. along with the player_id.
 		# if there is match, close the previous channel. decrement current players.
@@ -385,49 +477,25 @@ class GameConsumer(AsyncWebsocketConsumer):
 			# 	pass
 			session.current_players += 1
 			session.set_player(self.player_position, await get_player_room_player(player_room))
-			# TODO: also check against num_players in the game room (if it is one there is an issue)
-			''' 
-			TODO:
-				if we're in tournament mode, we need to wait until the maximum number of players have been reached. before starting...
-				tournament = Tournament.objects.filter(tournament=tournament).first()
-				if tournament.participants == tournament.max_participants:
-					start
-			'''
-			'''
-			BUG:
-				a quick-game player can player against a tournament player -> need to make sure that both games session
-			'''
+			# TODO: also check against num_players in the game room (if it is one, there is an issue)
+			session.on_session_end(self.flush_game_session)
+			session.on_connection_lost(self.connection_lost)
+			self._game_session = session
 			if session.current_players == expected_players:
-				# keep a reference to the game session.
-				self._game_session = session
+				# TODO: need to broadcast to all clients all the participants at each connection
 				await self.accept()
-				# send ready notification.
-				await self.channel_layer.group_send(
-				self.room_name,
-				{
-					'type': 'game_status',
-					'message': {'status': 'ready'}
-				})
-				session.on_session_end(self.flush_game_session)
-				session.on_connection_lost(self.connection_lost)
-				# only start new game loop if no game is in session.
-				if not await in_session(self.game_room):
-					asyncio.create_task(self._game_session.start(self.state_callback))
-					session.resume()
-					await set_in_session(self.game_room, True)
-					return
-				# resume game in case it paused.
-				session.resume()
+				await game_mode.ready(
+					session, self.room_name, 
+					self.game_room, self.state_callback)
 			elif session.current_players < expected_players:
-				session.on_session_end(self.flush_game_session)
-				session.on_connection_lost(self.connection_lost)
 				await self.accept()
-				self._game_session = session
 				await self.channel_layer.group_send(
 				self.room_name,
 				{
 					'type': 'game_status',
-					'message': {'status': 'waiting'}
+					'message': {
+						'status': 'waiting'
+						}
 				})
 
 	async def flush_game_session(self, data):
@@ -457,7 +525,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 			if session.current_players > 0:
 				session.current_players -= 1
 			session.remove_callback(
-				'session-end', 
+				'session-end',
 				self.flush_game_session)
 			session.pause()
 			# todo: send a message to clients when a player disconnects.
@@ -485,3 +553,12 @@ class GameConsumer(AsyncWebsocketConsumer):
 
 	async def game_status(self, event):
 		await self.send(text_data=json.dumps(event['message']))
+	
+	async def tournament_message(self, event):
+		# attempt to launch tournament.
+		async with self._game_server as server:
+			await self._game_mode.ready(
+				self._game_session, 
+				self.room_name, 
+				self.game_room, 
+				self.state_callback)

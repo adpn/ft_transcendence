@@ -18,7 +18,7 @@ class GameEndedState {
 		this.socket = null;
 		// Replay button
 		this.replayButton = this.createReplayButton();
-		this.giveUpButton = this.createGiveUpButton(); // Optional, similar pattern
+		this.giveUpButton = this.createQuitButton(); // Optional, similar pattern
 	}
 	setMessage(message, is_winner) {
 		//todo: set message.
@@ -38,9 +38,9 @@ class GameEndedState {
 	}
 
 	// Optional: Method to create a give-up button
-	createGiveUpButton() {
+	createQuitButton() {
 		const button = document.createElement('button');
-		button.textContent = "Give Up";
+		button.textContent = "Quit";
 		button.style.display = 'block';
 		button.className = "btn btn-outline-light mb-2";
 

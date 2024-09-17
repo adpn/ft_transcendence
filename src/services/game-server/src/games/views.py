@@ -4,6 +4,7 @@ import os
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse, HttpRequest
 from django.db.utils import IntegrityError
+from django.db.models import Subquery
 
 from .models import (
 	GameRoom, 
@@ -18,7 +19,7 @@ from .models import (
 
 from common import auth_client as auth
 
-MAX_TOURNAMENT_PARTICIPANTS = 8
+MAX_TOURNAMENT_PARTICIPANTS = 4
 # creates a game and performs matchmaking...
 # TODO: handle local games
 def create_game(request):
@@ -53,7 +54,10 @@ def create_game(request):
 			'status': 0,
 			'message': f"Game {game_request['game']} does not exist"}, status=404)
 
-	room_player = PlayerRoom.objects.filter(player__player_id=int(user_data['user_id'])).first()
+	# TODO: need to exclude tournament rooms !!!
+	room_player = PlayerRoom.objects.filter(
+		player__player_id=int(user_data['user_id'])).exclude(
+			game_room__in=Subquery(TournamentGameRoom.objects.values('game_room'))).first()
 
 	# the player is already into a game room so do nothing.
 	if room_player:
@@ -77,7 +81,9 @@ def create_game(request):
 	# or create a new room
 	rooms = GameRoom.objects.filter(
 		game__game_name=game_request['game'].lower(),
-		num_players__lt=game.min_players).order_by('created_at')
+		num_players__lt=game.min_players).order_by('created_at').exclude(
+			pk__in=Subquery(TournamentGameRoom.objects.values('game_room_id')
+		))
 
 	room = rooms.first()
 	if room:
@@ -143,6 +149,8 @@ def add_participant(
 
 	participant.tournament_position = tournament.participants
 	tournament.participants += 1
+	if tournament.participants == tournament.max_participants:
+		tournament.closed = True
 	tournament.save()
 	participant.save()
 	return participant
@@ -213,7 +221,7 @@ def join_tournament(
 		'status': 'joined',
 		'player_id': player.player_name}, status=200)
 
-def create_tournament(player: Player, game:Game, max_participants=8) -> GameRoom:
+def create_tournament(player: Player, game:Game, max_participants=MAX_TOURNAMENT_PARTICIPANTS) -> GameRoom:
 	tournament = Tournament(
 		game=game, 
 		tournament_id=str(uuid.uuid4()), 
@@ -233,6 +241,7 @@ def create_or_join_tournament(player: Player, game:Game, max_participants=8) -> 
 	# try to join the oldest tournament that isn't full.
 	tournament = Tournament.objects.filter(
 		game__game_name=game.game_name,
+		closed=False,
 		participants__lt=MAX_TOURNAMENT_PARTICIPANTS).order_by('created_at').first()
 
 	# if there is no tournament, create a new one and a new game room.
