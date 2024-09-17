@@ -171,6 +171,7 @@ def join_tournament(
 			tournament=tournament
 			).values_list('game_room', flat=True)
 	else:
+
 		# the tournament room that matches the round of the participant.
 		game_rooms_in_tournament = TournamentGameRoom.objects.filter(
 			tournament=tournament,
@@ -207,6 +208,8 @@ def join_tournament(
 		if tournament:
 			# map game room to tournament.
 			tgame_room = TournamentGameRoom(tournament=tournament, game_room=game_room)
+			if participant:
+				tgame_room.tournament_round = participant.tournament_round
 			tgame_room.save()
 		return JsonResponse({
 			'ip_address': os.environ.get('IP_ADDRESS'),

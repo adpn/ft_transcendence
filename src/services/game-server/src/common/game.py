@@ -139,6 +139,10 @@ def tournament_is_closed(tournament: Tournament) -> bool:
 def get_tournament_room_tournament_id(tournament_room: TournamentGameRoom) -> str:
 	return tournament_room.tournament.tournament_id
 
+@database_sync_to_async
+def get_game_room(room_name: str) -> GameRoom:
+	return GameRoom.objects.filter(room_name=room_name).first()
+
 class GameSession(object):
 	def __init__(self, game_logic, game_server, game_room, game_mode=None, pause_timeout=60):
 		self._game_logic = game_logic
@@ -260,12 +264,13 @@ class TournamentMode(object):
 		self.channel_layer = channel_layer
 		self._ready = False
 
-	# TODO: temporary implementation, need to wait until the tournament is closed.
 	async def ready(self, session: GameSession, room_name: str, game_room: GameRoom, state_callback) -> None:
 		'''
 		TODO:
+		----
 		need a better check for ready players
 		'''
+
 		closed = await tournament_is_closed(self._tournament)
 		if not closed:
 			await self.channel_layer.group_send(
@@ -286,6 +291,7 @@ class TournamentMode(object):
 					}
 			})
 
+		game_room = await get_game_room(room_name)
 		if not await in_session(game_room):
 			print("LAUNCH!!!", room_name, flush=True)
 			asyncio.create_task(session.start(state_callback))
@@ -414,7 +420,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 			return
 
 		self.game_room = await get_player_game_room(self.player_room)
-		expected_players = await get_min_players(self.game_room)
+		self._expected_players = expected_players = await get_min_players(self.game_room)
 
 		# check if the game room is in a tournament room.
 		tournament_room = await get_tournament_room(self.game_room)
@@ -556,9 +562,11 @@ class GameConsumer(AsyncWebsocketConsumer):
 	
 	async def tournament_message(self, event):
 		# attempt to launch tournament.
-		async with self._game_server as server:
-			await self._game_mode.ready(
-				self._game_session, 
-				self.room_name, 
-				self.game_room, 
-				self.state_callback)
+		async with self._game_server:
+			session = self._game_session
+			if session.current_players == self._expected_players:
+				await self._game_mode.ready(
+					self._game_session, 
+					self.room_name, 
+					self.game_room, 
+					self.state_callback)
