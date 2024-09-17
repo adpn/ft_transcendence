@@ -7,6 +7,7 @@ class Game(models.Model):
 class Player(models.Model):
 	player_name = models.CharField(max_length=50, unique=True)
 	player_id = models.IntegerField(primary_key=True)
+	is_guest = models.BooleanField(default=False)
 
 class GameRoom(models.Model):
 	room_name = models.CharField(max_length=100, primary_key=True)
@@ -15,6 +16,7 @@ class GameRoom(models.Model):
 	created_at = models.DateTimeField(auto_now_add=True)
 	num_players = models.IntegerField(default=0)
 	in_session = models.BooleanField(default=False)
+	is_local = models.BooleanField(default=False)
 
 # associate a player to a room.
 class PlayerRoom(models.Model):
@@ -52,6 +54,7 @@ class TournamentParticipant(models.Model):
 class TournamentGameRoom(models.Model):
 	tournament = models.ForeignKey(Tournament, on_delete=models.CASCADE)
 	game_room = models.ForeignKey(GameRoom, on_delete=models.CASCADE)
+	tournament_round = models.IntegerField(default=0)
 
 class TournamentResult(models.Model):
 	tournament = models.ForeignKey(Tournament, on_delete=models.CASCADE)

@@ -72,16 +72,17 @@ class GameEndedState {
 }
 
 class PlayingState {
-	constructor(game, gameModeState, prevState) {
+	constructor(game, gameModeState, prevState, gameEndState) {
 		// todo: add player profile on the side of the canvas.
 		// need cancel, replay, give up buttons bellow the canvas.
 		this.prevState = prevState;
 		this.gameModeState = gameModeState;
 		this.socket = null;
 		this.gameStatus = "playing"
-		this.gameEndState = new GameEndedState(game, gameModeState, prevState);
+		this.gameEndState = gameEndState;
 		this.game = game;
 	}
+
 	bindSocket(socket) {
 		this.socket = socket;
 		socket.addEventListener("close", () => this.disconnected());
@@ -94,20 +95,13 @@ class PlayingState {
 	update(event) {
 		var received_data = JSON.parse(event.data);
 		if (received_data.type == "end") {
-			// todo: move to result state
-			this.gameStatus = "ended";
-			if (this.gameStatus == "win")
-				this.gameEndState.setMessage("You Won!", true);
-			else
-				this.gameEndState.setMessage("You Lost!", false);
-			if (this.socket)
-				this.socket.close();
-			state = this.gameEndState;
-			state.execute();
+			// TODO: handle disconnections etc. 
+			this.prevState.update(received_data)
 			return;
 		}
-		this.game.update(received_data);
+		this.prevState.update(received_data);
 	}
+
 	disconnected() {
 		if (this.gameStatus != "ended") {
 			// if the game did not end after disconnection, stay in playing state.
@@ -123,7 +117,8 @@ class PlayingState {
 
 class QuickGame {
 	constructor(game, prevState) {
-		this.playingState = new PlayingState(game, prevState, this);
+		this.gameEndState = new GameEndedState(game, prevState, this);
+		this.playingState = new PlayingState(game, prevState, this, this.gameEndState);
 
 		this.game = game;
 		this.prevState = prevState;
@@ -159,6 +154,24 @@ class QuickGame {
 		this.connectGameRoom();
 	};
 
+	update(data) {
+		// todo: move to result state
+		if (data.type == "end")
+		{
+			this.gameStatus = "ended";
+			if (this.gameStatus == "win")
+				this.gameEndState.setMessage("You Won!", true);
+			else
+				this.gameEndState.setMessage("You Lost!", false);
+			if (this.socket)
+				this.socket.close();
+			state = this.gameEndState;
+			state.execute();
+			return;
+		}
+		this.game.update(data);
+	}
+
 	handleEvent(event) {
 		if (JSON.parse(event.data).status == "ready") {
 			// todo: if a player was found, display his profile and move to PlayingState.
@@ -171,7 +184,7 @@ class QuickGame {
 			state.execute();
 			this.game.start(this.socket);
 		}
-	}
+	};
 
 	connectGameRoom() {
 		// create a game and connect to socket.
@@ -221,7 +234,8 @@ class QuickGame {
 class Tournament {
 	constructor(game, prevState)
 	{
-		this.playingState = new PlayingState(game, prevState, this);
+		this.gameEndState = new GameEndedState(game, prevState, this);
+		this.playingState = new PlayingState(game, prevState, this, this.gameEndState);
 		this.game = game;
 		this.prevState = prevState;
 		this.cancelBtn = document.createElement('button');
@@ -231,6 +245,11 @@ class Tournament {
 		this.cancelBtn.addEventListener('click', () => this.cancel());
 	};
 	cancel() {
+		if (this.socket)
+			this.socket.close();
+		loadingOverlay.style.display = 'none';
+		gameUI.style.display = 'flex'
+		// put the menu back.
 		state = this.prevState;
 		state.execute();
 	}
@@ -258,36 +277,52 @@ class Tournament {
 		}
 	}
 
-	update(event) {
-		var received_data = JSON.parse(event.data);
-		// TODO: wins the tournament.
-		if (received_data.type == "end") {
-			// todo: move to result state
-			this.gameStatus = "ended";
-			if (this.gameStatus == "win")
-				this.gameEndState.setMessage("You Won!", true);
-			else
-				this.gameEndState.setMessage("You Lost!", false);
-			if (this.socket)
-				this.socket.close();
-			state = this.gameEndState;
-			state.execute();
-			return;
+	update(data) {
+		if (data.type == "end") {
+			if (data.status == "lost")
+			{
+				this.gameStatus = "ended";
+				if (this.gameStatus == "win")
+					this.gameEndState.setMessage("You Won!", true);
+				else
+					this.gameEndState.setMessage("You Lost!", false);
+				if (this.socket)
+					this.socket.close();
+				state = this.gameEndState;
+				state.execute();
+				return;
+			}
+			if (data.status == "win")
+			{
+				if (data.context == "round") {
+					console.log("NEXT ROUND!!!")
+					// move to next round
+					// TODO: maybe put a confirmation to move to the next round.
+					gameUI.style.display = 'flex'
+					state = this;
+					this.execute();
+					return;
+				}
+				this.gameStatus = "ended";
+				if (this.gameStatus == "win")
+					this.gameEndState.setMessage("You Won!", true);
+				else
+					this.gameEndState.setMessage("You Lost!", false);
+				if (this.socket)
+					this.socket.close();
+				state = this.gameEndState;
+				state.execute();
+				return;
+			}
 		}
-		if (received_data.type == "round") {
-			// move to next round
-			// TODO: maybe put a confirmation to move to the next round.
-			this.joinTournament();
+		else if (data.type == "participant") {
+			//new participant joined. -> update view... (fetch user data of the new participant)
 			return ;
 		}
-		if (received_data.type == "participant") {
-			//new participant joined.
-		}
-		this.game.update(received_data);
+		this.game.update(data);
 	}
 
 	joinTournament() {
-		
 		// create a game and connect to socket.
 		fetch("/games/join_tournament/", {
 			method: "POST",
