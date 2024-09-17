@@ -30,7 +30,7 @@ def create_user(request : HttpRequest):
         response = connection.getresponse()
         if response.status != 200:
             connection.close()
-            return HttpResponse(status=500)
+            return HttpResponse(status=response.status)
         image = ContentFile(response.read(), name=str(user_id) + ".jpg")
         connection.close()
         new_user = UserProfile(user=user, profile_picture=image)

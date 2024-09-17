@@ -18,6 +18,8 @@
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 </head>
 <body class="bg-light">
+    <div id="status" hidden>{{status}}</div>
+    <div id="message" hidden>{{message}}</div>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="navbar-brand ms-3">ft_transcendence</div>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarTogglerDemo02" aria-controls="navbarTogglerDemo02" aria-expanded="false" aria-label="Toggle navigation">
@@ -54,15 +56,7 @@
         </div>
     </nav>
 
-    <div id="alert-placeholder">
-        {% if messages %}
-            {% for message in messages %}
-                <div class="error-banner" role="alert">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        {% endif %}
-    </div>
+    <div id="alert-placeholder"></div>
 
 	<div id="app" class="container mt-4 content-wrapper"></div>
 

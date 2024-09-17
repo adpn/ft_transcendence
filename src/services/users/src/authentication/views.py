@@ -4,6 +4,7 @@ from common import jwt, service_client
 # Create your views here.
 
 from django.contrib import messages
+from django.shortcuts import render
 from django.contrib.auth import get_user_model, login, logout
 from django.http import JsonResponse, HttpResponse
 from django.db.utils import IntegrityError, DataError
@@ -17,7 +18,7 @@ import string
 import time
 from datetime import datetime, timedelta
 from .models import UserToken
-import sys
+# import sys
 
 User = get_user_model()
 
@@ -233,6 +234,21 @@ def is_authenticated_view(request) -> JsonResponse:
 	else :
 		return JsonResponse({'status': 0, 'message': 'User not connected'}, status=200)
 
+def check_token(request):
+	# todo: if the user has logged-out this should 
+	if check_jwt(request):
+		return HttpResponse(status=200)
+	return HttpResponse(status=401)
+
+def get_user(request) -> JsonResponse:
+	user = check_jwt(request)
+	if user:
+		return JsonResponse({
+			'username': user.username,
+			'user_id': user.id
+		}, status=200)
+	return JsonResponse({}, status=401)
+
 def authenticate_42API(request) -> tuple:
 	path = request.get_full_path()
 	if "error" in path:
@@ -285,29 +301,13 @@ def generate_username() -> str:
 	username = random.choice(words) + "".join(random.choices(string.digits, k=4))
 	return username
 
-def check_token(request):
-	# todo: if the user has logged-out this should 
-	if check_jwt(request):
-		return HttpResponse(status=200)
-	return HttpResponse(status=401)
-
-def get_user(request) -> JsonResponse:
-	user = check_jwt(request)
-	if user:
-		return JsonResponse({
-			'username': user.username,
-			'user_id': user.id
-		}, status=200)
-	return JsonResponse({}, status=401)
-
-def auth42_view(request):
+def auth42_view(request) -> HttpResponse:
 	if request.user.is_authenticated:
-		return redirect('/') 
-	
+		return render(request, 'api42.html', {'json_data': json.dumps({'status': 0, 'message': 'Already logged in'})})
+
 	auth_response, error_message = authenticate_42API(request)
 	if error_message:
-		messages.error(request, error_message)
-		return redirect('/', permanent=True) #find a way to display error message
+		return render(request, 'api42.html', {'json_data': json.dumps({"status": 0, "message": error_message})})
 	
 	headers = {
 		"Authorization": "Bearer " + auth_response["access_token"]
@@ -323,8 +323,7 @@ def auth42_view(request):
 	connection.close()
 
 	if api_response.status != 200:
-		messages.error(request, 'Failed to retrieve user data')
-		return redirect('/', permanent=True) #find a way to display error message
+		return render(request, 'api42.html', {'json_data': json.dumps({"status": 0, "message": "Failed to retrieve user data, please try again later"})})
 
 	MeData = json.loads(data)
 	user = User.objects.filter(username42=MeData["login"]).first()
@@ -343,11 +342,12 @@ def auth42_view(request):
 		response = connection.getresponse()
 		connection.close()
 		if response.status != 201:
-			return redirect('/', permanent=True) #find a way to display error message
+			# todo : cancel entry (delete it)
+			return render(request, 'api42.html', {'json_data': json.dumps({"status": 0, "message": "Could not create user"})})
 		login(request, new_user)
 	else:
 		login(request, user)
-	return redirect('/', permanent=True)
+	return render(request, 'api42.html', {'json_data': json.dumps({"status": 1, "message": "Welcome"})})
 
 def change_username_view(request) -> JsonResponse:
 	if not request.user.is_authenticated:
