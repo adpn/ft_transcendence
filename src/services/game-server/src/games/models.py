@@ -9,6 +9,10 @@ class Player(models.Model):
 	player_id = models.IntegerField(primary_key=True)
 	is_guest = models.BooleanField(default=False)
 
+class PlayerGuest(models.Model):
+	player = models.ForeignKey(Player, on_delete=models.CASCADE, related_name='host')
+	guest = models.ForeignKey(Player, on_delete=models.CASCADE, related_name='guest', unique=True)
+
 class Tournament(models.Model):
 	game = models.ForeignKey(Game, on_delete=models.CASCADE)
 	tournament_id = models.CharField(max_length=100, primary_key=True)

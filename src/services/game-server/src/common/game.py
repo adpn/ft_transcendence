@@ -284,6 +284,9 @@ class TournamentMode(object):
 						}
 				})
 			return
+		game_room = await get_game_room(room_name)
+		if not game_room:
+			return
 		await self.channel_layer.group_send(
 			room_name,
 			{
@@ -292,10 +295,6 @@ class TournamentMode(object):
 					'status': 'ready'
 					}
 			})
-
-		game_room = await get_game_room(room_name)
-		if not game_room:
-			return
 		if not await in_session(game_room):
 			asyncio.create_task(session.start(state_callback))
 			session.resume()
@@ -307,9 +306,7 @@ class TournamentMode(object):
 	async def handle_end_game(self, data: dict, game_result: GameResult):
 		tournament = await get_tournament(self._tournament_id)
 		await eliminate_player(game_result.loser, tournament)
-		# discard consumer from channel.
 		remaining_players = await get_remaining_participants(tournament)
-		# TODO: maybe use a better approach for checking if the tournament has ended.
 		if remaining_players == 1:
 			await set_tournament_winner(game_result.winner, tournament)
 			await delete_tournament(tournament)
@@ -384,7 +381,11 @@ class GameConsumer(AsyncWebsocketConsumer):
 				}
 			)
 
-	# TODO: BUG when the same player joins the game from two windows it still works !!!
+	'''
+	TODO: BUG when the same player joins the game from two windows it still works 
+	(the same player gets in the session twice) !!!
+	'''
+
 	async def connect(self):
 		self.room_name = room_name = self.scope['url_route']['kwargs']['room_name']
 		query_string = self.scope.get('query_string').decode('utf-8')
@@ -415,7 +416,9 @@ class GameConsumer(AsyncWebsocketConsumer):
 			self.close()
 			return
 
-		self.player_room = player_room = await get_player_room(user['user_id'], room_name)
+		self.player_room = player_room = await get_player_room(
+			user['user_id'], 
+			room_name)
 		''' 
 		TODO: check if the game room is in local mode if so, the game should start right away.
 				  the opponent should already be present in the game room (after calling the api)
@@ -435,10 +438,6 @@ class GameConsumer(AsyncWebsocketConsumer):
 
 		# check if the game room is in a tournament room.
 		tournament_room = await get_tournament_room(self.game_room)
-		'''
-		BUG:
-			somehow we still have a tournament mode even though we are in quick-game
-		'''
 		if tournament_room:
 			# add channel to tournament group.
 			tournament_id = await get_tournament_room_tournament_id(tournament_room)
@@ -484,8 +483,8 @@ class GameConsumer(AsyncWebsocketConsumer):
         # # Accept the new connection
         # await self.accept()
 
-		# create new game session if none exists.
 		# TODO: when in local mode, the game starts right away, no need to wait for other players.
+		# create new game session if none exists.
 		async with self._game_server as server:
 			session = server.get_game_session(self.game_room, game_mode)
 			# if the amount of players is met, notify all clients.
@@ -499,7 +498,6 @@ class GameConsumer(AsyncWebsocketConsumer):
 			session.on_connection_lost(self.connection_lost)
 			self._game_session = session
 			if session.current_players == expected_players:
-				# TODO: need to broadcast to all clients all the participants at each connection
 				await self.accept()
 				await game_mode.ready(
 					session, self.room_name, 
@@ -549,7 +547,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 			await self.channel_layer.group_discard(self.room_name, self.channel_name)
 			await self._game_mode.handle_disconnection()
 			self.disconnected = True
-			# TODO: delete player room -> if there are no more players in the game room, delete the game room.
+			# TODO: delete player room -> if there is only one player in the GameRoom.
 
 	# receives data from websocket.
 	async def receive(self, bytes_data):
@@ -580,3 +578,4 @@ class GameConsumer(AsyncWebsocketConsumer):
 				self.room_name, 
 				self.game_room, 
 				self.state_callback)
+		# TODO: send all participants to clients.

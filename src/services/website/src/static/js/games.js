@@ -9,6 +9,24 @@ var	gameUI;
 let	state = null;
 var overlayBody;
 
+/*
+TODO: in local mode, need an interface to set guest players names.
+in local mode, we make two create_game fetches (one per player)
+then connect to a single room.
+*/
+class LocalQuickGameState {
+	constructor(game, prevState) {
+
+	}
+}
+
+class LocalTournamentGameState {
+	constructor(game, prevState) {
+
+	}
+}
+
+
 class GameEndedState {
 	constructor(game, gameModeState, prevState) {
 		// todo: 
@@ -115,7 +133,7 @@ class PlayingState {
 	}
 }
 
-class QuickGame {
+class OnlineQuickGameState {
 	constructor(game, prevState) {
 		this.gameEndState = new GameEndedState(game, prevState, this);
 		this.playingState = new PlayingState(game, prevState, this, this.gameEndState);
@@ -128,8 +146,7 @@ class QuickGame {
 		this.cancelBtn.addEventListener('click', () => this.cancel());
 
 		this.socket = null;
-
-	};
+	}
 
 	cancel() {
 		if (this.socket)
@@ -231,6 +248,193 @@ class QuickGame {
 	}
 }
 
+// TODO: from quick game we either select LOCAL or ONLINE -> LocalQuickGameState
+class MultiplayerMode {
+	constructor(game, prevState, localGame, onlineGame) {
+		this.prevState = prevState;
+		this.localGameState = localGame;
+		this.onlineGameState = onlineGame;
+		// TODO: need an local and an online button
+		this.localButton = document.createElement('button');
+		this.localButton.textContent = 'Local';
+		this.localButton.className = "btn btn-outline-light mb-2";
+		this.onlineButton = document.createElement('button');
+		this.onlineButton.textContent = 'Online';
+		this.onlineButton.className = "btn btn-outline-light mb-2";
+		this.backButton = document.createElement('button');
+		this.backButton.textContent = 'Back';
+		this.backButton.className = "btn btn-outline-light mb-2";
+		this.localButton.addEventListener('click', () => this.localGame())
+		this.onlineButton.addEventListener('click', () => this.onlineGame())
+		this.backButton.addEventListener('click', () => this.back())
+	};
+
+	execute() {
+		// Clear the game menu content
+		gameMenu.style.display = 'block';
+		// this.loadingBody.appendChild(this.cancelBtn);
+		// this.loadingModal.show();
+		//loadingOverlay.innerHTML = '';
+		// overlayBody.innerHTML = '';
+		// loadingOverlay.style.display = 'flex';
+		// overlayBody.innerHTML = '';
+		// overlayBody.appendChild(this.cancelBtn);
+		// this.connectGameRoom();
+		gameMenu.innerHTML = '';
+		gameMenu.appendChild(this.localButton);
+		gameMenu.appendChild(this.onlineButton);
+		gameMenu.appendChild(this.backButton);
+	};
+
+	back() {
+		state = this.prevState;
+		state.execute();
+	}
+
+	localGame() {
+		state = this.localGameState;
+		state.execute()
+	}
+
+	onlineGame() {
+		state = this.onlineGameState;
+		state.execute()
+	}
+}
+
+class OnlineTournamentGameState {
+	constructor(game, prevState)
+	{
+		this.gameEndState = new GameEndedState(game, prevState, this);
+		this.playingState = new PlayingState(game, prevState, this, this.gameEndState);
+		this.game = game;
+		this.prevState = prevState;
+		this.cancelBtn = document.createElement('button');
+		this.cancelBtn.textContent = 'Cancel';
+		this.cancelBtn.className = "btn btn-outline-light mb-2";
+
+		this.cancelBtn.addEventListener('click', () => this.cancel());
+	};
+	cancel() {
+		if (this.socket)
+			this.socket.close();
+		loadingOverlay.style.display = 'none';
+		gameUI.style.display = 'flex'
+		// put the menu back.
+		state = this.prevState;
+		state.execute();
+	}
+	execute() {
+		//todo launch loading screen and animations.
+		// Clear the game menu content
+		gameMenu.style.display = 'none';
+		overlayBody.innerHTML = '';
+		loadingOverlay.style.display = 'flex';
+		overlayBody.appendChild(this.cancelBtn);
+		this.joinTournament();
+	};
+
+	handleEvent(event) {
+		if (JSON.parse(event.data).status == "ready") {
+			// todo: if a player was found, display his profile and move to PlayingState.
+			// move to playing state.
+			// todo: wait for players to be ready. (click on button?)
+			// this.loadingModal.hide();
+			loadingOverlay.style.display = 'none';
+			gameUI.style.display = 'none';
+			state = this.playingState;
+			state.execute();
+			this.game.start(this.socket);
+		}
+	}
+
+	update(data) {
+		if (data.type == "end") {
+			if (data.status == "lost") {
+				this.gameStatus = "ended";
+				if (this.gameStatus == "win")
+					this.gameEndState.setMessage("You Won!", true);
+				else
+					this.gameEndState.setMessage("You Lost!", false);
+				if (this.socket)
+					this.socket.close();
+				state = this.gameEndState;
+				state.execute();
+				return;
+			}
+			if (data.status == "win") {
+				if (data.context == "round") {
+					console.log("NEXT ROUND!!!")
+					// move to next round
+					// TODO: maybe put a confirmation to move to the next round.
+					gameUI.style.display = 'flex'
+					state = this;
+					this.execute();
+					return;
+				}
+				this.gameStatus = "ended";
+				if (this.gameStatus == "win")
+					this.gameEndState.setMessage("You Won!", true);
+				else
+					this.gameEndState.setMessage("You Lost!", false);
+				if (this.socket)
+					this.socket.close();
+				state = this.gameEndState;
+				state.execute();
+				return;
+			}
+		}
+		else if (data.type == "participant") {
+			//new participant joined. -> update view... (fetch user data of the new participant)
+			return ;
+		}
+		this.game.update(data);
+	}
+
+	joinTournament() {
+		// create a game and connect to socket.
+		fetch("/games/join_tournament/", {
+			method: "POST",
+			headers: {
+				"X-CSRFToken": getCookie("csrftoken"),
+				"Authorization": "Bearer " + localStorage.getItem("auth_token")
+			},
+			credentials: "include",
+				body: JSON.stringify({
+					"game": this.game.name
+				})
+		})
+		.then((response) => {
+			if(!response.ok) {
+				throw new Error(response.status);
+			}
+			return response.json();
+		})
+		.then(data => {
+			this.socket = new WebSocket("wss://" + data.ip_address + "/ws/game/pong/" +  data.game_room_id + "/?csrf_token=" + getCookie("csrftoken") + "&token=" + localStorage.getItem("auth_token"));
+			if (this.socket.readyState > this.socket.OPEN) {
+				// todo: display error message in the loading window.
+				this.cancel();
+				throw new Error("WebSocket error: " + this.socket.readyState);
+			}
+			this.socket.addEventListener("open", () => {
+				this.playingState.bindSocket(this.socket);
+				this.socket.addEventListener("message", (event) => {
+					this.handleEvent(event);
+				});
+			});
+		})
+		.catch((error) => {
+			// stop game_menu animations display error in menu.
+			// todo: display error message in the loading window
+			// todo: display error message in the loading window
+			// then go back game menu.
+			this.cancel();
+			console.log(error); // maybe display the error message in the window
+		});
+	}
+}
+
 class Tournament {
 	constructor(game, prevState)
 	{
@@ -279,8 +483,7 @@ class Tournament {
 
 	update(data) {
 		if (data.type == "end") {
-			if (data.status == "lost")
-			{
+			if (data.status == "lost") {
 				this.gameStatus = "ended";
 				if (this.gameStatus == "win")
 					this.gameEndState.setMessage("You Won!", true);
@@ -292,8 +495,7 @@ class Tournament {
 				state.execute();
 				return;
 			}
-			if (data.status == "win")
-			{
+			if (data.status == "win") {
 				if (data.context == "round") {
 					console.log("NEXT ROUND!!!")
 					// move to next round
@@ -370,8 +572,15 @@ class GameModes {
 	constructor(game, prevState)
 	{
 		this.game = game
-		this.tournamentState = new Tournament(game, this);
-		this.quickGameState = new QuickGame(game, this);
+		this.tournamentState = new MultiplayerMode(
+			game, this,
+			new LocalTournamentGameState(game, this),
+			new OnlineTournamentGameState(game, this));
+		this.quickGameState = new MultiplayerMode(
+			game,
+			this, 
+			new LocalQuickGameState(game, this),
+			new OnlineQuickGameState(game, this));
 
 		this.prevState = prevState;
 
@@ -444,6 +653,9 @@ class GameMenu {
 		if (game == "pong") {
 			state = this.pongState;
 			state.execute()
+		}
+		else if (game == "snake") {
+			console.log("SNAKE ?! SNAAAAAAAAAAAKE !!!")
 		}
 	}
 

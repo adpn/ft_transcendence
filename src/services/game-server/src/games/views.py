@@ -20,15 +20,13 @@ from .models import (
 from common import auth_client as auth
 
 MAX_TOURNAMENT_PARTICIPANTS = 4
+
 # creates a game and performs matchmaking...
 # TODO: handle local games
 def create_game(request):
 	# add pong game in database
-	PONG = Game(game_name='pong', min_players=2)
-	try:
-		PONG.save()
-	except IntegrityError:
-		pass
+	Game.objects.get_or_create(game_name='pong', min_players=2)
+	local = False
 
 	user_data = auth.get_user(request)
 	if not user_data:
@@ -36,25 +34,33 @@ def create_game(request):
 			'status': 0, 
 			'message': 'Invalid token'
 		}, status=401)
-	# TODO: check if the game is a local game.
+
+	'''
+	TODO:
+	check if the game is local, if it is, create guest Player 
+	'''
 	try:
 		game_request = json.loads(request.body)
 		if 'game' not in game_request:
 			return JsonResponse({
 				'status': 0,
-				'message': "missing required field: {}".format('game')}, status=500)
+				'message': "missing required field: {}".format('game')
+				}, status=400)
+		
 	except json.decoder.JSONDecodeError:
 		return JsonResponse({
 			'status': 0,
-			'message': 'Couldn\'t read input'}, status=500)
+			'message': 'Couldn\'t read input'
+			}, status=400)
 
 	game = Game.objects.filter(game_name=game_request['game']).first()
 	if not game:
 		return JsonResponse({
 			'status': 0,
-			'message': f"Game {game_request['game']} does not exist"}, status=404)
+			'message': f"Game {game_request['game']} does not exist"
+			}, status=404)
 
-	# TODO: need to exclude tournament rooms !!!
+	# get the player room excluding tournament rooms.
 	room_player = PlayerRoom.objects.filter(
 		player__player_id=int(user_data['user_id'])).exclude(
 			game_room__in=Subquery(TournamentGameRoom.objects.values('game_room'))).first()
@@ -68,15 +74,28 @@ def create_game(request):
 			'player_id': room_player.player.player_name
 			}, status=200)
 
-	# try to create a new player
-	player = Player(
-		player_name=user_data['username'], 
-		player_id=int(user_data['user_id']))
-	try:
-		player.save()
-	except IntegrityError:
-		pass
-
+	if 'mode' in game_request:
+		local = game_request['mode'] == 'local'
+	if local:
+		if 'guest_name' not in game_request:
+			return JsonResponse({
+				'status': 0,
+				'message': "missing required field: {} for local mode".format('guest_name')
+			}, status=400)
+		'''
+		NOTE: there should always be a guest name in local mode even for the host. 
+			  Guest players data is not saved.
+		'''
+		player = Player(
+			player_name=game_request['guest_name'],
+			player_id=str(uuid.uuid4()),
+			is_guest=True
+		)
+	else:
+		player, created = Player.objects.get_or_create(
+			player_name=user_data['username'], 
+			player_id=int(user_data['user_id']))
+	
 	# if the player is not found in any room, either assign it the oldest room that isn't full
 	# or create a new room
 	rooms = GameRoom.objects.filter(
@@ -103,7 +122,8 @@ def create_game(request):
 	# create new room if room does not exist
 	room = GameRoom(
 		room_name=str(uuid.uuid4()), 
-		game=game)
+		game=game,
+		is_local=local)
 	room.num_players += 1
 	room.save()
 	PlayerRoom(
@@ -161,11 +181,13 @@ def add_guests(request: HttpRequest) -> JsonResponse:
 
 def join_tournament(
 	game: Game,
-	player:Player,
+	player: Player,
 	tournament: Tournament,
-	participant: TournamentParticipant = None):
+	participant: TournamentParticipant=None):
 
-	# join the tournament by either reconnecting, joining a room or create a nes room.
+	# join the tournament by either reconnecting, 
+	# joining a room or create a nes room.
+
 	if not participant:
 		game_rooms_in_tournament = TournamentGameRoom.objects.filter(
 			tournament=tournament
