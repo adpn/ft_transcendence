@@ -171,7 +171,6 @@ def join_tournament(
 			tournament=tournament
 			).values_list('game_room', flat=True)
 	else:
-
 		# the tournament room that matches the round of the participant.
 		game_rooms_in_tournament = TournamentGameRoom.objects.filter(
 			tournament=tournament,
@@ -217,6 +216,7 @@ def join_tournament(
 			'status': 'created',
 			'player_id': player.player_name
 		}, status=201)
+
 	add_player_to_room(player, game_room)
 	return JsonResponse({
 		'ip_address': os.environ.get('IP_ADDRESS'),
@@ -229,6 +229,7 @@ def create_tournament(player: Player, game:Game, max_participants=MAX_TOURNAMENT
 		game=game, 
 		tournament_id=str(uuid.uuid4()), 
 		max_participants=max_participants)
+	print("NEW TOURNAMENT", tournament.tournament_id, flush=True)
 	game_room = create_game_room(player, game)
 	add_participant(player, tournament, True)
 	# map game room to tournament
@@ -238,26 +239,24 @@ def create_tournament(player: Player, game:Game, max_participants=MAX_TOURNAMENT
 	tgame_room.save()
 	return game_room
 
-def create_or_join_tournament(player: Player, game:Game, max_participants=8) -> JsonResponse:
-	print("NEW PARTICIPANT", flush=True)
+def create_or_join_tournament(player: Player, game:Game, max_participants=MAX_TOURNAMENT_PARTICIPANTS) -> JsonResponse:
 	# if the player is not a participant, 
 	# try to join the oldest tournament that isn't full.
 	tournament = Tournament.objects.filter(
 		game__game_name=game.game_name,
 		closed=False,
-		participants__lt=MAX_TOURNAMENT_PARTICIPANTS).order_by('created_at').first()
+		participants__lt=max_participants).order_by('created_at').first()
 
 	# if there is no tournament, create a new one and a new game room.
 	if not tournament:
 		game_room = create_tournament(player, game)
-		print("NEW TOURNAMENT", game_room, flush=True)
 		return JsonResponse({
 			'ip_address': os.environ.get('IP_ADDRESS'),
 			'game_room_id': game_room.room_name,
 			'status': 'created',
 			'player_id': player.player_name
 			}, status=201)
-	print("NEW PARTICIPANT JOIN", flush=True)
+	print("NEW PARTICIPANT JOIN", tournament.tournament_id , flush=True)
 	return join_tournament(game, player, tournament)
 
 def	find_tournament(request: HttpRequest) -> JsonResponse:
