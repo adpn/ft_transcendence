@@ -5,8 +5,8 @@ class Game(models.Model):
 	min_players = models.IntegerField(default=2)
 
 class Player(models.Model):
-	player_name = models.CharField(max_length=50, unique=True)
-	player_id = models.IntegerField(primary_key=True)
+	player_name = models.CharField(max_length=50)
+	user_id = models.IntegerField(null=False)
 	is_guest = models.BooleanField(default=False)
 
 class PlayerGuest(models.Model):

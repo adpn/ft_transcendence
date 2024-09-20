@@ -21,8 +21,13 @@ from common import auth_client as auth
 
 MAX_TOURNAMENT_PARTICIPANTS = 4
 
-# creates a game and performs matchmaking...
-# TODO: handle local games
+def get_player_room(user_id, player_name="host"):
+	# get the player room excluding tournament rooms.
+	return PlayerRoom.objects.filter(
+		player__user_id=int(user_id), 
+		player__player_name=player_name).exclude(
+			game_room__in=Subquery(TournamentGameRoom.objects.values('game_room'))).first()
+
 def create_game(request):
 	# add pong game in database
 	Game.objects.get_or_create(game_name='pong', min_players=2)
@@ -60,10 +65,15 @@ def create_game(request):
 			'message': f"Game {game_request['game']} does not exist"
 			}, status=404)
 
-	# get the player room excluding tournament rooms.
-	room_player = PlayerRoom.objects.filter(
-		player__player_id=int(user_data['user_id'])).exclude(
-			game_room__in=Subquery(TournamentGameRoom.objects.values('game_room'))).first()
+	player_name = "host"
+	if local:
+		if 'guest_name' not in game_request:
+			return JsonResponse({
+				'status': 0,
+				'message': "missing required field: {} for local mode".format('guest_name')
+			}, status=400)
+
+	room_player = get_player_room(user_data['user_id'], player_name)
 
 	# the player is already into a game room so do nothing.
 	if room_player:
@@ -77,24 +87,21 @@ def create_game(request):
 	if 'mode' in game_request:
 		local = game_request['mode'] == 'local'
 	if local:
-		if 'guest_name' not in game_request:
-			return JsonResponse({
-				'status': 0,
-				'message': "missing required field: {} for local mode".format('guest_name')
-			}, status=400)
 		'''
 		NOTE: there should always be a guest name in local mode even for the host. 
 			  Guest players data is not saved.
 		'''
-		player = Player(
+		'''
+		TODO: get or create
+		'''
+		player, created = Player.objects.get_or_create(
 			player_name=game_request['guest_name'],
-			player_id=str(uuid.uuid4()),
-			is_guest=True
-		)
+			user_id=int(user_data['user_id']),
+			is_guest=True)
 	else:
 		player, created = Player.objects.get_or_create(
-			player_name=user_data['username'], 
-			player_id=int(user_data['user_id']))
+			player_name="host",
+			user_id=int(user_data['user_id']))
 	
 	# if the player is not found in any room, either assign it the oldest room that isn't full
 	# or create a new room
@@ -174,10 +181,6 @@ def add_participant(
 	tournament.save()
 	participant.save()
 	return participant
-
-# TODO: api call for adding a guest to the database
-def add_guests(request: HttpRequest) -> JsonResponse:
-	pass
 
 def join_tournament(
 	game: Game,
@@ -317,8 +320,8 @@ def	find_tournament(request: HttpRequest) -> JsonResponse:
 
 	# try to create a new player
 	player = Player(
-		player_name=user_data['username'], 
-		player_id=int(user_data['user_id']))
+		player_name="host", 
+		user_id=int(user_data['user_id']))
 	try:
 		player.save()
 	except IntegrityError:
@@ -349,10 +352,10 @@ def game_stats(request: HttpRequest, user_id : int) -> JsonResponse:
 		return JsonResponse({'status': 0, 'message': 'Only GET method is allowed'}, status=405)
 
 	# the player never played a game
-	if not Player.objects.filter(player_id=user_id).exists():
+	if not Player.objects.filter(user_id=user_id, player_name="host").exists():
 		return JsonResponse({'status': 0, 'message': 'Player never played'}, status=200)
 
-	player = Player.objects.get(player_id=user_id)
+	player = Player.objects.get(user_id=user_id, player_name="host")
 
 	list_games = Game.objects.all()
 	if list_games.count() == 0:

@@ -9,24 +9,6 @@ var	gameUI;
 let	state = null;
 var overlayBody;
 
-/*
-TODO: in local mode, need an interface to set guest players names.
-in local mode, we make two create_game fetches (one per player)
-then connect to a single room.
-*/
-class LocalQuickGameState {
-	constructor(game, prevState) {
-
-	}
-}
-
-class LocalTournamentGameState {
-	constructor(game, prevState) {
-
-	}
-}
-
-
 class GameEndedState {
 	constructor(game, gameModeState, prevState) {
 		// todo: 
@@ -130,6 +112,177 @@ class PlayingState {
 	execute() {
 		gameUI.style.display = 'none';
 		this.game.load(canvas);
+	}
+}
+
+/*
+	TODO: in local mode, need an interface to set guest players names.
+	in local mode, we make two create_game fetches (one per player)
+	then connect to a single room.
+*/
+class LocalQuickGameState {
+	constructor(game, prevState) {
+		this.gameEndState = new GameEndedState(game, prevState, this);
+		this.playingState = new PlayingState(game, prevState, this);
+
+		this.game = game;
+		this.prevState = prevState;
+	}
+
+	update(data) {
+		// todo: move to result state
+		if (data.type == "end")
+		{
+			this.gameStatus = "ended";
+			if (this.gameStatus == "win")
+				this.gameEndState.setMessage("You Won!", true);
+			else
+				this.gameEndState.setMessage("You Lost!", false);
+			if (this.socket)
+				this.socket.close();
+			state = this.gameEndState;
+			state.execute();
+			return;
+		}
+		this.game.update(data);
+	}
+
+	handleEvent(event) {
+		if (JSON.parse(event.data).status == "ready") {
+			console.log("UPDATE!!!")
+			// todo: if a player was found, display his profile and move to PlayingState.
+			// move to playing state.
+			// todo: wait for players to be ready. (click on button?)
+			// this.loadingModal.hide();
+			loadingOverlay.style.display = 'none';
+			gameUI.style.display = 'none';
+			state = this.playingState;
+			state.execute();
+			this.game.start(this.socket);
+		}
+	}
+
+	async startGame(player1, player2) {
+		try {
+			const response1 = await fetch("/games/create_game/", {
+				method: "POST",
+				headers: {
+					"X-CSRFToken": getCookie("csrftoken"),
+					"Authorization": "Bearer " + localStorage.getItem("auth_token")
+				},
+				credentials: "include",
+					body: JSON.stringify({
+						"game": this.game.name,
+						"mode": "local",
+						"guest_name": player1
+					})
+			})
+
+			if (!response1.ok) {
+				throw new Error(`Error ${response1.status}: Failed to create game`);
+			}
+
+			const response2 = await fetch("/games/create_game/", {
+				method: "POST",
+				headers: {
+					"X-CSRFToken": getCookie("csrftoken"),
+					"Authorization": "Bearer " + localStorage.getItem("auth_token")
+				},
+				credentials: "include",
+					body: JSON.stringify({
+						"game": this.game.name,
+						"mode": "local",
+						"guest_name": player2
+					})
+			});
+
+			if (!response2.ok) {
+				throw new Error(`Error ${response2.status}: Failed to create game`);
+			}
+
+			const data = await response2.json();
+			console.log("STUFF", data);
+			// make a single connection for both players.
+			this.socket = new WebSocket(`wss://${data.ip_address}/ws/game/pong/${data.game_room_id}/?csrf_token=${getCookie("csrftoken")}&token=${localStorage.getItem("auth_token")}&local=true&player1=${player1}&player2=${player2}`);
+			if (this.socket.readyState > this.socket.OPEN) {
+				// todo: display error message in the loading window.
+				this.cancel();
+				throw new Error("WebSocket error: " + this.socket.readyState);
+			}
+			this.socket.addEventListener("open", () => {
+				this.playingState.bindSocket(this.socket);
+				this.socket.addEventListener("message", (event) => {
+					this.handleEvent(event);
+				});
+			});
+		}
+		catch(error) {
+			// stop game_menu animations display error in menu.
+			// todo: display error message in the loading window
+			// todo: display error message in the loading window
+			// then go back game menu.
+			this.cancel();
+			// resizeCanvas();
+			console.log(error); // maybe display the error message in the window
+		}
+	}
+
+	cancel() {
+		state = this.prevState;
+		state.execute();
+	}
+
+	execute() {
+		gameMenu.style.display = 'block';
+		gameMenu.innerHTML = `
+			<div class="card text-white bg-dark p-3">
+			<h5 class="card-title">Local Quick Game</h5>
+			<form id="playerForm">
+				<div class="mb-2">
+					<input type="text" class="form-control" id="player1" placeholder="Enter Player 1 Name" required>
+				</div>
+				<div class="mb-2">
+					<input type="text" class="form-control" id="player2" placeholder="Enter Player 2 Name" required>
+				</div>
+				<div class="d-flex flex-column align-items-center mt-2">
+					<button type="button" id="playButton" class="btn btn-outline-light mb-2" disabled>Play</button>
+					<button type="button" id="backButton" class="btn btn-outline-light mb-2">Back</button>
+				</div>
+			</form>
+			</div>
+		`;
+	  	const player1Input = document.getElementById('player1');
+		const player2Input = document.getElementById('player2');
+		const playButton = document.getElementById('playButton');
+		const backButton = document.getElementById('backButton');
+
+		function checkPlayers() {
+			if (player1Input.value.trim() !== '' && player2Input.value.trim() !== '') {
+				playButton.disabled = false;
+			} 
+			else {
+				playButton.disabled = true;
+			}
+		}
+
+		player1Input.addEventListener('input', checkPlayers);
+		player2Input.addEventListener('input', checkPlayers);
+
+		playButton.addEventListener('click', async () => {
+			const player1 = player1Input.value.trim();
+			const player2 = player2Input.value.trim();
+			
+			if (player1 && player2) {
+				await this.startGame(player1, player2);
+			}
+		});
+		backButton.addEventListener('click', () => this.cancel())
+}
+}
+
+class LocalTournamentGameState {
+	constructor(game, prevState) {
+
 	}
 }
 
@@ -249,7 +402,7 @@ class OnlineQuickGameState {
 }
 
 // TODO: from quick game we either select LOCAL or ONLINE -> LocalQuickGameState
-class MultiplayerMode {
+class GameLocality {
 	constructor(game, prevState, localGame, onlineGame) {
 		this.prevState = prevState;
 		this.localGameState = localGame;
@@ -364,7 +517,6 @@ class OnlineTournamentGameState {
 			}
 			if (data.status == "win") {
 				if (data.context == "round") {
-					console.log("NEXT ROUND!!!")
 					// move to next round
 					// TODO: maybe put a confirmation to move to the next round.
 					gameUI.style.display = 'flex'
@@ -572,11 +724,11 @@ class GameModes {
 	constructor(game, prevState)
 	{
 		this.game = game
-		this.tournamentState = new MultiplayerMode(
+		this.tournamentState = new GameLocality(
 			game, this,
 			new LocalTournamentGameState(game, this),
 			new OnlineTournamentGameState(game, this));
-		this.quickGameState = new MultiplayerMode(
+		this.quickGameState = new GameLocality(
 			game,
 			this, 
 			new LocalQuickGameState(game, this),

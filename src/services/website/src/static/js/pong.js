@@ -27,6 +27,7 @@ var ctx;
 var is_focus = false;
 var game_status = NOT_JOINED;
 var canvas_loaded = false;
+var bytes_array = new Uint8Array([false, false, false, false]);
 
 
 function disconnected() {
@@ -79,12 +80,16 @@ function takeInputDown(e) {
 	}
 	switch (e.key) {
 		case "w":
+			submitInput(UP, START, 0);
+			break ;
 		case "ArrowUp":
-			submitInput(UP, START);
+			submitInput(UP, START, 1);
 			break ;
 		case "s":
+			submitInput(DOWN, START, 0);
+			break ;
 		case "ArrowDown":
-			submitInput(DOWN, START);
+			submitInput(DOWN, START, 1);
 			break ;
 	}
 	e.preventDefault();
@@ -96,12 +101,16 @@ function takeInputUp(e) {
 	}
 	switch (e.key) {
 		case "w":
+			submitInput(UP, STOP, 0);
+			break ;
 		case "ArrowUp":
-			submitInput(UP, STOP);
+			submitInput(UP, STOP, 1);
 			break ;
 		case "s":
+			submitInput(DOWN, STOP, 0);
+			break ;
 		case "ArrowDown":
-			submitInput(DOWN, STOP);
+			submitInput(DOWN, STOP, 1);
 			break ;
 	}
 	e.preventDefault();
@@ -170,8 +179,12 @@ function gameTick(canvas, ctx, game_data) {
 	drawFrame(canvas, ctx, game_data);
 }
 
-function submitInput(dir, action) {
-	socket.send(new Uint8Array([false, dir, action]));
+function submitInput(dir, action, position) {
+	bytes_array[0] = false;
+	bytes_array[1] = dir;
+	bytes_array[2] = action;
+	bytes_array[3] = position;
+	socket.send(bytes_array);
 }
 
 function clearCanvas(canvas, ctx) {
@@ -259,7 +272,11 @@ var Pong = ( function () {
 			}
 		},
 		giveUp: function (socket) {
-			socket.send(new Uint8Array([true, false, false]));
+			bytes_array[0] = true;
+			bytes_array[1] = false;
+			bytes_array[2] = false;
+			bytes_array[3] = false;
+			socket.send(by);
 		}
 	};
 })();

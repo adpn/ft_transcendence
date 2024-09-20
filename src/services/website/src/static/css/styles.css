@@ -208,3 +208,8 @@ footer {
 .online_status.offline {
     background-color: red;
 }
+
+.card {
+    border: none;
+    box-shadow: none; /* Remove shadow if present */
+  }
