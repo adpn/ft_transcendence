@@ -86,6 +86,12 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
     restart: always
+  
+  redis:
+    image: "redis:alpine"
+    container_name: 'redis'
+    networks:
+      - transcendence
 
 networks:
   transcendence:

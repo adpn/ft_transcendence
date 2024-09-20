@@ -5,6 +5,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse, HttpRequest
 from django.db.utils import IntegrityError
 import datetime
+from django.db.models import Subquery
 
 from .models import (
 	GameRoom, 
@@ -19,16 +20,14 @@ from .models import (
 
 from common import auth_client as auth
 
-MAX_TOURNAMENT_PARTICIPANTS = 8
+MAX_TOURNAMENT_PARTICIPANTS = 4
+
 # creates a game and performs matchmaking...
 # TODO: handle local games
 def create_game(request):
 	# add pong game in database
-	PONG = Game(game_name='pong', min_players=2)
-	try:
-		PONG.save()
-	except IntegrityError:
-		pass
+	Game.objects.get_or_create(game_name='pong', min_players=2)
+	local = False
 
 	user_data = auth.get_user(request)
 	if not user_data:
@@ -36,25 +35,36 @@ def create_game(request):
 			'status': 0, 
 			'message': 'Invalid token'
 		}, status=401)
-	# TODO: check if the game is a local game.
+
+	'''
+	TODO:
+	check if the game is local, if it is, create guest Player 
+	'''
 	try:
 		game_request = json.loads(request.body)
 		if 'game' not in game_request:
 			return JsonResponse({
 				'status': 0,
-				'message': "missing required field: {}".format('game')}, status=500)
+				'message': "missing required field: {}".format('game')
+				}, status=400)
+		
 	except json.decoder.JSONDecodeError:
 		return JsonResponse({
 			'status': 0,
-			'message': 'Couldn\'t read input'}, status=500)
+			'message': 'Couldn\'t read input'
+			}, status=400)
 
 	game = Game.objects.filter(game_name=game_request['game']).first()
 	if not game:
 		return JsonResponse({
 			'status': 0,
-			'message': f"Game {game_request['game']} does not exist"}, status=404)
+			'message': f"Game {game_request['game']} does not exist"
+			}, status=404)
 
-	room_player = PlayerRoom.objects.filter(player__player_id=int(user_data['user_id'])).first()
+	# get the player room excluding tournament rooms.
+	room_player = PlayerRoom.objects.filter(
+		player__player_id=int(user_data['user_id'])).exclude(
+			game_room__in=Subquery(TournamentGameRoom.objects.values('game_room'))).first()
 
 	# the player is already into a game room so do nothing.
 	if room_player:
@@ -65,20 +75,35 @@ def create_game(request):
 			'player_id': room_player.player.player_name
 			}, status=200)
 
-	# try to create a new player
-	player = Player(
-		player_name=user_data['username'], 
-		player_id=int(user_data['user_id']))
-	try:
-		player.save()
-	except IntegrityError:
-		pass
-
+	if 'mode' in game_request:
+		local = game_request['mode'] == 'local'
+	if local:
+		if 'guest_name' not in game_request:
+			return JsonResponse({
+				'status': 0,
+				'message': "missing required field: {} for local mode".format('guest_name')
+			}, status=400)
+		'''
+		NOTE: there should always be a guest name in local mode even for the host. 
+			  Guest players data is not saved.
+		'''
+		player = Player(
+			player_name=game_request['guest_name'],
+			player_id=str(uuid.uuid4()),
+			is_guest=True
+		)
+	else:
+		player, created = Player.objects.get_or_create(
+			player_name=user_data['username'], 
+			player_id=int(user_data['user_id']))
+	
 	# if the player is not found in any room, either assign it the oldest room that isn't full
 	# or create a new room
 	rooms = GameRoom.objects.filter(
 		game__game_name=game_request['game'].lower(),
-		num_players__lt=game.min_players).order_by('created_at')
+		num_players__lt=game.min_players).order_by('created_at').exclude(
+			pk__in=Subquery(TournamentGameRoom.objects.values('game_room_id')
+		))
 
 	room = rooms.first()
 	if room:
@@ -98,7 +123,8 @@ def create_game(request):
 	# create new room if room does not exist
 	room = GameRoom(
 		room_name=str(uuid.uuid4()), 
-		game=game)
+		game=game,
+		is_local=local)
 	room.num_players += 1
 	room.save()
 	PlayerRoom(
@@ -144,6 +170,8 @@ def add_participant(
 
 	participant.tournament_position = tournament.participants
 	tournament.participants += 1
+	if tournament.participants == tournament.max_participants:
+		tournament.closed = True
 	tournament.save()
 	participant.save()
 	return participant
@@ -154,11 +182,13 @@ def add_guests(request: HttpRequest) -> JsonResponse:
 
 def join_tournament(
 	game: Game,
-	player:Player,
+	player: Player,
 	tournament: Tournament,
-	participant: TournamentParticipant = None):
+	participant: TournamentParticipant=None):
 
-	# join the tournament by either reconnecting, joining a room or create a nes room.
+	# join the tournament by either reconnecting, 
+	# joining a room or create a nes room.
+
 	if not participant:
 		game_rooms_in_tournament = TournamentGameRoom.objects.filter(
 			tournament=tournament
@@ -200,6 +230,8 @@ def join_tournament(
 		if tournament:
 			# map game room to tournament.
 			tgame_room = TournamentGameRoom(tournament=tournament, game_room=game_room)
+			if participant:
+				tgame_room.tournament_round = participant.tournament_round
 			tgame_room.save()
 		return JsonResponse({
 			'ip_address': os.environ.get('IP_ADDRESS'),
@@ -207,6 +239,7 @@ def join_tournament(
 			'status': 'created',
 			'player_id': player.player_name
 		}, status=201)
+
 	add_player_to_room(player, game_room)
 	return JsonResponse({
 		'ip_address': os.environ.get('IP_ADDRESS'),
@@ -214,11 +247,12 @@ def join_tournament(
 		'status': 'joined',
 		'player_id': player.player_name}, status=200)
 
-def create_tournament(player: Player, game:Game, max_participants=8) -> GameRoom:
+def create_tournament(player: Player, game:Game, max_participants=MAX_TOURNAMENT_PARTICIPANTS) -> GameRoom:
 	tournament = Tournament(
 		game=game, 
 		tournament_id=str(uuid.uuid4()), 
 		max_participants=max_participants)
+	print("NEW TOURNAMENT", tournament.tournament_id, flush=True)
 	game_room = create_game_room(player, game)
 	add_participant(player, tournament, True)
 	# map game room to tournament
@@ -228,25 +262,24 @@ def create_tournament(player: Player, game:Game, max_participants=8) -> GameRoom
 	tgame_room.save()
 	return game_room
 
-def create_or_join_tournament(player: Player, game:Game, max_participants=8) -> JsonResponse:
-	print("NEW PARTICIPANT", flush=True)
+def create_or_join_tournament(player: Player, game:Game, max_participants=MAX_TOURNAMENT_PARTICIPANTS) -> JsonResponse:
 	# if the player is not a participant, 
 	# try to join the oldest tournament that isn't full.
 	tournament = Tournament.objects.filter(
 		game__game_name=game.game_name,
-		participants__lt=MAX_TOURNAMENT_PARTICIPANTS).order_by('created_at').first()
+		closed=False,
+		participants__lt=max_participants).order_by('created_at').first()
 
 	# if there is no tournament, create a new one and a new game room.
 	if not tournament:
 		game_room = create_tournament(player, game)
-		print("NEW TOURNAMENT", game_room, flush=True)
 		return JsonResponse({
 			'ip_address': os.environ.get('IP_ADDRESS'),
 			'game_room_id': game_room.room_name,
 			'status': 'created',
 			'player_id': player.player_name
 			}, status=201)
-	print("NEW PARTICIPANT JOIN", flush=True)
+	print("NEW PARTICIPANT JOIN", tournament.tournament_id , flush=True)
 	return join_tournament(game, player, tournament)
 
 def	find_tournament(request: HttpRequest) -> JsonResponse:

@@ -9,6 +9,19 @@ class Player(models.Model):
 	player_id = models.IntegerField(primary_key=True)
 	is_guest = models.BooleanField(default=False)
 
+class PlayerGuest(models.Model):
+	player = models.ForeignKey(Player, on_delete=models.CASCADE, related_name='host')
+	guest = models.ForeignKey(Player, on_delete=models.CASCADE, related_name='guest', unique=True)
+
+class Tournament(models.Model):
+	game = models.ForeignKey(Game, on_delete=models.CASCADE)
+	tournament_id = models.CharField(max_length=100, primary_key=True)
+	game_room_count = models.IntegerField(default=0)
+	participants = models.IntegerField(default=0)
+	max_participants = models.IntegerField(default=8)
+	created_at = models.DateTimeField(auto_now_add=True)
+	closed = models.BooleanField(default=False)
+
 class GameRoom(models.Model):
 	room_name = models.CharField(max_length=100, primary_key=True)
 	# a game room can only have one game.
@@ -33,15 +46,6 @@ class GameResult(models.Model):
 	game_duration = models.IntegerField(default=0)
 	game_date = models.DateTimeField(auto_now_add=True)
 	game = models.ForeignKey(Game, on_delete=models.CASCADE)
-
-class Tournament(models.Model):
-	game = models.ForeignKey(Game, on_delete=models.CASCADE)
-	tournament_id = models.CharField(max_length=100, primary_key=True)
-	game_room_count = models.IntegerField(default=0)
-	participants = models.IntegerField(default=0)
-	max_participants = models.IntegerField(default=8)
-	created_at = models.DateTimeField(auto_now_add=True)
-	closed = models.BooleanField(default=True)
 
 class TournamentParticipant(models.Model):
 	player = models.ForeignKey(Player, on_delete=models.CASCADE)
