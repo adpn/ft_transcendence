@@ -329,10 +329,10 @@ const Stats = async () => {
             </div>
         `;
         return document.getElementById('app').innerHTML;
-    } 
+    }
 
     document.getElementById("total-stats-content").textContent =
-        `Total Games: ${statsData.pong.total_games} | Win percentage: ${statsData.pong.win_percentage}%`;
+        `Total Games: ${statsData.pong.total_games} | Win percentage: ${statsData.pong.win_percentage}% | Average score: ${statsData.pong.average_score} | Precision: ${statsData.pong.precision}% | Total playtime: ${statsData.pong.playtime}`;
 
     const gameHistoryList = document.getElementById("game-history-list");
     gameHistoryList.innerHTML = '';
@@ -346,7 +346,7 @@ const Stats = async () => {
             <strong>${resultText}</strong>&nbsp;| 
             Opponent:&nbsp;<a href="/user/${game.opponent}" class="text-white" data-link>${game.opponent}</a>&nbsp;|
             Score: ${game.personal_score} - ${game.opponent_score} |
-            Duration: ${game.game_duration}sec |
+            Duration: ${game.game_duration} |
             Date: ${new Date(game.game_date).toLocaleString()}
             `;
 
@@ -388,12 +388,15 @@ const UserProfile = async (username) => {
     }
 
     const app_content = `
-    <div class="text-center">
-        <img src="${data.profile_picture}" alt="${data.username}" class="profile-picture-preview">
-        <h1>${data.username}</h1>
-        <div id="friendship"></div>
-        <h3>Stats</h3>
-        <div id="user-stats"> </div>
+    <div class="container text-center my-5">
+        <img src="${data.profile_picture}" alt="${data.username}" class="rounded-circle mb-4 profile-picture-preview">
+        <h1 class="fw-bold text-dark">${data.username}</h1>
+
+        <div id="friendship" class="my-4"></div>
+        
+        <h3 class="mt-5 text-secondary">Stats</h3>
+        <div id="user-stats" class="row justify-content-center mt-4"></div>
+    </div>
     `;
     
     document.getElementById('app').innerHTML = app_content;
@@ -404,13 +407,39 @@ const UserProfile = async (username) => {
 
     if (Object.keys(data.stats).length === 0) {
         userStats.innerHTML = `
+        <div class="alert alert-info" role="alert">
             <p>No games played yet.</p>
+        </div>
         `;
     }
     else {
+        const pongStats = data.stats.pong;
         // need to add another check to differentiate between snake and pong
         userStats.innerHTML = `
-            <p>Total Games: ${data.stats.pong.total_games} | Win percentage: ${data.stats.pong.win_percentage}%</p>
+        <div class="col-md-5 card p-4 mx-2 mb-4 shadow-sm">
+            <p class="h5"><strong>Total Games:</strong> ${pongStats.total_games}</p>
+            <p class="h5"><strong>Average Score:</strong> ${pongStats.average_score}</p>
+            <p class="h5"><strong>Total Playtime:</strong> ${pongStats.playtime}</p>
+        </div>
+
+        <div class="col-md-5 card p-4 mx-2 mb-4 shadow-sm">
+            <p class="h5"><strong>Win Percentage:</strong> <span class="text-success fw-bold">${pongStats.win_percentage}%</span></p>
+            <p class="h5"><strong>Precision:</strong> <span class="text-primary fw-bold">${pongStats.precision}%</span></p>
+        </div>
+
+        <div class="col-10 mt-3">
+            <p class="mb-2">Win Percentage</p>
+            <div class="progress">
+                <div class="progress-bar bg-success" role="progressbar" style="width: ${pongStats.win_percentage}%;" aria-valuenow="${pongStats.win_percentage}" aria-valuemin="0" aria-valuemax="100">${pongStats.win_percentage}%</div>
+            </div>
+        </div>
+
+        <div class="col-10 mt-3">
+            <p class="mb-2">Precision</p>
+            <div class="progress">
+                <div class="progress-bar bg-primary" role="progressbar" style="width: ${pongStats.precision}%;" aria-valuenow="${pongStats.precision}" aria-valuemin="0" aria-valuemax="100">${pongStats.precision}%</div>
+            </div>
+        </div>
         `;
     }
 

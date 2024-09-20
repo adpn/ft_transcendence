@@ -4,6 +4,7 @@ import os
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse, HttpRequest
 from django.db.utils import IntegrityError
+import datetime
 from django.db.models import Subquery
 
 from .models import (
@@ -375,22 +376,32 @@ def game_stats(request: HttpRequest, user_id : int) -> JsonResponse:
 			}
 			continue
 		nb_games += 1
-		
+	
 		games_data = []
+		total_points = 0
+		total_total_points = 0
+		playtime = 0
 		for result in games_won.union(games_lost):
+			total_points += result.winner_score if result.winner == player else result.loser_score
+			total_total_points += result.winner_score + result.loser_score
+			playtime += result.game_duration
 			games_data.append({
 				'is_winner': result.winner == player,
 				'opponent_id': result.loser.player_id if result.winner == player else result.winner.player_id,
 				'personal_score': result.winner_score if result.winner == player else result.loser_score,
 				'opponent_score': result.loser_score if result.winner == player else result.winner_score,
 				'game_date': result.game_date,
-				'game_duration': result.game_duration,
+				'game_duration': str(datetime.timedelta(seconds=result.game_duration))
 			})
-		
+
+		playtime = str(datetime.timedelta(seconds=playtime))
 		# maybe add average score, average duration
 		response_data[game.game_name] = {
 			'total_games': win_count + loss_count,
 			'total_wins': win_count,
+			'average_score': round(total_points / (win_count + loss_count), 1),
+			'playtime' : playtime,
+			'precision': round(total_points / total_total_points * 100, 1),
 			'win_percentage': round(win_count / (win_count + loss_count) * 100, 1),
 			'games': games_data
 		}

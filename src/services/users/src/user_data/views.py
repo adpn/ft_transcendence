@@ -119,7 +119,12 @@ def get_profile(request: HttpRequest, username: str) -> JsonResponse:
             if data[game]['total_games'] == 0:
                 stats[game] = {'total_games': 0}
             else:
-                stats[game] = {'total_games': data[game]['total_games'], 'total_wins': data[game]['total_wins'], 'win_percentage': data[game]['win_percentage']}
+                stats[game] = {'total_games': data[game]['total_games'],
+                                'total_wins': data[game]['total_wins'],
+                                'win_percentage': data[game]['win_percentage'],
+                                'average_score': data[game]['average_score'],
+                                'playtime': data[game]['playtime'],
+                                'precision': data[game]['precision']}
 
     if not UserProfile.objects.filter(user=request.user).exists():
         return JsonResponse({'status': 0, 'message': 'Could not get user info'}, status=500)
