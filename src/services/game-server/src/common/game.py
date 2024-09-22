@@ -327,7 +327,7 @@ class TournamentMode(object):
 		return data
 	
 	async def handle_disconnection(self):
-		self.channel_layer.group_discard(
+		await self.channel_layer.group_discard(
 			self._tournament_id,
 			self._channel_name)
 

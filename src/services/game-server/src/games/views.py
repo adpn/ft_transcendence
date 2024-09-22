@@ -319,14 +319,9 @@ def	find_tournament(request: HttpRequest) -> JsonResponse:
 		request, but the server knows who's eliminated.
 	'''
 
-	# try to create a new player
-	player = Player(
+	player, created = Player.objects.get_or_create(
 		player_name="host", 
 		user_id=int(user_data['user_id']))
-	try:
-		player.save()
-	except IntegrityError:
-		pass
 
 	game = Game.objects.filter(game_name=game_request['game']).first()
 	if not game:
