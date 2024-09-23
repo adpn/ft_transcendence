@@ -17,6 +17,8 @@ import string
 import time
 from datetime import datetime, timedelta
 from .models import UserToken
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 
 User = get_user_model()
 
@@ -131,6 +133,14 @@ def logout_view(request) -> JsonResponse:
 	user_token = UserToken.objects.filter(user=request.user).first()
 	if user_token:
 		user_token.delete()
+	channel_layer = get_channel_layer()
+	async_to_sync(channel_layer.group_send)(
+		f"user_{request.user.id}",  # Channel group name
+		{	
+			'type': 'user.logout',  # Custom event type
+			'message': 'User logged out',
+		}
+	)
 	logout(request)
 	return JsonResponse({'status' : 1}, status=200)
 

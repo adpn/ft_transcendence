@@ -216,9 +216,6 @@ document.addEventListener("DOMContentLoaded", function() {
                 successAlertPlaceholder('You have been logged out! Bye bye!');
                 resetLoginButtons();
                 navigateTo('/');
-                if (socket != null) {
-                    socket.close();
-                }
             });
         }
     });
