@@ -6,11 +6,11 @@ from django.http import JsonResponse, HttpRequest
 from django.db.utils import IntegrityError
 
 from .models import (
-	GameRoom, 
-	PlayerRoom, 
-	Player, 
-	Game, 
-	Tournament, 
+	GameRoom,
+	PlayerRoom,
+	Player,
+	Game,
+	Tournament,
 	TournamentRound,
 	Participant,
 	GameResult
@@ -33,7 +33,7 @@ def create_game(request):
 	user_data = auth.get_user(request)
 	if not user_data:
 		return JsonResponse({
-			'status': 0, 
+			'status': 0,
 			'message': 'Invalid token'
 		}, status=401)
 	try:
@@ -66,7 +66,7 @@ def create_game(request):
 
 	# try to create a new player
 	player = Player(
-		player_name=user_data['username'], 
+		player_name=user_data['username'],
 		player_id=int(user_data['user_id']))
 	try:
 		player.save()
@@ -84,8 +84,8 @@ def create_game(request):
 		room.num_players += 1
 		room.save(update_fields=['num_players'])
 		PlayerRoom(
-			player=player, 
-			game_room=room, 
+			player=player,
+			game_room=room,
 			player_position=room.num_players - 1).save()
 		return JsonResponse({
 				'ip_address': os.environ.get('IP_ADDRESS'),
@@ -96,13 +96,13 @@ def create_game(request):
 
 	# create new room if room does not exist
 	room = GameRoom(
-		room_name=str(uuid.uuid4()), 
+		room_name=str(uuid.uuid4()),
 		game=game)
 	room.num_players += 1
 	room.save()
 	PlayerRoom(
 		player=player,
-		game_room=room, 
+		game_room=room,
 		player_position=room.num_players - 1).save()
 	return JsonResponse({
 		'ip_address': os.environ.get('IP_ADDRESS'),
@@ -133,13 +133,13 @@ def	find_tournament(request: HttpRequest) -> JsonResponse:
 	user_data = auth.get_user(request)
 	if not user_data:
 		return JsonResponse({
-			'status': 0, 
+			'status': 0,
 			'message': 'Invalid token'
 		}, status=401)
 
 	# try to create a new player
 	player = Player(
-		player_name=user_data['username'], 
+		player_name=user_data['username'],
 		player_id=int(user_data['user_id']))
 	try:
 		player.save()
@@ -161,7 +161,7 @@ def	find_tournament(request: HttpRequest) -> JsonResponse:
 				tournament=tournament)
 			# todo: if the room does not exist for some reason send an internal server error.
 			player_room = PlayerRoom.objects.filter(
-				player=player, 
+				player=player,
 				game_room__in=game_rooms_in_tournament).first()
 			return JsonResponse({
 			'ip_address': os.environ.get('IP_ADDRESS'),
@@ -181,7 +181,7 @@ def	find_tournament(request: HttpRequest) -> JsonResponse:
 		tournament = Tournament(game=game, tournament_id=str(uuid.uuid4()))
 		game_room = GameRoom(room_name=str(uuid.uuid4()), game=game)
 		player_room = PlayerRoom(
-			player=player, 
+			player=player,
 			game_room=game_room,
 			player_position=game_room.num_players
 		)
@@ -204,7 +204,7 @@ def	find_tournament(request: HttpRequest) -> JsonResponse:
 	game_rooms_in_tournament = TournamentRound.objects.filter(
 		tournament=tournament)
 	player_room = PlayerRoom.objects.filter(
-		player=player, 
+		player=player,
 		game_room__in=game_rooms_in_tournament).first()
 
 	# if player is already in a room return it. also means he is already a participant
@@ -222,7 +222,7 @@ def	find_tournament(request: HttpRequest) -> JsonResponse:
 		# create new room, add the player to it add the game room to the tournament.
 		game_room = GameRoom(room_name=str(uuid.uuid4()), game=game)
 		player_room = PlayerRoom(
-			player=player, 
+			player=player,
 			game_room=game_room,
 			player_position=game_room.num_players
 		)
@@ -242,11 +242,11 @@ def	find_tournament(request: HttpRequest) -> JsonResponse:
 
 	# if a game room was found add the player to it.
 	participant = Participant(
-		player=player, 
-		tournament=tournament, 
+		player=player,
+		tournament=tournament,
 		status="PLAYING")
 	player_room = PlayerRoom(
-		player=player, 
+		player=player,
 		game_room=game_room,
 		player_position=game_room.num_players
 	)

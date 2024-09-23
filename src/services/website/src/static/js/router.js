@@ -14,6 +14,7 @@ const router = async () => {
     const routes = [
         { path: "/", view: Home },
         { path: "/pong", view: Pong },
+        { path: "/snake", view: Snake },
         { path: "/other-game", view: Other_game },
         { path: "/settings", view: Settings },
         { path: "/friends", view: Friends },
@@ -54,6 +55,19 @@ const Home = () => `
 `;
 
 const Pong = () => `
+    <div class="row">
+        <div class="col text-center">
+            <div class="canvas-container">
+                <canvas id="gameCanvas" class="w-100 border"></canvas>
+            </div>
+        </div>
+        <div id="game-button-container">
+            <button class="btn btn-succes me-2" id="game-button" type="button">find game</button>
+        </div>
+    </div>
+`;
+
+const Snake = () => `
     <div class="row">
         <div class="col text-center">
             <div class="canvas-container">
@@ -144,7 +158,7 @@ const Settings = async () => {
 };
 
 const Friends = async () => {
-    const app_content = 
+    const app_content =
     `
     <div class="text-center">
         <h1>Friends Page</h1>
@@ -228,7 +242,7 @@ const Friends = async () => {
     if (friendsRequestsData.friend_requests.length === 0) {
         document.getElementById('friend-requests').innerHTML = `
             <h3>Friend Requests</h3>
-            <p>Nobody wants to be your friend.</p>  
+            <p>Nobody wants to be your friend.</p>
         `;
     } else {
         const friendRequestsList = document.getElementById("friend-requests-list");
@@ -373,7 +387,7 @@ const UserProfile = async (username) => {
         <h3>Stats</h3>
         <div id="user-stats"> </div>
     `;
-    
+
     document.getElementById('app').innerHTML = app_content;
 
     const userStats = document.getElementById('user-stats');

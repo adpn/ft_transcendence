@@ -119,7 +119,7 @@ class GameSession(object):
 			for end in self._connection_lost_callbacks:
 				await end()
 			await set_in_session(self._game_room, False)
-			# todo: on connection lost, game results should be stored 
+			# todo: on connection lost, game results should be stored
 			# by the game consumers.
 			#await store_game_result(game_result)
 			return
@@ -133,7 +133,7 @@ class GameSession(object):
 				await set_in_session(self._game_room, False)
 				# todo: store game results and delete the game room
 				self._game_result = GameResult(
-					winner=self._players[data["player"]], 
+					winner=self._players[data["player"]],
 					loser=self._players[data["loser"]],
 					winner_score=data["score"][data["player"]],
 					loser_score=data["score"][data["loser"]],
@@ -145,9 +145,9 @@ class GameSession(object):
 
 	def on_session_end(self, callback):
 		self._end_callbacks.append(callback)
-	
+
 	def remove_callback(self, event, callback):
-		try: 
+		try:
 			if event == 'session-end':
 				self._end_callbacks.remove(callback)
 			elif event == 'connection-lost':
@@ -179,7 +179,7 @@ class GameServer(object):
 				game_room,
 				pause_timeout) # create new game logic for the game room.
 		return self._game_sessions[game_room.room_name]
-	
+
 	def remove_session(self, session_id):
 		if session_id in self._game_sessions:
 			del self._game_sessions[session_id]
@@ -209,7 +209,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 		self._game_session = None
 		self.disconnected = False
 		self._lost_connection = False
-	
+
 	async def send_json(self, data: dict):
 		await self.send(text_data=json.dumps(data))
 
@@ -333,7 +333,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 			if session.current_players > 0:
 				session.current_players -= 1
 			session.remove_callback(
-				'session-end', 
+				'session-end',
 				self.flush_game_session)
 			session.pause()
 			# todo: send a message to clients when a player disconnects.
