@@ -30,7 +30,7 @@ def create_user(request : HttpRequest):
         response = connection.getresponse()
         if response.status != 200:
             connection.close()
-            return HttpResponse(status=500)
+            return HttpResponse(status=response.status)
         image = ContentFile(response.read(), name=str(user_id) + ".jpg")
         connection.close()
         new_user = UserProfile(user=user, profile_picture=image)
@@ -68,52 +68,29 @@ def change_profile_picture(request : HttpRequest) -> JsonResponse:
     user.save()
     return JsonResponse({'status': 1, 'message': 'Profile picture updated', 'new_profile_picture_url': user.profile_picture.url}, status=200)
 
-@csrf_exempt
-def game_stats_view(request : HttpRequest, user_id : int) -> JsonResponse:
-    if request.method != 'GET':
-        return JsonResponse({'status': 0, 'message': 'Only GET method is allowed'}, status=405)
-    user_profile = UserProfile.objects.get(user__id=user_id)
-    if not user_profile:
-        return JsonResponse({'status': 0, 'message': 'User not found'}, status=404)
-    games_won = Game.objects.filter(winner=user_profile)
-    games_lost = Game.objects.filter(loser=user_profile)
-
-    win_count = games_won.count()
-    loss_count = games_lost.count()
-    if win_count + loss_count == 0:
-        return JsonResponse({'status': 1, 'total_games': 0}, status=200)
-
-    games_data = []
-    for game in games_won.union(games_lost):
-        games_data.append({
-            'is_winner': game.winner == user_profile,
-            'opponent': game.loser.user.username if game.winner == user_profile else game.winner.user.username,
-            'personal_score': game.winner_score if game.winner == user_profile else game.loser_score,
-            'opponent_score': game.loser_score if game.winner == user_profile else game.winner_score,
-            'game_date': game.game_date,
-            'game_duration': game.game_duration,
-        })
-
-    response_data = {
-        'status': 1,
-        'total_games': win_count + loss_count,
-        'total_wins': win_count,
-        'win_percentage': round(win_count / (win_count + loss_count) * 100, 1),
-        'games': games_data
-    }
-
-    return JsonResponse(response_data, status=200)
-
-def personal_stats(request : HttpRequest):
+def personal_stats(request : HttpRequest) -> JsonResponse:
     if request.method != 'GET':
         return JsonResponse({'status': 0, 'message': 'Only GET method is allowed'}, status=405)
     if not request.user.is_authenticated:
         return JsonResponse({'status': 0, 'message': 'User not connected'}, status=401)
-    connection = client.HTTPConnection("users:8000")
+    connection = client.HTTPConnection("game-server:8000")
     connection.request("GET", f"/game_stats/{request.user.id}/")
     response = connection.getresponse()
     data = json.loads(response.read().decode())
     connection.close()
+    if response.status != 200 or data['status'] == 0:
+        return JsonResponse(data, status=response.status)
+
+    for game in data:
+        if game == 'status':
+            continue
+        if not 'games' in data[game]:
+            continue
+        for result in data[game]["games"]:
+            name = UserProfile.objects.get(user_id=result["opponent_id"]).user.username
+            result["opponent"] = name
+            result.pop("opponent_id")
+
     return JsonResponse(data, status=response.status)
 
 def get_profile(request: HttpRequest, username: str) -> JsonResponse:
@@ -128,22 +105,31 @@ def get_profile(request: HttpRequest, username: str) -> JsonResponse:
     if not user_profile:
         return JsonResponse({'status': 0, 'message': 'User profile not found'}, status=404)
 
-    connection = client.HTTPConnection("users:8000")
+    connection = client.HTTPConnection("game-server:8000")
     connection.request("GET", f"/game_stats/{user.id}/")
     response = connection.getresponse()
     data = json.loads(response.read().decode())
     connection.close()
 
-    if data['status'] == 0:
-        return JsonResponse({'status': 0, 'message': 'User not found'}, status=404)
-    if data['total_games'] == 0:
-        stats = {'total_games': 0}
-    else:
-        stats = {'total_games': data['total_games'], 'total_wins': data['total_wins'], 'win_percentage': data['win_percentage']}
+    stats = {}
+    if response.status == 200 and data['status'] != 0:
+        for game in data:
+            if game == 'status':
+                continue
+            if data[game]['total_games'] == 0:
+                stats[game] = {'total_games': 0}
+            else:
+                stats[game] = {'total_games': data[game]['total_games'],
+                                'total_wins': data[game]['total_wins'],
+                                'win_percentage': data[game]['win_percentage'],
+                                'average_score': data[game]['average_score'],
+                                'playtime': data[game]['playtime'],
+                                'precision': data[game]['precision']}
 
-    request_user_profile = UserProfile.objects.get(user=request.user)
-    if not request_user_profile:
+    if not UserProfile.objects.filter(user=request.user).exists():
         return JsonResponse({'status': 0, 'message': 'Could not get user info'}, status=500)
+    request_user_profile = UserProfile.objects.get(user=request.user)
+
     # different possibilities of current friendship status: yourself, not friend, friend, pending request, request received
     # yourself: 0, not friend: 1, friend: 2, pending request: 3, request received: 4
     if Relation.objects.filter(user=request_user_profile, friend=user_profile).exists():

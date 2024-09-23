@@ -10,8 +10,6 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
-import os
-
 from pathlib import Path
 import os
 
@@ -28,7 +26,7 @@ SECRET_KEY = 'django-insecure-nij_k$4=6(3r15srht9)0$)!44nn4@7=m)lcp(2c8fo_zjb*d8
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = [str(os.environ.get('IP_ADDRESS')), 'localhost']
+ALLOWED_HOSTS = [str(os.environ.get('IP_ADDRESS')), 'localhost', 'game-server']
 CSRF_TRUSTED_ORIGINS = ['https://localhost', 'https://127.0.0.1', 'http://users', 'https://' + str(os.environ.get('IP_ADDRESS'))]
 
 # Application definition
@@ -81,7 +79,10 @@ ASGI_APPLICATION = 'src.asgi.application'
 # For development. Use Redis in production.
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('redis', 6379)],  # Adjust to your Redis host and port
+        },
     },
 }
 

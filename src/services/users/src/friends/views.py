@@ -13,9 +13,9 @@ def get_friend_list(request : HttpRequest) -> JsonResponse:
     friend_list_data = []
     for item in friends:
         if item.user == user_profile:
-            friend_list_data.append({'username': item.friend.user.username, 'profile_picture': item.friend.profile_picture.url})
+            friend_list_data.append({'username': item.friend.user.username, 'profile_picture': item.friend.profile_picture.url, 'is_online': item.friend.online_status})
         else:
-            friend_list_data.append({'username': item.user.user.username, 'profile_picture': item.user.profile_picture.url})
+            friend_list_data.append({'username': item.user.user.username, 'profile_picture': item.user.profile_picture.url, 'is_online': item.user.online_status})
     return JsonResponse({'status': 1, 'friends': friend_list_data}, status=200)
 
 def get_friend_requests_list(request : HttpRequest) -> JsonResponse:
@@ -101,9 +101,9 @@ def add_friend(request: HttpRequest, friend_id: int) -> JsonResponse:
     if not request.user.is_authenticated:
         return JsonResponse({'status': 0, 'message': 'User not connected'}, status=401)
     user_profile = UserProfile.objects.get(user=request.user)
-    if not UserProfile.objects.filter(id=friend_id).exists():
+    if not UserProfile.objects.filter(user_id=friend_id).exists():
         return JsonResponse({'status': 0, 'message': 'User does not exist'}, status=404)
-    friend_profile = UserProfile.objects.get(id=friend_id)
+    friend_profile = UserProfile.objects.get(user_id=friend_id)
     if Relation.objects.filter(user=user_profile, friend=friend_profile).exists() or Relation.objects.filter(user=friend_profile, friend=user_profile).exists():
         return JsonResponse({'status': 0, 'message': 'Can\'t send a friend request to this user'}, status=403)
     new_relation = Relation(user=user_profile, friend=friend_profile)

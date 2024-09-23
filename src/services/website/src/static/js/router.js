@@ -3,19 +3,17 @@ import { getCookie } from "./auth.js";
 export const navigateTo = async url => {
     history.pushState(null, null, url);
     await router();
-    const matches = url.match('https://[^/]*/');
-    if (matches && matches.length) {
-        window.dispatchEvent(new Event(url.substr(matches[0].length)));
-    }
+    // const matches = url.match('https://[^/]*/');
+    // if (matches && matches.length) {
+    //     window.dispatchEvent(new Event(url.substr(matches[0].length)));
+    // }
 };
 
 // Router function to handle routes
 const router = async () => {
     const routes = [
         { path: "/", view: Home },
-        { path: "/pong", view: Pong },
-        { path: "/snake", view: Snake },
-        { path: "/other-game", view: Other_game },
+        { path: "/game", view: Games },
         { path: "/settings", view: Settings },
         { path: "/friends", view: Friends },
         { path: "/stats", view: Stats },
@@ -41,9 +39,11 @@ const router = async () => {
     }
 
     const params = match.result.slice(1);
-
     // Render the view
     document.getElementById('app').innerHTML = await match.route.view(...params);
+
+	if (match.route.path == "/game")
+		window.dispatchEvent(new Event("game"));
 };
 
 // View functions
@@ -55,40 +55,49 @@ const Home = () => `
 `;
 
 const Pong = () => `
-    <div class="row">
-        <div class="col text-center">
-            <div class="canvas-container">
-                <canvas id="gameCanvas" class="w-100 border"></canvas>
-            </div>
-        </div>
-        <div id="game-button-container">
-            <button class="btn btn-succes me-2" id="game-button" type="button">find game</button>
-        </div>
-    </div>
+<div class="row">
+<div class="row text-center">
+	<div class="canvas-container position-relative">
+		<canvas id="gameCanvas" class="w-100 border"></canvas>
+		<div id="game-menu" class="position-absolute top-50 start-50 translate-middle">
+			<button class="btn btn-primary mb-2" id="quick-game-button" type="button">Quick Game</button>
+		<br>
+			<button class="btn btn-secondary" id="tournament-button" type="button">Tournament</button>
+		</div>
+	</div>
+</div>
+<div id="game-button-container" class="text-center mt-3">
+	<button class="btn btn-success me-2" id="game-button" type="button">Find Game</button>
+</div>
+</div>
 `;
 
-const Snake = () => `
-    <div class="row">
-        <div class="col text-center">
-            <div class="canvas-container">
-                <canvas id="gameCanvas" class="w-100 border"></canvas>
+const Games = async () => `
+<div class="row">
+<div class="row text-center">
+	<div class="canvas-container position-relative" >
+		<canvas id="gameCanvas" class="w-100 border"></canvas>
+		<div id="game-ui" class="position-absolute top-0 start-0 w-100 h-100 flex-column align-items-center justify-content-center bg-dark">
+		    <div id="loading-overlay" class="loading-overlay position-absolute top-0 start-0 w-100 h-100 flex-column align-items-center justify-content-center bg-dark" aria-hidden="true">
+                <div class="spinner"></div>
+		        <p class="text-light mt-3">Waiting for opponent...</p>
+		        <div id="overlay-body" class=text-center></div>
+    	    </div>
+            <div id="game-menu" class="card position-absolute top-50 start-50 translate-middle bg-dark text-light" aria-hidden="true">
+                <div id="game-menu-header" class="card-header d-flex flex-column justify-content-center align-items-center"></div>
+                <div id="game-menu-body" class="card-body d-flex flex-column justify-content-center align-items-center"></div>
+                <div id="game-menu-footer" class="card-footer d-flex flex-column justify-content-center align-items-center"></div>
             </div>
-        </div>
-        <div id="game-button-container">
-            <button class="btn btn-succes me-2" id="game-button" type="button">find game</button>
-        </div>
+	    </div>
     </div>
+</div>
+<div id="game-button-container" class="text-center mt-3">
+	<button class="btn btn-success me-2" id="game-button" type="button">Find Game</button>
+</div>
+</div>
 `;
 
-const Other_game = () => `
-    <div class="row">
-    <div class="col text-center">
-        <div class="canvas-container">
-            <canvas id="gameCanvas" class="w-100 border"></canvas>
-        </div>
-    </div>
-    </div>
-`;
+// todo: need a container that displays the participants. (a list ?)
 
 const Settings = async () => {
     const token = localStorage.getItem('auth_token');
@@ -222,6 +231,7 @@ const Friends = async () => {
                             </a>
                     </div>
                     <span class="friend-name">${friend.username}</span>
+                    <div class="online_status ${friend.is_online ? 'online' : 'offline'}"></div>
                 </div>
             `;
 
@@ -272,6 +282,7 @@ const Friends = async () => {
     return document.getElementById('app').innerHTML;
 };
 
+// change so that it manages two games, snake and pong
 const Stats = async () => {
     const token = localStorage.getItem('auth_token');
 
@@ -304,7 +315,7 @@ const Stats = async () => {
 
     const statsData = await statsResponse.json();
 
-    if (statsResponse.status === 401 ||statsData.status === 0) {
+    if (statsResponse.status === 401) {
         document.getElementById('app').innerHTML = `
             <div class="text-center">
                 <h1>Access Denied</h1>
@@ -314,37 +325,38 @@ const Stats = async () => {
         return document.getElementById('app').innerHTML;
     }
 
-    if (statsData.total_games === 0) {
+    if (statsData.status === 0) {
         document.getElementById('app').innerHTML = `
-        <div class="text-center">
-            <h1>Stats Page</h1>
-            <p>No games played yet.</p>
-        </div>
+            <div class="text-center">
+                <h1>Stats Page</h1>
+                <p>No games played yet.</p>
+            </div>
         `;
-    } else {
-        document.getElementById("total-stats-content").textContent =
-            `Total Games: ${statsData.total_games} | Win percentage: ${statsData.win_percentage}`;
+        return document.getElementById('app').innerHTML;
+    }
 
-        const gameHistoryList = document.getElementById("game-history-list");
-        gameHistoryList.innerHTML = '';
+    document.getElementById("total-stats-content").textContent =
+        `Total Games: ${statsData.pong.total_games} | Win percentage: ${statsData.pong.win_percentage}% | Average score: ${statsData.pong.average_score} | Precision: ${statsData.pong.precision}% | Total playtime: ${statsData.pong.playtime}`;
 
-        statsData.games.forEach(game => {
-            const listItem = document.createElement("div");
-            listItem.className = `game-stat ${game.is_winner ? 'victory' : 'defeat'}`;
+    const gameHistoryList = document.getElementById("game-history-list");
+    gameHistoryList.innerHTML = '';
 
-            const resultText = game.is_winner ? 'Victory' : 'Defeat';
-            listItem.innerHTML = `
-                <strong>${resultText}</strong> -
-                Opponent: ${game.opponent} |
-                Your Score: ${game.personal_score} |
-                Opponent's Score: ${game.opponent_score} |
-                Duration: ${game.game_duration} |
-                Date: ${new Date(game.game_date).toLocaleString()}
+    statsData.pong.games.forEach(game => {
+        const listItem = document.createElement("div");
+        listItem.className = `game-stat ${game.is_winner ? 'victory' : 'defeat'}`;
+
+        const resultText = game.is_winner ? 'Victory' : 'Defeat';
+        listItem.innerHTML = `
+            <strong>${resultText}</strong>&nbsp;|
+            Opponent:&nbsp;<a href="/user/${game.opponent}" class="text-white" data-link>${game.opponent}</a>&nbsp;|
+            Score: ${game.personal_score} - ${game.opponent_score} |
+            Duration: ${game.game_duration} |
+            Date: ${new Date(game.game_date).toLocaleString()}
             `;
 
             gameHistoryList.appendChild(listItem);
         });
-    }
+
     return document.getElementById('app').innerHTML;
 };
 
@@ -380,12 +392,15 @@ const UserProfile = async (username) => {
     }
 
     const app_content = `
-    <div class="text-center">
-        <img src="${data.profile_picture}" alt="${data.username}" class="profile-picture-preview">
-        <h1>${data.username}</h1>
-        <div id="friendship"></div>
-        <h3>Stats</h3>
-        <div id="user-stats"> </div>
+    <div class="container text-center my-5">
+        <img src="${data.profile_picture}" alt="${data.username}" class="rounded-circle mb-4 profile-picture-preview">
+        <h1 class="fw-bold text-dark">${data.username}</h1>
+
+        <div id="friendship" class="my-4"></div>
+
+        <h3 class="mt-5 text-secondary">Stats</h3>
+        <div id="user-stats" class="row justify-content-center mt-4"></div>
+    </div>
     `;
 
     document.getElementById('app').innerHTML = app_content;
@@ -394,14 +409,41 @@ const UserProfile = async (username) => {
     const friendship = document.getElementById('friendship');
     friendship.innerHTML = get_friendship_content(data.friendship, data.id);
 
-    if (data.stats.total_games === 0) {
+    if (Object.keys(data.stats).length === 0) {
         userStats.innerHTML = `
+        <div class="alert alert-info" role="alert">
             <p>No games played yet.</p>
+        </div>
         `;
     }
     else {
+        const pongStats = data.stats.pong;
+        // need to add another check to differentiate between snake and pong
         userStats.innerHTML = `
-            <p>Total Games: ${data.stats.total_games} | Win percentage: ${data.stats.win_percentage}</p>
+        <div class="col-md-5 card p-4 mx-2 mb-4 shadow-sm">
+            <p class="h5"><strong>Total Games:</strong> ${pongStats.total_games}</p>
+            <p class="h5"><strong>Average Score:</strong> ${pongStats.average_score}</p>
+            <p class="h5"><strong>Total Playtime:</strong> ${pongStats.playtime}</p>
+        </div>
+
+        <div class="col-md-5 card p-4 mx-2 mb-4 shadow-sm">
+            <p class="h5"><strong>Win Percentage:</strong> <span class="text-success fw-bold">${pongStats.win_percentage}%</span></p>
+            <p class="h5"><strong>Precision:</strong> <span class="text-primary fw-bold">${pongStats.precision}%</span></p>
+        </div>
+
+        <div class="col-10 mt-3">
+            <p class="mb-2">Win Percentage</p>
+            <div class="progress">
+                <div class="progress-bar bg-success" role="progressbar" style="width: ${pongStats.win_percentage}%;" aria-valuenow="${pongStats.win_percentage}" aria-valuemin="0" aria-valuemax="100">${pongStats.win_percentage}%</div>
+            </div>
+        </div>
+
+        <div class="col-10 mt-3">
+            <p class="mb-2">Precision</p>
+            <div class="progress">
+                <div class="progress-bar bg-primary" role="progressbar" style="width: ${pongStats.precision}%;" aria-valuenow="${pongStats.precision}" aria-valuemin="0" aria-valuemax="100">${pongStats.precision}%</div>
+            </div>
+        </div>
         `;
     }
 

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ft_transcendence</title>
+</head>
+<body>
+    <script type="text/javascript">
+        var jsonData = {{ json_data|safe }};
+
+        fetch('/', {
+            method: "GET",
+            headers: {
+                "Content-Type": "text/html",
+                "status": jsonData.status,
+                "message": jsonData.message
+            }
+        })
+        .then(response => response.text())
+        .then(data => {
+            document.open();
+            document.write(data);
+            document.close();
+        });
+    </script>
+</body>
+</html>
