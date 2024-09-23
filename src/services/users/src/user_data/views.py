@@ -123,8 +123,11 @@ def get_profile(request: HttpRequest, username: str) -> JsonResponse:
                                 'total_wins': data[game]['total_wins'],
                                 'win_percentage': data[game]['win_percentage'],
                                 'average_score': data[game]['average_score'],
-                                'playtime': data[game]['playtime'],
-                                'precision': data[game]['precision']}
+                                'playtime': data[game]['playtime']}
+                if game == 'pong':
+                    stats[game]["precision"] = data[game]['precision']
+                elif game == 'snake':
+                    stats[game]["high_score"] = data[game]['high_score']
 
     if not UserProfile.objects.filter(user=request.user).exists():
         return JsonResponse({'status': 0, 'message': 'Could not get user info'}, status=500)
