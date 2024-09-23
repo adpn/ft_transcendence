@@ -1,6 +1,6 @@
 class ParticipantFormState {
-	constructor(context, local_tournament_state, num_forms) {
-		this.local_tournament_state = local_tournament_state;
+	constructor(context, localTournamentState, num_forms) {
+		this.localTournamentState = localTournamentState;
 		this.context = context;
 		this.startButton = null;
 		this.num_forms = num_forms;
@@ -19,19 +19,19 @@ class ParticipantFormState {
 		</div>`;
 		this.startButton = document.getElementById('playButton');
 		const backButton = document.getElementById('backButton');
-		this.startButton.addEventListener('click', () => this.local_tournament_state.startTournament());
+		this.startButton.addEventListener('click', () => this.addTournamentPlayers());
 		backButton.addEventListener('click', () => this.back())
 	}
 
 	back() {
-		this.context.state = this.local_tournament_state;
+		this.context.state = this.localTournamentState;
 		this.context.state.execute();
 	}
 
 	generateForm(index) {
 		return `
 		<div class="col col-md-3 justify-content-center">
-			<form justify-content-center flex-column">
+			<form justify-content-center flex-column room-tag">
 				<h10 class="text-center">Room ${index + 1}</h10>
 				<input type="text" class="form-control player-tag bg-dark text-light flex-column mb-2 white-placeholder" id="player1-${index}" placeholder="Player Name">
 				<input type="text" class="form-control player-tag bg-dark text-light flex-column white-placeholder" id="player2-${index}" placeholder="Player Name">
@@ -46,6 +46,7 @@ class ParticipantFormState {
 		for (let i = 0; i < number; i++) {
 			formsContainer.innerHTML += this.generateForm(i);
 		}
+		// TODO: add function to fetch once the player has been added
 		this.addInputListeners();  // Re-add listeners to the input fields
 	}
 
@@ -57,43 +58,49 @@ class ParticipantFormState {
 	}
 
 	checkFormCompletion() {
-		// todo: once a form has been filled, make a pull request. to check if it is valid -> the server will reject
-		// any duplicate names
 		const inputs = document.querySelectorAll('.player-tag');
-		const allFilled = Array.from(inputs).every(input => input.value.trim() !== '');
-		this.startButton.disabled = !allFilled;
-	}
-}
+		const values = Array.from(inputs).map(input => input.value.trim());
 
-class CustomGrid {
-	constructor(context, col_size) {
-		this.context = context;
-		this.col_size = col_size;
+		// Check if all inputs are filled
+		const allFilled = values.every(value => value !== '');
+
+		// Find duplicate values
+		const duplicates = values
+			.filter((value, index, self) => self.indexOf(value) !== index && value !== '');
+
+		// Highlight the duplicates and remove highlights from non-duplicates
+		inputs.forEach(input => {
+			if (duplicates.includes(input.value.trim())) {
+				input.classList.add('duplicate');
+			} else {
+				input.classList.remove('duplicate');
+			}
+		});
+
+		this.startButton.disabled = !(allFilled && allUnique);
 	}
 
-	render() {
-		this.context.gameMenuBody.innerHTML = `
-		<div class="row w-100 h-100 justify-content-md-center" id="customGridContainer"></div>`;
+	async addTournamentPlayers() {
+		const promises = Array.from(inputs).map(input => {
+			return joinTournament(input.value.trim()).catch(error => {
+				console.error(`Error for input ${input.value}:`, error);
+				return null; // Return null or any fallback value in case of error
+			});
+		});
+		try {
+			const results = await Promise.all(promises);
+			console.log('All joinTournament requests handled:', results);
+		} 
+		catch (error) {
+			console.error('An unexpected error occurred:', error);
+		}
+		this.localTournamentState.startTournament();
 	}
 
-	addHTMLElement(value) {
-		const container = document.getElementById("customGridContainer");
-		container.innerHTML += this.generateColumn(value);
-	}
-
-	generateColumn(value) {
-		return `
-		<div class="col col-md-${this.col_size} justify-content-center">
-			<div class="justify-content-center flex-column w-100 h-100">
-				${value}
-			</div>
-		</div>`;
-	}
 }
 
 class LocalTournamentGameState {
 	constructor(context, game, prevState) {
-		// TODO: need an interface for adding players.
 		// make a fetch for each participant.
 		// make a fetch to get the current participants.
 		// make a fetch to get the two next opponents. -> need an api endpoint for this.
@@ -102,15 +109,100 @@ class LocalTournamentGameState {
 		// TODO: have do i retrieve the next game room ?
 		// how do i know when to move to the next round?
 		// todo: number of players states.
-		this.participantsState = new ParticipantFormState(
-			context, this)
+		// this.participantsState = new ParticipantFormState(
+		// 	context, game, this, this, )
 		this.buttonGrid = new CustomGrid(context, 4);
 		this.context = context;
+		this.game = game;
+		this.endGameState = new GameEndedState(game, context, prevState, this)
+		this.playingState = new PlayingState(game, context, this, this.endGameState);
+		this.currentRound = 0;
 	}
 
-	startTournament() {
-		// todo: at each end of game, fetch game rooms with players that are not eliminated.
-		// if the're no more rooms, move to the next round -> do this until there is a win condition.
+	async addTournamentPlayer(player_name) {
+		const response = await fetch("/games/join_tournament/", {
+			method: "POST",
+			headers: {
+				"X-CSRFToken": getCookie("csrftoken"),
+				"Authorization": "Bearer " + localStorage.getItem("auth_token")
+			},
+			credentials: "include",
+			body: JSON.stringify({
+				"game": this.game.name,
+				"mode": "local",
+				"guest_name": player_name
+			})
+		});
+
+		if (!response.ok) {
+			throw new Error(`Error ${response.status}: Failed to create game`);
+		};
+	}
+
+	async startTournament() {
+		// todo: 
+		// 1) get all the rooms of earliest non-eliminated players at round 0
+		//		1.1) if there no rooms, -> increment round, startTournament again
+		//									-> game loop
+		// 2) make a websocket connection for the pair of players.
+		// 3) -> game loop.
+		const room = await fetch("/games/get_tournament_room/", {
+			method: "POST",
+			headers: {
+				"X-CSRFToken": getCookie("csrftoken"),
+				"Authorization": "Bearer " + localStorage.getItem("auth_token")
+			},
+			credentials: "include",
+			body: JSON.stringify({
+				"tournament_id": this.game.name,
+				"mode": "local",
+				"guest_name": player_name
+			})
+		});
+		this.context.changeState(this.playingState);
+	}
+
+	update(data) {
+		if (data.type == "end") {
+			if (data.status == "lost") {
+				this.gameStatus = "ended";
+				if (this.gameStatus == "win")
+					this.gameEndState.setMessage("You Won!", true);
+				else
+					this.gameEndState.setMessage("You Lost!", false);
+				if (this.socket)
+					this.socket.close();
+				this.context.state = this.gameEndState;
+				this.context.state.execute();
+				return;
+			}
+			if (data.status == "win") {
+				if (data.context == "round") {
+					// move to next round
+					// TODO: maybe put a confirmation to move to the next round.
+					this.context.gameUI.style.display = 'flex'
+					this.context.state = this;
+					// TODO: if it is a round, get all rooms of non-eleminated players at current round
+					this.execute();
+					return;
+				}
+				this.gameStatus = "ended";
+				if (this.gameStatus == "win")
+					this.gameEndState.setMessage("You Won!", true);
+				else
+					this.gameEndState.setMessage("You Lost!", false);
+				if (this.socket)
+					this.socket.close();
+				this.context.state = this.gameEndState;
+				this.context.state.execute();
+				return;
+			}
+		}
+		else if (data.type == "participant") {
+			//new participant joined. -> update view... (fetch user data of the new participant)
+			return;
+		}
+		this.game.update(data);
 	}
 
 	moveToForms(num_players) {
@@ -130,8 +222,8 @@ class LocalTournamentGameState {
 	}
 
 	execute() {
-		// TODO: fetch possible players.
-		// add buttons for selecting one of the possible number of players.
+		this.context.gameMenu.style.display = 'flex';
+		this.context.gameMenuHeader.textContent = `${this.game.name.toUpperCase()} LOCAL TOURNAMENT`;
 		this.buttonGrid.render();
 		this.buttonGrid.addHTMLElement(this.generateButton("4 Players"));
 		this.buttonGrid.addHTMLElement(this.generateButton("8 Players"));

@@ -21,6 +21,7 @@ from .models import (
 from common import auth_client as auth
 
 MAX_TOURNAMENT_PARTICIPANTS = 4
+INITIALIZED = False
 
 def get_player_room(user_id, player_name="host"):
 	# get the player room excluding tournament rooms.
@@ -30,8 +31,12 @@ def get_player_room(user_id, player_name="host"):
 			game_room__in=Subquery(TournamentGameRoom.objects.values('game_room'))).first()
 
 def create_game(request):
-	# add pong game in database
-	Game.objects.get_or_create(game_name='pong', min_players=2)
+	global INITIALIZED
+	if not INITIALIZED:
+		Game.objects.get_or_create(game_name='pong', min_players=2)
+		Game.objects.get_or_create(game_name='snake', min_players=2)
+		INITIALIZED = True
+
 	local = False
 
 	user_data = auth.get_user(request)
@@ -183,7 +188,7 @@ def add_participant(
 	participant.save()
 	return participant
 
-def join_tournament(
+def _join_tournament(
 	game: Game,
 	player: Player,
 	tournament: Tournament,
@@ -250,7 +255,7 @@ def join_tournament(
 		'status': 'joined',
 		'player_id': player.player_name}, status=200)
 
-def create_tournament(player: Player, game:Game, max_participants=MAX_TOURNAMENT_PARTICIPANTS) -> GameRoom:
+def _create_tournament(player: Player, game:Game, max_participants=MAX_TOURNAMENT_PARTICIPANTS) -> GameRoom:
 	tournament = Tournament(
 		game=game, 
 		tournament_id=str(uuid.uuid4()), 
@@ -275,7 +280,7 @@ def create_or_join_tournament(player: Player, game:Game, max_participants=MAX_TO
 
 	# if there is no tournament, create a new one and a new game room.
 	if not tournament:
-		game_room = create_tournament(player, game)
+		game_room = _create_tournament(player, game)
 		return JsonResponse({
 			'ip_address': os.environ.get('IP_ADDRESS'),
 			'game_room_id': game_room.room_name,
@@ -283,15 +288,36 @@ def create_or_join_tournament(player: Player, game:Game, max_participants=MAX_TO
 			'player_id': player.player_name
 			}, status=201)
 	print("NEW PARTICIPANT JOIN", tournament.tournament_id , flush=True)
-	return join_tournament(game, player, tournament)
+	return _join_tournament(game, player, tournament)
 
-def	find_tournament(request: HttpRequest) -> JsonResponse:
+def create_tournament_view(request: HttpRequest) -> JsonResponse:
+	'''
+	TODO: 
+	this creates a tournament and returns the tournament id.
+	NOTE: if it is a named tournament, it becomes public.
+	'''
+	return
+
+def get_tournaments_view(request: HttpRequest) -> JsonResponse:
+	'''
+		returns a list of tournaments
+		TODO: should only return public tournaments (tournaments with names)
+	'''
+	return
+
+def get_tournament_room(request: HttpRequest) -> JsonResponse:
+	'''
+	returns the earliest room with non eliminated players (PLAYING) of a given tournament.
+	'''
+	return
+
+def	find_tournament_view(request: HttpRequest) -> JsonResponse:
 	# add pong game in database
-	PONG = Game(game_name='pong', min_players=2)
-	try:
-		PONG.save()
-	except IntegrityError:
-		pass
+	global INITIALIZED
+	if not INITIALIZED:
+		Game.objects.get_or_create(game_name='pong', min_players=2)
+		Game.objects.get_or_create(game_name='snake', min_players=2)
+		INITIALIZED = True
 	# todo: put game request handling in a function.
 	# TODO: check if it local.
 	try:
@@ -339,7 +365,7 @@ def	find_tournament(request: HttpRequest) -> JsonResponse:
 			return create_or_join_tournament(player, game)
 		elif participant.status == "PLAYING":
 			# if the participant is not eliminated then 
-			return join_tournament(game, player, participant.tournament, participant)
+			return _join_tournament(game, player, participant.tournament, participant)
 	return create_or_join_tournament(player, game)
 
 @csrf_exempt

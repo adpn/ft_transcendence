@@ -1,10 +1,8 @@
 class GameEndedState {
-	constructor(game, context, gameModeState, prevState) {
-		// todo: 
-		// need replay, give up buttons bellow the canvas.
+	constructor(game, context, prevState, gameModeState) {
+		/* todo: give up buttons bellow the canvas.*/
 		this.prevState = prevState;
 		this.gameModeState = gameModeState;
-		this.socket = null;
 		// Replay button
 		this.replayButton = this.createReplayButton();
 		this.quitButton = this.createQuitButton(); // Optional, similar pattern
@@ -14,47 +12,37 @@ class GameEndedState {
 		//todo: set message.
 	}
 
-	// Method to create the replay button
 	createReplayButton() {
 		const button = document.createElement('button');
-		button.textContent = "Replay";
-		button.style.display = 'block';
+		button.textContent = 'Replay';
+		button.style.display = 'flex';
 		button.className = "btn btn-outline-light mb-2 w-100 h-100";
-
-		// Attach the replay method to the button's click event
 		button.addEventListener('click', () => this.replay());
 
 		return button;
 	}
 
-	// Optional: Method to create a give-up button
 	createQuitButton() {
 		const button = document.createElement('button');
-		button.textContent = "Quit";
-		button.style.display = 'block';
+		button.textContent = 'Quit';
+		button.style.display = 'flex';
 		button.className = "btn btn-outline-light mb-2";
-
-		// Attach the replay method to the button's click event
 		button.addEventListener('click', () => this.giveUp());
 
 		return button;
 	}
 
-	// Replay method logic
 	replay() {
-		// go back to either quick game or tournament.
-		this.context.state = this.prevState;
-		this.context.state.execute();
+		this.context.changeState(this.gameModeState);
 	}
 
 	giveUp() {
-		this.context.state = this.gameModeState;
-		this.gameModeState.execute();
+		this.context.changeState(this.prevState);
 	}
 
 	execute() {
 		this.context.gameUI.style.display = 'flex'
-		this.context.gameMenu.style.display = 'block';
+		this.context.gameMenu.style.display = 'flex';
 		this.context.gameMenuHeader.textContent = 'Game Over';
 		this.context.gameMenuBody.innerHTML = ''; // display some message here..
 		this.context.gameMenuFooter.innerHTML = `
@@ -73,11 +61,10 @@ class GameEndedState {
 }
 
 class PlayingState {
-	constructor(game, context, gameModeState, prevState, gameEndState) {
+	constructor(game, context, gameMode, gameEndState) {
 		// todo: add player profile on the side of the canvas.
 		// need cancel, replay, give up buttons bellow the canvas.
-		this.prevState = prevState;
-		this.gameModeState = gameModeState;
+		this.gameMode = gameMode;
 		this.socket = null;
 		this.gameStatus = "playing"
 		this.gameEndState = gameEndState;
@@ -98,10 +85,10 @@ class PlayingState {
 		var received_data = JSON.parse(event.data);
 		if (received_data.type == "end") {
 			// TODO: handle disconnections etc. 
-			this.prevState.update(received_data)
+			this.gameMode.update(received_data)
 			return;
 		}
-		this.prevState.update(received_data);
+		this.gameMode.update(received_data);
 	}
 
 	disconnected() {

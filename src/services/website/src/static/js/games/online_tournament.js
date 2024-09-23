@@ -3,7 +3,7 @@ class OnlineTournamentGameState {
 		this.gameEndState = new GameEndedState(
 			game, context, prevState, this);
 		this.playingState = new PlayingState(
-			game, context, prevState, this, this.gameEndState);
+			game, context, this, this.gameEndState);
 		this.game = game;
 		this.prevState = prevState;
 		this.cancelBtn = document.createElement('button');
@@ -107,7 +107,7 @@ class OnlineTournamentGameState {
 				return response.json();
 			})
 			.then(data => {
-				this.socket = new WebSocket("wss://" + data.ip_address + "/ws/game/pong/" + data.game_room_id + "/?csrf_token=" + getCookie("csrftoken") + "&token=" + localStorage.getItem("auth_token"));
+				this.socket = new WebSocket(`wss://${data.ip_address}/ws/game/pong/${data.game_room_id}/?csrf_token=${getCookie("csrftoken")}&token=${localStorage.getItem("auth_token")}`);
 				if (this.socket.readyState > this.socket.OPEN) {
 					// todo: display error message in the loading window.
 					this.cancel();

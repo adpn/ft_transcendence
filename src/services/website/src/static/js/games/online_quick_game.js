@@ -1,7 +1,7 @@
 class OnlineQuickGameState {
 	constructor(context, game, prevState) {
 		this.gameEndState = new GameEndedState(game, context, prevState, this);
-		this.playingState = new PlayingState(game, context, prevState, this, this.gameEndState);
+		this.playingState = new PlayingState(game, context, this, this.gameEndState);
 
 		this.game = game;
 		this.prevState = prevState;

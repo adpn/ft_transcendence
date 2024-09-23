@@ -16,11 +16,13 @@ class PlayerGuest(models.Model):
 class Tournament(models.Model):
 	game = models.ForeignKey(Game, on_delete=models.CASCADE)
 	tournament_id = models.CharField(max_length=100, primary_key=True)
+	tournament_name = models.CharField(max_length=100, default=None, blank=True, null=True) # if it is null then it is an anonymous tournament.
 	game_room_count = models.IntegerField(default=0)
 	participants = models.IntegerField(default=0)
 	max_participants = models.IntegerField(default=8)
 	created_at = models.DateTimeField(auto_now_add=True)
 	closed = models.BooleanField(default=False)
+	public = models.BooleanField(default=False)
 
 class GameRoom(models.Model):
 	room_name = models.CharField(max_length=100, primary_key=True)

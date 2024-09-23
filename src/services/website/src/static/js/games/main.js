@@ -21,7 +21,11 @@ var games_context = {
 	gameMenuHeader: null,
 	gameMenuBody: null,
 	gameMenuFooter: null,
-	state: null
+	state: null,
+	changeState: function (state) {
+		this.state = state;
+		state.execute();
+	}
 }
 
 class GameModes {
@@ -40,78 +44,45 @@ class GameModes {
 			new OnlineQuickGameState(context, game, this));
 
 		this.prevState = prevState;
-
-		this.quickGameBtn = document.createElement('button');
-		this.quickGameBtn.textContent = 'Quick Game';
-		this.quickGameBtn.className = "btn btn-outline-light mb-2 w-100 h-100";
-
-		this.quickGameBtn.addEventListener('click', () => this.quickGame());
-
-		this.tournamentBtn = document.createElement('button');
-		this.tournamentBtn.textContent = 'Tournament';
-		this.tournamentBtn.className = "btn btn-outline-light mb-2 w-100 h-100";
-
-		this.tournamentBtn.addEventListener('click', () => this.joinTournament());
-
-		this.backBtn = document.createElement('button');
-		this.backBtn.textContent = 'Back';
-		this.backBtn.className = "btn btn-outline-light mb-2";
-
-		this.backBtn.addEventListener('click', () => this.goBack());
 		this.context = context;
-
-
+		this.modesGrid = new CustomGrid(context, 6);
 	};
 	goBack() {
-		this.context.state = this.prevState;
-		this.context.state.execute();
+		this.changeState(this.prevState);
 	}
 	joinTournament() {
-		this.context.state = this.tournamentState;
-		this.context.state.execute();
+		this.context.changeState(this.tournamentState);
 	}
 	quickGame() {
-		this.context.state = this.quickGameState;
-		this.context.state.execute();
+		this.context.changeState(this.quickGameState);
 	}
 	execute() {
-		this.context.gameMenu.style.display = 'block';
-		this.context.gameMenuHeader.textContent = 'Game Mode';
-		this.context.gameMenuBody.innerHTML = '';
-		this.context.gameMenuBody.appendChild(this.quickGameBtn);
-		this.context.gameMenuBody.appendChild(this.tournamentBtn);
+		this.context.gameMenu.style.display = 'flex';
+		this.modesGrid.render();
+		this.context.gameMenuHeader.textContent = `${this.game.name.toUpperCase()} GAME MODE`;
+		this.modesGrid.addHTMLElement(`<button type="button" id="quickGameButton" class="btn btn-outline-light w-100 h-100">Quick Game</button>`);
+		this.modesGrid.addHTMLElement(`<button type="button" id="tournamentButton" class="btn btn-outline-light w-100 h-100">Tournament</button>`);
 		this.context.gameMenuFooter.innerHTML = `
 		<div class="d-flex flex-row align-items-center mt-2">
-			<button type="button" id="backButton" class="btn btn-outline-light mx-2">Back</button>
+			<button type="button" id="backButton" class="btn btn-outline-light mx-2 w-100">Back</button>
 		</div>`;
+		const quickGameButton = document.getElementById("quickGameButton");
+		const tournamentButton = document.getElementById("tournamentButton");
 		const backButton = document.getElementById("backButton");
+		quickGameButton.addEventListener('click', () => this.quickGame());
+		tournamentButton.addEventListener('click', () => this.joinTournament());
 		backButton.addEventListener('click', () => this.goBack())
-		//this.game.load(this.context.canvas);
 	}
 }
 
 class GameMenu {
 	constructor(context) {
 		this.pongState = new GameModes(context, Pong, this);
-		this.pongButton = document.createElement('button');
-		this.pongButton.textContent = 'Pong';
-		this.pongButton.className = "btn btn-outline-light mb-2 w-100 h-100";
-
-		this.snakeButton = document.createElement('button');
-		this.snakeButton.textContent = 'Snake';
-		this.snakeButton.className = "btn btn-outline-light mb-2 w-100 h-100";
-
-		this.backButton = document.createElement('button');
-		this.backButton.textContent = 'Back';
-		this.backButton.className = "btn btn-outline-light mb-2";
-
-		this.pongButton.addEventListener('click', () => this.launch_game("pong"));
-		this.snakeButton.addEventListener('click', () => this.launch_game("snake"));
 		this.context = context;
-
+		this.gamesGrid = new CustomGrid(context, 6);
 	};
 
-	launch_game(game) {
+	launchGame(game) {
 		if (game == "pong") {
 			this.context.state = this.pongState;
 			this.context.state.execute()
@@ -122,11 +93,15 @@ class GameMenu {
 	}
 
 	execute() {
-		this.context.gameMenu.style.display = 'block';
-		this.context.gameMenuHeader.textContent = 'Game';
-		this.context.gameMenuBody.innerHTML = '';
-		this.context.gameMenuBody.appendChild(this.pongButton);
-		this.context.gameMenuBody.appendChild(this.snakeButton);
+		this.context.gameMenu.style.display = 'flex';
+		this.gamesGrid.render();
+		this.context.gameMenuHeader.textContent = 'CHOOSE GAME';
+		this.gamesGrid.addHTMLElement(`<button type="button" id="pongButton" class="btn btn-outline-light w-100 h-100">Pong</button>`);
+		this.gamesGrid.addHTMLElement(`<button type="button" id="snakeButton" class="btn btn-outline-light w-100 h-100">Snake</button>`);
+		const pongButton = document.getElementById("pongButton");
+		const snakeButton = document.getElementById("snakeButton");
+		pongButton.addEventListener('click', () => this.launchGame("pong"));
+		snakeButton.addEventListener('click', () => this.launchGame("snake"));
 		this.context.gameMenuFooter.innerHTML = '';
 	}
 }
