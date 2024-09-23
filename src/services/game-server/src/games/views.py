@@ -408,7 +408,7 @@ def game_stats(request: HttpRequest, user_id : int) -> JsonResponse:
 			playtime += result.game_duration
 			games_data.append({
 				'is_winner': result.winner == player,
-				'opponent_id': result.loser.player_id if result.winner == player else result.winner.player_id,
+				'opponent_id': result.loser.user_id if result.winner == player else result.winner.user_id,
 				'personal_score': result.winner_score if result.winner == player else result.loser_score,
 				'opponent_score': result.loser_score if result.winner == player else result.winner_score,
 				'game_date': result.game_date,
@@ -422,10 +422,13 @@ def game_stats(request: HttpRequest, user_id : int) -> JsonResponse:
 			'total_wins': win_count,
 			'average_score': round(total_points / (win_count + loss_count), 1),
 			'playtime' : playtime,
-			'precision': round(total_points / total_total_points * 100, 1),
 			'win_percentage': round(win_count / (win_count + loss_count) * 100, 1),
 			'games': games_data
 		}
+		if game.game_name == 'pong':
+			response_data[game.game_name]["precision"] = round(total_points / total_total_points * 100, 1)
+		elif game.game_name == 'snake':
+			response_data[game.game_name]["high_score"] = max([data['personal_score'] for data in games_data])
 
 	if nb_games == 0:
 		return JsonResponse({'status': 0, 'message': 'Player never played'}, status=200)

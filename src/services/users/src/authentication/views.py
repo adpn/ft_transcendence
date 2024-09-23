@@ -17,6 +17,8 @@ import string
 import time
 from datetime import datetime, timedelta
 from .models import UserToken
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 
 User = get_user_model()
 
@@ -92,7 +94,7 @@ def check_jwt(request) -> User:
 		user_token.delete()
 		return None
 
-def custom_login(request, username, password):
+def custom_login(request : HttpRequest, username, password):
 	user = User.objects.filter(username=username).first()
 	if user is None:
 		return JsonResponse({
@@ -108,7 +110,7 @@ def custom_login(request, username, password):
 		'status': 0, 
 		'message': 'Login failed'}, status=401)
 
-def login_view(request) -> JsonResponse:
+def login_view(request : HttpRequest) -> JsonResponse:
 	if request.method != 'POST':
 		return JsonResponse({'status': 0, 'message': 'Only POST method is allowed'}, status=405)
 	if request.user.is_authenticated:
@@ -122,7 +124,7 @@ def login_view(request) -> JsonResponse:
 	# todo: need to implement this...
 	return custom_login(request, username, password)
 
-def logout_view(request) -> JsonResponse:
+def logout_view(request : HttpRequest) -> JsonResponse:
 	if request.method != 'POST':
 		return JsonResponse({'status': 0, 'message': 'Only POST method is allowed'}, status=405)
 	if not request.user.is_authenticated:
@@ -131,10 +133,18 @@ def logout_view(request) -> JsonResponse:
 	user_token = UserToken.objects.filter(user=request.user).first()
 	if user_token:
 		user_token.delete()
+	channel_layer = get_channel_layer()
+	async_to_sync(channel_layer.group_send)(
+		f"user_{request.user.id}",  # Channel group name
+		{	
+			'type': 'user.logout',  # Custom event type
+			'message': 'User logged out',
+		}
+	)
 	logout(request)
 	return JsonResponse({'status' : 1}, status=200)
 
-def profile_mini(request, jwt_existing: bool) -> JsonResponse:
+def profile_mini(request : HttpRequest, jwt_existing: bool) -> JsonResponse:
 	try:
 		connection = client.HTTPConnection("users:8000")
 		connection.request("GET", f"/get_picture/{request.user.id}/")
@@ -178,7 +188,7 @@ def profile_mini(request, jwt_existing: bool) -> JsonResponse:
 		}
 	}, status=200)
 
-def sign_up_view(request) -> JsonResponse:
+def sign_up_view(request : HttpRequest) -> JsonResponse:
 	if request.method != 'POST':
 		return JsonResponse({'status': 0, 'message': 'Only POST method is allowed'}, status=405)
 	if request.user.is_authenticated:
@@ -219,7 +229,7 @@ def sign_up_view(request) -> JsonResponse:
 	login(request, user)
 	return profile_mini(request, False)
 
-def is_authenticated_view(request) -> JsonResponse:
+def is_authenticated_view(request : HttpRequest) -> JsonResponse:
 	if request.method != 'GET':
 		return JsonResponse({'status': 0, 'message': 'Only GET method is allowed'}, status=405)
 	# check if it has a valid token first
@@ -235,13 +245,13 @@ def is_authenticated_view(request) -> JsonResponse:
 	else :
 		return JsonResponse({'status': 0, 'message': 'User not connected'}, status=200)
 
-def check_token(request):
+def check_token(request : HttpRequest) -> JsonResponse:
 	# todo: if the user has logged-out this should 
 	if check_jwt(request):
 		return HttpResponse(status=200)
 	return HttpResponse(status=401)
 
-def get_user(request) -> JsonResponse:
+def get_user(request : HttpRequest) -> JsonResponse:
 	user = check_jwt(request)
 	if user:
 		return JsonResponse({
@@ -305,7 +315,7 @@ def generate_username() -> str:
 def auth42_response(request : HttpRequest, status : int, message : str) -> HttpResponse:
 	return render(request, 'api42.html', {'json_data': json.dumps({'status': status, 'message': message})})
 
-def auth42_view(request) -> HttpResponse:
+def auth42_view(request : HttpRequest) -> HttpResponse:
 	if request.user.is_authenticated:
 		return auth42_response(request, 0, "Already logged in")
 
@@ -352,7 +362,7 @@ def auth42_view(request) -> HttpResponse:
 		login(request, user)
 	return auth42_response(request, 1, "Welcome")
 
-def change_username_view(request) -> JsonResponse:
+def change_username_view(request : HttpRequest) -> JsonResponse:
 	if not request.user.is_authenticated:
 		return JsonResponse({'status': 0, 'message': 'User not connected'}, status=401)
 	if request.method != 'POST':
@@ -370,7 +380,7 @@ def change_username_view(request) -> JsonResponse:
 	user.save()
 	return JsonResponse({'status': 1, 'message': 'Username changed', 'username': data['username']}, status=200)
 
-def change_password_view(request) -> JsonResponse:
+def change_password_view(request : HttpRequest) -> JsonResponse:
 	if not request.user.is_authenticated:
 		return JsonResponse({'status': 0, 'message': 'User not connected'}, status=401)
 	if request.method != 'POST':
