@@ -1,17 +1,18 @@
 class ParticipantFormState {
-	constructor(context, localTournamentState, num_forms) {
+	constructor(context, localTournamentState, num_players) {
 		this.localTournamentState = localTournamentState;
 		this.context = context;
 		this.startButton = null;
-		this.num_forms = num_forms;
+		this.num_forms = num_players / 2;
+		this.num_players = num_players
 	}
 
 	execute() {
 		this.render(this.num_forms);
 	}
 
-	render(num_players) {
-		this.renderForms(num_players);
+	render(num_forms) {
+		this.renderForms(num_forms);
 		this.context.gameMenuFooter.innerHTML = `
 		<div class="d-flex flex-row align-items-center mt-2">
 			<button type="button" id="playButton" class="btn btn-outline-light mx-2" disabled>Play</button>
@@ -77,24 +78,31 @@ class ParticipantFormState {
 			}
 		});
 
+		const allUnique = duplicates.length === 0;
+
 		this.startButton.disabled = !(allFilled && allUnique);
 	}
 
 	async addTournamentPlayers() {
+		const inputs = document.querySelectorAll('.player-tag');
+		console.log("NUM PLAYERS", inputs.length);
+
+		// Create the tournament first
 		await this.localTournamentState.createTournament(this.num_players);
-		const promises = Array.from(inputs).map(input => {
-			return joinTournament(input.value.trim()).catch(error => {
-				console.error(`Error for input ${input.value}:`, error);
-				return null; // Return null or any fallback value in case of error
-			});
-		});
-		try {
-			const results = await Promise.all(promises);
-			console.log('All joinTournament requests handled:', results);
-		} 
-		catch (error) {
-			console.error('An unexpected error occurred:', error);
+
+		// Iterate over the inputs one at a time
+		for (let input of inputs) {
+			const playerTag = input.value.trim();
+			try {
+				// Wait for the player to be added before moving to the next one
+				const result = await this.localTournamentState.addTournamentPlayer(playerTag);
+				console.log(`Player ${playerTag} added:`, result);
+			} catch (error) {
+				console.error(`Error for player ${playerTag}:`, error);
+			}
 		}
+
+		// Once all players have been processed, move to the next room
 		await this.localTournamentState.nextRoom();
 	}
 }
@@ -121,6 +129,7 @@ class LocalTournamentGameState {
 			},
 			credentials: "include",
 			body: JSON.stringify({
+				"tournament_id": this.tournament.tournament_id,
 				"game": this.game.name,
 				"mode": "local",
 				"guest_name": player_name
@@ -128,8 +137,10 @@ class LocalTournamentGameState {
 		});
 
 		if (!response.ok) {
+			console.log("GAME ERROR", await response.json());
 			throw new Error(`Error ${response.status}: Failed to create game`);
 		};
+		return await response.json();
 	}
 
 	async createTournament(max_players) {
@@ -142,11 +153,11 @@ class LocalTournamentGameState {
 			credentials: "include",
 			body: JSON.stringify({
 				"game": this.game.name,
-				"max_players": max_players,
-				"mode": "local"
+				"max_players": max_players
 			})
 		});
 		if (!response.ok) {
+			console.log(await response.json());
 			throw new Error(`Error ${response.status}: Failed to create tournament`);
 		}
 		this.tournament = await response.json();
@@ -163,6 +174,7 @@ class LocalTournamentGameState {
 	}
 
 	startGame(data) {
+		console.log("STARTING GAME", data);
 		this.socket = new WebSocket(`wss://${data.ip_address}/ws/game/pong/${data.game_room_id}/?csrf_token=${getCookie("csrftoken")}&token=${localStorage.getItem("auth_token")}&local=true&player1=${data.player1}&player2=${data.player2}`);
 		if (this.socket.readyState > this.socket.OPEN) {
 			// todo: display error message in the loading window.
@@ -179,7 +191,8 @@ class LocalTournamentGameState {
 
 	async nextRoom() {
 		// plays the next room
-		const response = await fetch("/games/get_tournament_room/", {
+		console.log("CURRENT ROUND", this.currentRound);
+		const response = await fetch("/games/next_tournament_room/", {
 			method: "POST",
 			headers: {
 				"X-CSRFToken": getCookie("csrftoken"),
@@ -187,14 +200,12 @@ class LocalTournamentGameState {
 			},
 			credentials: "include",
 			body: JSON.stringify({
-				"tournament_id": this.tournament.id,
-				"round": this.currentRound,
-				"active": true
+				"game": this.game.name,
+				"tournament_id": this.tournament.tournament_id,
+				"round": this.currentRound
 			})
 		});
 		if (response.status == 200 || response.status == 201) {
-			//todo: connect to a new room.
-			//TODO: show next round display.
 			const room = await response.json();
 			this.startGame(room);
 			this.context.changeState(this.playingState);
@@ -202,9 +213,11 @@ class LocalTournamentGameState {
 		}
 		else if (response.status == 404) {
 			// try to move to the next round.
+			// TODO: call joinTournament again.
 			this.currentRound++;
 			return await this.nextRoom();
 		}
+		console.log("ERROR", await response.json());
 		throw new Error(`Error ${response.status}: Failed to start tournament`);
 	}
 

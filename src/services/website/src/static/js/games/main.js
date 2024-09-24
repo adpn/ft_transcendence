@@ -48,7 +48,7 @@ class GameModes {
 		this.modesGrid = new CustomGrid(context, 6);
 	};
 	goBack() {
-		this.changeState(this.prevState);
+		this.context.changeState(this.prevState);
 	}
 	joinTournament() {
 		this.context.changeState(this.tournamentState);

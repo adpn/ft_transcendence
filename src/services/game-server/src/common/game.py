@@ -111,6 +111,7 @@ def qualify_player(player: Player, tournament: Tournament) -> None:
 
 @database_sync_to_async
 def eliminate_player(player: Player, tournament: Tournament) -> TournamentParticipant:
+	print("ELIMINATING", player, tournament, flush=True)
 	participant = TournamentParticipant.objects.filter(player=player, tournament=tournament).first()
 	participant.status = "ELIMINATED"
 	participant.save(update_fields=["status"])
@@ -152,6 +153,11 @@ def get_tournament(tournament_id: str) -> GameRoom:
 @database_sync_to_async
 def delete_guest_players(user_id: int) -> int:
 	Player.objects.filter(is_guest=True, user_id=user_id).delete()
+
+@database_sync_to_async
+def close_game_room(game_room: GameRoom) -> None:
+	game_room.closed = True
+	game_room.save(update_fields=['closed'])
 
 class GameSession(object):
 	def __init__(self, game_logic, game_server, game_room, game_mode=None, pause_timeout=60):
@@ -272,12 +278,18 @@ class QuickGameMode(object):
 		pass
 
 class TournamentMode(object):
-	def __init__(self, tournament: Tournament, tournament_id, channel_name, channel_layer: BaseChannelLayer) -> None:
+	def __init__(self, 
+		tournament: Tournament, 
+		tournament_id,
+		game_room,
+		channel_name, 
+		channel_layer: BaseChannelLayer) -> None:
 		self._tournament = tournament
 		self.channel_layer = channel_layer
 		self._channel_name = channel_name
 		self._ready = False
 		self._tournament_id = tournament_id
+		self._game_room = game_room
 
 	async def ready(self, 
 		session: GameSession, 
@@ -295,7 +307,7 @@ class TournamentMode(object):
 						}
 				})
 			return
-		game_room = await get_game_room(room_name)
+		self._game_room = game_room = await get_game_room(room_name)
 		if not game_room:
 			return
 		await self.channel_layer.group_send(
@@ -323,6 +335,7 @@ class TournamentMode(object):
 			await delete_tournament(tournament)
 			data["type"] = "win"
 			return data
+		await close_game_room(self._game_room)
 		await qualify_player(game_result.winner, tournament)
 		data["type"] = "round"
 		return data
@@ -399,6 +412,7 @@ class LocalMode(object):
 		self._player_rooms = [None, None]
 
 	async def _load_players(self):
+		print("PLAYERS", self._player_ids, flush=True)
 		self._player_rooms[0] = player1_room = await get_player_room(
 			self._host_user_id,
 			self.room_name,
@@ -415,6 +429,7 @@ class LocalMode(object):
 		return self._loaded
 
 	async def validate_player(self):
+		print("GAME ROOM", self.room_name, self._host_user_id, flush=True)
 		if not await self._load_players():
 			return False
 		return True
@@ -452,8 +467,7 @@ class LocalMode(object):
 				position = await get_player_position(player_room)
 				session.set_player(
 					position,
-					await get_player_room_player(player_room)
-				)
+					await get_player_room_player(player_room))
 				self._players_positions[i] = position
 			session.on_session_end(self.flush_game_session)
 			session.on_connection_lost(self.connection_lost)
@@ -785,6 +799,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 			self._game_mode = game_mode = TournamentMode(
 				await get_tournament_room_tournament(tournament_room),
 				tournament_id,
+				self.game_room,
 				self.channel_name,
 				self.channel_layer
 			)
