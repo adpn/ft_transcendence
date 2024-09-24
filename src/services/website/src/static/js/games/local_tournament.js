@@ -81,6 +81,7 @@ class ParticipantFormState {
 	}
 
 	async addTournamentPlayers() {
+		await this.localTournamentState.createTournament(this.num_players);
 		const promises = Array.from(inputs).map(input => {
 			return joinTournament(input.value.trim()).catch(error => {
 				console.error(`Error for input ${input.value}:`, error);
@@ -94,29 +95,21 @@ class ParticipantFormState {
 		catch (error) {
 			console.error('An unexpected error occurred:', error);
 		}
-		this.localTournamentState.startTournament();
+		await this.localTournamentState.nextRoom();
 	}
-
 }
 
 class LocalTournamentGameState {
 	constructor(context, game, prevState) {
-		// make a fetch for each participant.
-		// make a fetch to get the current participants.
-		// make a fetch to get the two next opponents. -> need an api endpoint for this.
-		// make a websocket connection by specifying the two opponents.
-		// and so on until and "end" condition is met.
-		// TODO: have do i retrieve the next game room ?
-		// how do i know when to move to the next round?
-		// todo: number of players states.
-		// this.participantsState = new ParticipantFormState(
-		// 	context, game, this, this, )
 		this.buttonGrid = new CustomGrid(context, 4);
 		this.context = context;
 		this.game = game;
-		this.endGameState = new GameEndedState(game, context, prevState, this)
-		this.playingState = new PlayingState(game, context, this, this.endGameState);
+		this.endGameState = new GameEndedState(
+			game, context, prevState, this)
+		this.playingState = new PlayingState(
+			game, context, this, this.endGameState);
 		this.currentRound = 0;
+		this.tournament = null;
 	}
 
 	async addTournamentPlayer(player_name) {
@@ -139,14 +132,8 @@ class LocalTournamentGameState {
 		};
 	}
 
-	async startTournament() {
-		// todo: 
-		// 1) get all the rooms of earliest non-eliminated players at round 0
-		//		1.1) if there no rooms, -> increment round, startTournament again
-		//									-> game loop
-		// 2) make a websocket connection for the pair of players.
-		// 3) -> game loop.
-		const room = await fetch("/games/get_tournament_room/", {
+	async createTournament(max_players) {
+		const response = await fetch("/games/create_tournament/", {
 			method: "POST",
 			headers: {
 				"X-CSRFToken": getCookie("csrftoken"),
@@ -154,36 +141,90 @@ class LocalTournamentGameState {
 			},
 			credentials: "include",
 			body: JSON.stringify({
-				"tournament_id": this.game.name,
-				"mode": "local",
-				"guest_name": player_name
+				"game": this.game.name,
+				"max_players": max_players,
+				"mode": "local"
 			})
 		});
-		this.context.changeState(this.playingState);
+		if (!response.ok) {
+			throw new Error(`Error ${response.status}: Failed to create tournament`);
+		}
+		this.tournament = await response.json();
+	}
+
+	handleEvent(event) {
+		if (JSON.parse(event.data).status == "ready") {
+			// TODO: check if game already started.
+			this.context.loadingOverlay.style.display = 'none';
+			this.context.gameUI.style.display = 'none';
+			this.context.changeState(this.playingState);
+			this.game.start(this.socket);
+		}
+	}
+
+	startGame(data) {
+		this.socket = new WebSocket(`wss://${data.ip_address}/ws/game/pong/${data.game_room_id}/?csrf_token=${getCookie("csrftoken")}&token=${localStorage.getItem("auth_token")}&local=true&player1=${data.player1}&player2=${data.player2}`);
+		if (this.socket.readyState > this.socket.OPEN) {
+			// todo: display error message in the loading window.
+			// this.cancel();
+			throw new Error("WebSocket error: " + this.socket.readyState);
+		}
+		this.socket.addEventListener("open", () => {
+			this.playingState.bindSocket(this.socket);
+			this.socket.addEventListener("message", (event) => {
+				this.handleEvent(event);
+			});
+		});
+	}
+
+	async nextRoom() {
+		// plays the next room
+		const response = await fetch("/games/get_tournament_room/", {
+			method: "POST",
+			headers: {
+				"X-CSRFToken": getCookie("csrftoken"),
+				"Authorization": "Bearer " + localStorage.getItem("auth_token")
+			},
+			credentials: "include",
+			body: JSON.stringify({
+				"tournament_id": this.tournament.id,
+				"round": this.currentRound,
+				"active": true
+			})
+		});
+		if (response.status == 200 || response.status == 201) {
+			//todo: connect to a new room.
+			//TODO: show next round display.
+			const room = await response.json();
+			this.startGame(room);
+			this.context.changeState(this.playingState);
+			return
+		}
+		else if (response.status == 404) {
+			// try to move to the next round.
+			this.currentRound++;
+			return await this.nextRoom();
+		}
+		throw new Error(`Error ${response.status}: Failed to start tournament`);
 	}
 
 	update(data) {
 		if (data.type == "end") {
 			if (data.status == "lost") {
 				this.gameStatus = "ended";
+				// todo: display winner.
 				if (this.gameStatus == "win")
+					//this.gameEndState.setWinner(data.winner);
 					this.gameEndState.setMessage("You Won!", true);
 				else
 					this.gameEndState.setMessage("You Lost!", false);
-				if (this.socket)
-					this.socket.close();
-				this.context.state = this.gameEndState;
-				this.context.state.execute();
+				this.context.changeState(this.gameEndState);
 				return;
 			}
 			if (data.status == "win") {
 				if (data.context == "round") {
-					// move to next round
-					// TODO: maybe put a confirmation to move to the next round.
-					this.context.gameUI.style.display = 'flex'
-					this.context.state = this;
-					// TODO: if it is a round, get all rooms of non-eleminated players at current round
-					this.execute();
+					// move to next room or to next round.
+					this.nextRoom();
 					return;
 				}
 				this.gameStatus = "ended";
@@ -191,16 +232,9 @@ class LocalTournamentGameState {
 					this.gameEndState.setMessage("You Won!", true);
 				else
 					this.gameEndState.setMessage("You Lost!", false);
-				if (this.socket)
-					this.socket.close();
-				this.context.state = this.gameEndState;
-				this.context.state.execute();
+				this.context.changeState(this.gameEndState);
 				return;
 			}
-		}
-		else if (data.type == "participant") {
-			//new participant joined. -> update view... (fetch user data of the new participant)
-			return;
 		}
 		this.game.update(data);
 	}

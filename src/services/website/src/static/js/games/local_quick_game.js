@@ -31,14 +31,10 @@ class LocalQuickGameState {
 
 	handleEvent(event) {
 		if (JSON.parse(event.data).status == "ready") {
-			// todo: if a player was found, display his profile and move to PlayingState.
-			// move to playing state.
-			// todo: wait for players to be ready. (click on button?)
-			// this.loadingModal.hide();
+			// TODO: check if game already started.
 			this.context.loadingOverlay.style.display = 'none';
 			this.context.gameUI.style.display = 'none';
-			this.context.state = this.playingState;
-			this.context.state.execute();
+			this.context.changeState(this.playingState);
 			this.game.start(this.socket);
 		}
 	}

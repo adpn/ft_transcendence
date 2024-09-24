@@ -23,6 +23,49 @@ from common import auth_client as auth
 MAX_TOURNAMENT_PARTICIPANTS = 4
 INITIALIZED = False
 
+def check_request(func):
+	def wrapper(request:HttpRequest):
+		global INITIALIZED
+		if not INITIALIZED:
+			Game.objects.get_or_create(game_name='pong', min_players=2)
+			Game.objects.get_or_create(game_name='snake', min_players=2)
+			INITIALIZED = True
+		user_data = auth.get_user(request)
+		if not user_data:
+			return JsonResponse({
+				'status': 0, 
+				'message': 'Invalid token'
+			}, status=401)
+		try:
+			game_request = json.loads(request.body)
+			if 'game' not in game_request:
+				return JsonResponse({
+					'status': 0,
+					'message': "missing required field: {}".format('game')
+					}, status=400)
+			game = Game.objects.filter(game_name=game_request['game']).first()
+			if not game:
+				return JsonResponse({
+					'status': 0,
+					'message': f"Game {game_request['game']} does not exist"
+					}, status=404)
+			local = False
+			if 'mode' in game_request:
+				local = game_request['mode'] == 'local'
+			if local:
+				if 'guest_name' not in game_request:
+					return JsonResponse({
+						'status': 0,
+						'message': "missing required field: {} for local mode".format('guest_name')
+					}, status=400)
+			return func(request, user_data, game, game_request, local)
+		except json.decoder.JSONDecodeError:
+			return JsonResponse({
+				'status': 0,
+				'message': 'Couldn\'t read input'
+				}, status=400)
+	return wrapper
+
 def get_player_room(user_id, player_name="host"):
 	# get the player room excluding tournament rooms.
 	return PlayerRoom.objects.filter(
@@ -30,54 +73,13 @@ def get_player_room(user_id, player_name="host"):
 		player__player_name=player_name).exclude(
 			game_room__in=Subquery(TournamentGameRoom.objects.values('game_room'))).first()
 
-def create_game(request):
-	global INITIALIZED
-	if not INITIALIZED:
-		Game.objects.get_or_create(game_name='pong', min_players=2)
-		Game.objects.get_or_create(game_name='snake', min_players=2)
-		INITIALIZED = True
-
-	local = False
-
-	user_data = auth.get_user(request)
-	if not user_data:
-		return JsonResponse({
-			'status': 0, 
-			'message': 'Invalid token'
-		}, status=401)
-
+@check_request
+def create_game(request: HttpRequest, user_data: dict, game: Game, game_request, local) -> JsonResponse:
 	'''
 	TODO:
 	check if the game is local, if it is, create guest Player 
 	'''
-	try:
-		game_request = json.loads(request.body)
-		if 'game' not in game_request:
-			return JsonResponse({
-				'status': 0,
-				'message': "missing required field: {}".format('game')
-				}, status=400)
-		
-	except json.decoder.JSONDecodeError:
-		return JsonResponse({
-			'status': 0,
-			'message': 'Couldn\'t read input'
-			}, status=400)
-
-	game = Game.objects.filter(game_name=game_request['game']).first()
-	if not game:
-		return JsonResponse({
-			'status': 0,
-			'message': f"Game {game_request['game']} does not exist"
-			}, status=404)
-
 	player_name = "host"
-	if local:
-		if 'guest_name' not in game_request:
-			return JsonResponse({
-				'status': 0,
-				'message': "missing required field: {} for local mode".format('guest_name')
-			}, status=400)
 
 	room_player = get_player_room(user_data['user_id'], player_name)
 
@@ -90,8 +92,6 @@ def create_game(request):
 			'player_id': room_player.player.player_name
 			}, status=200)
 
-	if 'mode' in game_request:
-		local = game_request['mode'] == 'local'
 	if local:
 		'''
 		NOTE: there should always be a guest name in local mode even for the host. 
@@ -104,6 +104,7 @@ def create_game(request):
 			player_name=game_request['guest_name'],
 			user_id=int(user_data['user_id']),
 			is_guest=True)
+		print("NEW GUEST", game_request['guest_name'], flush=True)
 	else:
 		player, created = Player.objects.get_or_create(
 			player_name="host",
@@ -195,7 +196,7 @@ def _join_tournament(
 	participant: TournamentParticipant=None):
 
 	# join the tournament by either reconnecting, 
-	# joining a room or create a nes room.
+	# joining a room or create a new room.
 
 	if not participant:
 		game_rooms_in_tournament = TournamentGameRoom.objects.filter(
@@ -290,7 +291,8 @@ def create_or_join_tournament(player: Player, game:Game, max_participants=MAX_TO
 	print("NEW PARTICIPANT JOIN", tournament.tournament_id , flush=True)
 	return _join_tournament(game, player, tournament)
 
-def create_tournament_view(request: HttpRequest) -> JsonResponse:
+@check_request
+def create_tournament_view(request: HttpRequest, user_data: dict, game:Game, game_request, local) -> JsonResponse:
 	'''
 	TODO: 
 	this creates a tournament and returns the tournament id.
@@ -298,51 +300,30 @@ def create_tournament_view(request: HttpRequest) -> JsonResponse:
 	'''
 	return
 
-def get_tournaments_view(request: HttpRequest) -> JsonResponse:
+@check_request
+def get_tournaments_view(request: HttpRequest, user_data: dict, game:Game, game_request, local) -> JsonResponse:
 	'''
 		returns a list of tournaments
 		TODO: should only return public tournaments (tournaments with names)
 	'''
 	return
 
-def get_tournament_room(request: HttpRequest) -> JsonResponse:
+@check_request
+def get_tournament_room(request: HttpRequest, user_data: dict, game:Game, game_request, local) -> JsonResponse:
 	'''
 	returns the earliest room with non eliminated players (PLAYING) of a given tournament.
 	'''
 	return
 
-def	find_tournament_view(request: HttpRequest) -> JsonResponse:
-	# add pong game in database
-	global INITIALIZED
-	if not INITIALIZED:
-		Game.objects.get_or_create(game_name='pong', min_players=2)
-		Game.objects.get_or_create(game_name='snake', min_players=2)
-		INITIALIZED = True
-	# todo: put game request handling in a function.
-	# TODO: check if it local.
-	try:
-		game_request = json.loads(request.body)
-		if 'game' not in game_request:
-			return JsonResponse({
-			'status': 0,
-			'message': "missing required field: {}".format('game')}, status=500)
-	except json.decoder.JSONDecodeError:
-		return JsonResponse({
-			'status': 0,
-			'message': 'Couldn\'t read input'}, status=500)
-
-	user_data = auth.get_user(request)
-	if not user_data:
-		return JsonResponse({
-			'status': 0, 
-			'message': 'Invalid token'
-		}, status=401)
-
+@check_request
+def	find_tournament_view(request: HttpRequest, user_data: dict, game: Game, game_request, local) -> JsonResponse:
 	''' TODO:
 		----
 		if the game is in local mode, get the PARTICIPANT in the json file, check if it is a guest or the host then proceed as usual ?
 		this would mean that we make two calls for finding a tournament for each participant. the client is responsible for making the proper
 		request, but the server knows who's eliminated.
+
+		the json may contain a tournament id. ->use that to query a tournament
 	'''
 
 	player, created = Player.objects.get_or_create(
@@ -381,7 +362,7 @@ def game_stats(request: HttpRequest, user_id : int) -> JsonResponse:
 
 	list_games = Game.objects.all()
 	if list_games.count() == 0:
-		return JsonResponse({'status': 0, 'message': 'No game found'}, status=500)
+		return JsonResponse({'status': 0, 'message': 'No game found'}, status=404)
 
 	response_data = {'status': 1}
 	nb_games = 0

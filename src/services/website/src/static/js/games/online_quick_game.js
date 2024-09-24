@@ -76,34 +76,34 @@ class OnlineQuickGameState {
 				"game": this.game.name
 			})
 		})
-			.then((response) => {
-				if (!response.ok) {
-					throw new Error(response.status);
-				}
-				return response.json();
-			})
-			.then(data => {
-				this.socket = new WebSocket("wss://" + data.ip_address + "/ws/game/pong/" + data.game_room_id + "/?csrf_token=" + getCookie("csrftoken") + "&token=" + localStorage.getItem("auth_token"));
-				if (this.socket.readyState > this.socket.OPEN) {
-					// todo: display error message in the loading window.
-					this.cancel();
-					throw new Error("WebSocket error: " + this.socket.readyState);
-				}
-				this.socket.addEventListener("open", () => {
-					this.playingState.bindSocket(this.socket);
-					this.socket.addEventListener("message", (event) => {
-						this.handleEvent(event);
-					});
-				});
-			})
-			.catch((error) => {
-				// stop game_menu animations display error in menu.
-				// todo: display error message in the loading window
-				// todo: display error message in the loading window
-				// then go back game menu.
+		.then((response) => {
+			if (!response.ok) {
+				throw new Error(response.status);
+			}
+			return response.json();
+		})
+		.then(data => {
+			this.socket = new WebSocket("wss://" + data.ip_address + "/ws/game/pong/" + data.game_room_id + "/?csrf_token=" + getCookie("csrftoken") + "&token=" + localStorage.getItem("auth_token"));
+			if (this.socket.readyState > this.socket.OPEN) {
+				// todo: display error message in the loading window.
 				this.cancel();
-				// resizeCanvas();
-				console.log(error); // maybe display the error message in the window
+				throw new Error("WebSocket error: " + this.socket.readyState);
+			}
+			this.socket.addEventListener("open", () => {
+				this.playingState.bindSocket(this.socket);
+				this.socket.addEventListener("message", (event) => {
+					this.handleEvent(event);
+				});
 			});
+		})
+		.catch((error) => {
+			// stop game_menu animations display error in menu.
+			// todo: display error message in the loading window
+			// todo: display error message in the loading window
+			// then go back game menu.
+			this.cancel();
+			// resizeCanvas();
+			console.log(error); // maybe display the error message in the window
+		});
 	}
 }

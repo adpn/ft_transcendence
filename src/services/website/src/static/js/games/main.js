@@ -22,7 +22,7 @@ var games_context = {
 	gameMenuBody: null,
 	gameMenuFooter: null,
 	state: null,
-	changeState: function (state) {
+	changeState(state) {
 		this.state = state;
 		state.execute();
 	}

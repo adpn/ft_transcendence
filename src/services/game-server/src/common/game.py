@@ -214,7 +214,8 @@ class GameSession(object):
 				self._game_result.winner_score = data["score"][data["player"]]
 				self._game_result.loser_score = data["score"][data["loser"]]
 				self._game_result.game = await get_game_room_game(self._game_room)
-				data = await self._game_mode.handle_end_game(data, self._game_result)
+				if self._game_mode:
+					data = await self._game_mode.handle_end_game(data, self._game_result)
 				for end in self._end_callbacks:
 					await end(data)
 				self.is_running = False
@@ -521,7 +522,8 @@ class LocalMode(object):
 			# TODO: delete all guest players
 			await delete_guest_players(self._host_user_id)
 			await self.channel_layer.group_discard(self.room_name, self.consumer.channel_name)
-			await game_mode.handle_disconnection()
+			if game_mode:
+				await game_mode.handle_disconnection()
 			await self.channel_layer.group_discard(
 			self.room_name, self.consumer.channel_name)
 
@@ -673,7 +675,8 @@ class OnlineMode(object):
 			session.pause()
 			# todo: send a message to clients when a player disconnects.
 			await self.channel_layer.group_discard(self.room_name, self.consumer.channel_name)
-			await game_mode.handle_disconnection()
+			if game_mode:
+				await game_mode.handle_disconnection()
 			self._disconnected = True
 			# TODO: delete player room -> if there is only one player in the GameRoom.
 
@@ -684,6 +687,8 @@ class GameConsumer(AsyncWebsocketConsumer):
 		self._game_session = None
 		self._disconnected = False
 		self._lost_connection = False
+		self._game_mode = None
+		self.game_room = None
 	
 	async def send_json(self, data: dict):
 		await self.send(text_data=json.dumps(data))
@@ -709,6 +714,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 		csrf = params.get('csrf_token')
 
 		if not token and not csrf:
+			print("NOT TOKEN!!!", flush=True)
 			# If the room does not exist, close the connection
 			await self.accept()
 			await self.send_json({
@@ -721,6 +727,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 
 		user = auth.get_user_with_token(token, csrf)
 		if not user:
+			print("NOT USER!!!", flush=True)
 			# If the room does not exist, close the connection
 			await self.accept()
 			await self.send_json({
@@ -759,6 +766,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 		'''
 
 		if not await game_locality.validate_player():
+			print("INVALID PLAYER!!!", flush=True)
 			await self.accept()
 			await self.send_json({
 				"type": "websocket.close",
@@ -822,6 +830,8 @@ class GameConsumer(AsyncWebsocketConsumer):
 
 	# todo: notify the game loop to pause the game
 	async def disconnect(self, close_code):
+		if not self.game_room:
+			return
 		await self._game_locality.disconnect(self._game_mode)
 
 	# receives data from websocket.
