@@ -3,34 +3,16 @@ class GameEndedState {
 		/* todo: give up buttons bellow the canvas.*/
 		this.prevState = prevState;
 		this.gameModeState = gameModeState;
-		// Replay button
-		this.replayButton = this.createReplayButton();
-		this.quitButton = this.createQuitButton(); // Optional, similar pattern
 		this.context = context;
 		this.game = game;
 	}
-	setMessage(message, is_winner) {
-		//todo: set message.
-	}
-
-	createReplayButton() {
-		const button = document.createElement('button');
-		button.textContent = 'Replay';
-		button.style.display = 'flex';
-		button.className = "btn btn-outline-light mb-2 w-100 h-100";
-		button.addEventListener('click', () => this.replay());
-
-		return button;
-	}
-
-	createQuitButton() {
-		const button = document.createElement('button');
-		button.textContent = 'Quit';
-		button.style.display = 'flex';
-		button.className = "btn btn-outline-light mb-2";
-		button.addEventListener('click', () => this.giveUp());
-
-		return button;
+	setMessage(is_winner) {
+		this.context.gameMenuBody.textContent = "You Won!";
+		this.context.gameMenuBody.style.color = 'green';
+		if (!is_winner) {
+			this.context.gameMenuBody.textContent = "You Lost!";
+			this.context.gameMenuBody.style.color = 'red';
+		}
 	}
 
 	replay() {
@@ -46,7 +28,6 @@ class GameEndedState {
 		this.context.gameUI.style.display = 'flex'
 		this.context.gameMenu.style.display = 'flex';
 		this.context.gameMenuHeader.textContent = 'Game Over';
-		this.context.gameMenuBody.innerHTML = ''; // display some message here..
 		this.context.gameMenuFooter.innerHTML = `
 		<div class="d-flex flex-row align-items-center mt-2">
 			<button type="button" id="replayButton" class="btn btn-outline-light mx-2">Replay</button>

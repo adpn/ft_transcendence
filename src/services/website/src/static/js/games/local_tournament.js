@@ -32,8 +32,8 @@ class ParticipantFormState {
 	generateForm(index) {
 		return `
 		<div class="col col-md-3 justify-content-center">
-			<form justify-content-center flex-column room-tag">
-				<h10 class="text-center">Room ${index + 1}</h10>
+			<form justify-content-center class="flex-column mb-2">
+				<h10 class="text-center mb-2">Room ${index + 1}</h10>
 				<input type="text" class="form-control player-tag bg-dark text-light flex-column mb-2 white-placeholder" id="player1-${index}" placeholder="Player Name">
 				<input type="text" class="form-control player-tag bg-dark text-light flex-column white-placeholder" id="player2-${index}" placeholder="Player Name">
 			</form>

@@ -139,10 +139,13 @@ class SnakeLogic(object):
 			self.apple_time -= 1
 			return
 		self.apple_time = APPLE_SPEED
+		spawn_tries = 1
 		spawn_tile = [randrange(GRID_WIDTH), randrange(GRID_HEIGHT)]
-		while (self.grid[spawn_tile[0]][spawn_tile[1]] != EMPTY):
+		while (self.grid[spawn_tile[0]][spawn_tile[1]] != EMPTY and spawn_tries < 10):
 			spawn_tile = [randrange(GRID_WIDTH), randrange(GRID_HEIGHT)]
-		await self.addToGrid(spawn_tile, APPLE)
+			spawn_tries += 1
+		if (self.grid[spawn_tile[0]][spawn_tile[1]] == EMPTY):
+			await self.addToGrid(spawn_tile, APPLE)
 
 	async def move(self):
 		if self.idle_time:

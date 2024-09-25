@@ -105,7 +105,7 @@ class GameMenu {
 		this.pong3dButton.addEventListener('click', () => this.launch_game("pong3d"));
 		this.snakeButton.addEventListener('click', () => this.launch_game("snake"));
 		this.context = context;
-		this.gamesGrid = new CustomGrid(context, 6);
+		this.gamesGrid = new CustomGrid(context, 4);
 	};
 
 	launchGame(game) {
