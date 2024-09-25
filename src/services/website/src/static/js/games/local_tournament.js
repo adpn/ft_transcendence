@@ -175,7 +175,7 @@ class LocalTournamentGameState {
 
 	startGame(data) {
 		console.log("STARTING GAME", data);
-		this.socket = new WebSocket(`wss://${data.ip_address}/ws/game/pong/${data.game_room_id}/?csrf_token=${getCookie("csrftoken")}&token=${localStorage.getItem("auth_token")}&local=true&player1=${data.player1}&player2=${data.player2}`);
+		this.socket = new WebSocket(`wss://${data.ip_address}/ws/game/${this.game.name}/${data.game_room_id}/?csrf_token=${getCookie("csrftoken")}&token=${localStorage.getItem("auth_token")}&local=true&player1=${data.player1}&player2=${data.player2}`);
 		if (this.socket.readyState > this.socket.OPEN) {
 			// todo: display error message in the loading window.
 			// this.cancel();
