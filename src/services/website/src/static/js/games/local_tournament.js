@@ -112,10 +112,10 @@ class LocalTournamentGameState {
 		this.buttonGrid = new CustomGrid(context, 4);
 		this.context = context;
 		this.game = game;
-		this.endGameState = new GameEndedState(
+		this.gameEndState = new GameEndedState(
 			game, context, prevState, this)
 		this.playingState = new PlayingState(
-			game, context, this, this.endGameState);
+			game, context, this, this.gameEndState);
 		this.currentRound = 0;
 		this.tournament = null;
 	}
@@ -191,7 +191,6 @@ class LocalTournamentGameState {
 
 	async nextRoom() {
 		// plays the next room
-		console.log("CURRENT ROUND", this.currentRound);
 		const response = await fetch("/games/next_tournament_room/", {
 			method: "POST",
 			headers: {
@@ -212,10 +211,8 @@ class LocalTournamentGameState {
 			return
 		}
 		else if (response.status == 404) {
-			// try to move to the next round.
-			// TODO: call joinTournament again.
-			this.currentRound++;
-			return await this.nextRoom();
+			// stop when the're no more rooms.
+			return;
 		}
 		console.log("ERROR", await response.json());
 		throw new Error(`Error ${response.status}: Failed to start tournament`);
