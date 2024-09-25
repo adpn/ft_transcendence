@@ -7,6 +7,7 @@ class GameEndedState {
 		this.replayButton = this.createReplayButton();
 		this.quitButton = this.createQuitButton(); // Optional, similar pattern
 		this.context = context;
+		this.game = game;
 	}
 	setMessage(message, is_winner) {
 		//todo: set message.
@@ -41,6 +42,7 @@ class GameEndedState {
 	}
 
 	execute() {
+		this.game.clear(); // clear what the game uses to display on the canvas
 		this.context.gameUI.style.display = 'flex'
 		this.context.gameMenu.style.display = 'flex';
 		this.context.gameMenuHeader.textContent = 'Game Over';
@@ -63,7 +65,7 @@ class GameEndedState {
 class PlayingState {
 	constructor(game, context, gameMode, gameEndState) {
 		// todo: add player profile on the side of the canvas.
-		// need cancel, replay, give up buttons bellow the canvas.
+		// need give up button above nicely in the middle between player names, the canvas.
 		this.gameMode = gameMode;
 		this.socket = null;
 		this.gameStatus = "playing"
@@ -84,7 +86,7 @@ class PlayingState {
 	update(event) {
 		var received_data = JSON.parse(event.data);
 		if (received_data.type == "end") {
-			// TODO: handle disconnections etc. 
+			// TODO: handle disconnections etc.
 			this.gameMode.update(received_data)
 			return;
 		}
@@ -101,5 +103,6 @@ class PlayingState {
 	execute() {
 		this.context.gameUI.style.display = 'none';
 		this.game.load(this.context.canvas);
+		this.game.start(this.socket);
 	}
 }

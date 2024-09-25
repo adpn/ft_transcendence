@@ -14,6 +14,14 @@ class LocalQuickGameState {
 
 	update(data) {
 		// todo: move to result state
+		if (data.status == "ready") {
+			this.context.loadingOverlay.style.display = 'none';
+			this.context.gameUI.style.display = 'none';
+			this.context.state = this.playingState;
+			this.context.state.execute();
+			this.game.start(this.socket);
+			return;
+		}
 		if (data.type == "end") {
 			this.gameStatus = "ended";
 			if (this.gameStatus == "win")
@@ -79,17 +87,17 @@ class LocalQuickGameState {
 
 			const data = await response2.json();
 			// make a single connection for both players.
-			this.socket = new WebSocket(`wss://${data.ip_address}/ws/game/pong/${data.game_room_id}/?csrf_token=${getCookie("csrftoken")}&token=${localStorage.getItem("auth_token")}&local=true&player1=${player1}&player2=${player2}`);
+			this.socket = new WebSocket(`wss://${data.ip_address}/ws/game/${this.game.name}/${data.game_room_id}/?csrf_token=${getCookie("csrftoken")}&token=${localStorage.getItem("auth_token")}&local=true&player1=${player1}&player2=${player2}`);
 			if (this.socket.readyState > this.socket.OPEN) {
 				// todo: display error message in the loading window.
 				this.cancel();
 				throw new Error("WebSocket error: " + this.socket.readyState);
 			}
 			this.socket.addEventListener("open", () => {
-				this.playingState.bindSocket(this.socket);
 				this.socket.addEventListener("message", (event) => {
 					this.handleEvent(event);
 				});
+				this.playingState.bindSocket(this.socket);
 			});
 		}
 		catch (error) {

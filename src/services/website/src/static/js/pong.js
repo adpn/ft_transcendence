@@ -2,6 +2,8 @@ const UP = true;
 const DOWN = false;
 const START = true;
 const STOP = false;
+const LEFT = false;
+const RIGHT = true;
 
 const NOT_JOINED = 0;
 const CONNECTING = 1;
@@ -23,19 +25,18 @@ var game_data = {
 
 var socket;
 var canvas;
-var ctx;
+var ctx = null;
 var is_focus = false;
 var game_status = NOT_JOINED;
-var canvas_loaded = false;
-var bytes_array = new Uint8Array([false, false, false, false]);
+var bytes_array = new Uint8Array(4);
 
 
-function disconnected() {
-	if (game_status <= PLAYING)
-		game_status = DISCONNECTED;
-	resizeCanvas();
-	changeButton();
-}
+// function disconnected() {
+// 	if (game_status <= PLAYING)
+// 		game_status = DISCONNECTED;
+// 	resizeCanvas();
+// 	changeButton();
+// }
 
 function changeButton() {
 	switch (game_status) {
@@ -80,16 +81,16 @@ function takeInputDown(e) {
 	}
 	switch (e.key) {
 		case "w":
-			submitInput(UP, START, 0);
+			submitInput(UP, START, LEFT);
 			break ;
 		case "ArrowUp":
-			submitInput(UP, START, 1);
+			submitInput(UP, START, RIGHT);
 			break ;
 		case "s":
-			submitInput(DOWN, START, 0);
+			submitInput(DOWN, START, LEFT);
 			break ;
 		case "ArrowDown":
-			submitInput(DOWN, START, 1);
+			submitInput(DOWN, START, RIGHT);
 			break ;
 	}
 	e.preventDefault();
@@ -101,16 +102,16 @@ function takeInputUp(e) {
 	}
 	switch (e.key) {
 		case "w":
-			submitInput(UP, STOP, 0);
+			submitInput(UP, STOP, LEFT);
 			break ;
 		case "ArrowUp":
-			submitInput(UP, STOP, 1);
+			submitInput(UP, STOP, RIGHT);
 			break ;
 		case "s":
-			submitInput(DOWN, STOP, 0);
+			submitInput(DOWN, STOP, LEFT);
 			break ;
 		case "ArrowDown":
-			submitInput(DOWN, STOP, 1);
+			submitInput(DOWN, STOP, RIGHT);
 			break ;
 	}
 	e.preventDefault();
@@ -156,14 +157,14 @@ function makeYCord(number, canvas) {
 	return number * (canvas.height / 1000);
 }
 
-function gameStart(sockt) {
-	socket = sockt;
-	sockt.addEventListener("message", updatePong);
-	game_status = PLAYING;
-	changeButton();
-	resizeCanvas();
-	canvas.focus();
-}
+// function gameStart(sockt) {
+// 	socket = sockt;
+// 	sockt.addEventListener("message", updatePong);
+// 	game_status = PLAYING;
+// 	changeButton();
+// 	resizeCanvas();
+// 	canvas.focus();
+// }
 
 function gameOver(gameStatus) {
 	if (gameStatus == 'win')
@@ -225,58 +226,69 @@ function drawScore(canvas, ctx, game_data) {
 	ctx.fillText(game_data.score[1], makeXCord(520, canvas), makeYCord(15, canvas));
 }
 
-var Pong = ( function () {
-	return {
-		name: "pong", 
-		load: function (canv) {
-			canvas = canv;
-			window.addEventListener("keydown", takeInputDown, true);
-			window.addEventListener("keyup", takeInputUp, true);
-			window.addEventListener("resize", resizeCanvas, false);
-			canvas.setAttribute("tabindex", "-1");
-			canvas.addEventListener("focus", () => { is_focus = true; });
-			canvas.addEventListener("blur", () => { is_focus = false; });
+export var Pong = {
+	name: "pong",
+	load(canv) {
+		canvas = canv;
+		canvas.setAttribute("tabindex", "-1");
+		canvas.addEventListener("focus", () => { is_focus = true; });
+		canvas.addEventListener("blur", () => { is_focus = false; });
+		if (!ctx) {
 			ctx = canvas.getContext("2d", { alpha: false });
-			game_status = PLAYING;
-			changeButton();
-			resizeCanvas();
-			canvas.focus();
-		},
-		start: function (sockt) {
-			socket = sockt;
-			game_status = PLAYING;
-			changeButton();
-			resizeCanvas();
-			canvas.focus();
-		},
-		update: function (data) {
-			if (data.type == "tick") {
-				game_data.ball_pos = data.b;
-				game_data.racket_pos = data.r;
-				gameTick(canvas, ctx, game_data);
-				return ;
-			}
-			if (data.type == "goal") {
-				game_data.score = data.score;
-				return ;
-			}
-			if (data.type == "start") {
-				game_data.ball_size = data.ball_size;
-				game_data.racket_size = data.racket_size;
-				game_data.score = data.score;
-				return ;
-			}
-			if (data.type == "end") {
-				gameOver(data.status);
-				return ;
-			}
-		},
-		giveUp: function (socket) {
-			bytes_array[0] = true;
-			bytes_array[1] = false;
-			bytes_array[2] = false;
-			bytes_array[3] = false;
-			socket.send(by);
+			if (!ctx)
+				throw Error("Couldn't create 2D drawing context");
 		}
-	};
-})();
+		window.addEventListener("resize", resizeCanvas, false);
+		game_status = PLAYING;
+		changeButton();
+		resizeCanvas();
+		canvas.focus();
+	},
+	start(sockt) {
+		socket = sockt;
+		game_status = PLAYING;
+		changeButton();
+		resizeCanvas();
+		canvas.focus();
+		window.addEventListener("keydown", takeInputDown, true);
+		window.addEventListener("keyup", takeInputUp, true);
+	},
+	clear() {
+		window.removeEventListener("keydown", takeInputDown, true);
+		window.removeEventListener("keyup", takeInputUp, true);
+		window.removeEventListener("resize", resizeCanvas, false);
+		ctx = null;
+		if (socket) {
+			socket.close();
+			socket = null;
+		}
+	},
+	update(data) {
+		if (game_status != PLAYING)
+			return ;
+		if (data.type == "tick") {
+			game_data.ball_pos = data.b;
+			game_data.racket_pos = data.r;
+			gameTick(canvas, ctx, game_data);
+			return ;
+		}
+		if (data.type == "goal") {
+			game_data.score = data.score;
+			return ;
+		}
+		if (data.type == "start") {
+			game_data.ball_size = data.ball_size;
+			game_data.racket_size = data.racket_size;
+			game_data.score = data.score;
+			return ;
+		}
+		if (data.type == "end") {
+			gameOver(data.status);
+			return ;
+		}
+	},
+	giveUp(socket) {
+		bytes_array[0] = true;
+		socket.send(bytes_array);
+	}
+};

@@ -54,29 +54,12 @@ const Home = () => `
 	</div>
 `;
 
-const Pong = () => `
-<div class="row">
-<div class="row text-center">
-	<div class="canvas-container position-relative">
-		<canvas id="gameCanvas" class="w-100 border"></canvas>
-		<div id="game-menu" class="position-absolute top-50 start-50 translate-middle">
-			<button class="btn btn-primary mb-2" id="quick-game-button" type="button">Quick Game</button>
-		<br>
-			<button class="btn btn-secondary" id="tournament-button" type="button">Tournament</button>
-		</div>
-	</div>
-</div>
-<div id="game-button-container" class="text-center mt-3">
-	<button class="btn btn-success me-2" id="game-button" type="button">Find Game</button>
-</div>
-</div>
-`;
-
 const Games = async () => `
 <div class="row">
 <div class="row text-center">
 	<div class="canvas-container position-relative" >
-		<canvas id="gameCanvas" class="w-100 border"></canvas>
+		<canvas id="gameCanvas2D" class="w-100 border"></canvas>
+        <canvas id="gameCanvas3D" class="w-100 border"></canvas>
 		<div id="game-ui" class="position-absolute top-0 start-0 w-100 h-100 flex-column align-items-center justify-content-center bg-dark">
 			<div id="loading-overlay" class="loading-overlay position-absolute top-0 start-0 w-100 h-100 flex-column align-items-center justify-content-center bg-dark" aria-hidden="true">
 				<div class="spinner"></div>
@@ -167,7 +150,7 @@ const Settings = async () => {
 };
 
 const Friends = async () => {
-	const app_content = 
+	const app_content =
 	`
 	<div class="text-center">
 		<h1>Friends Page</h1>
@@ -252,7 +235,7 @@ const Friends = async () => {
 	if (friendsRequestsData.friend_requests.length === 0) {
 		document.getElementById('friend-requests').innerHTML = `
 			<h3>Friend Requests</h3>
-			<p>Nobody wants to be your friend.</p>  
+			<p>Nobody wants to be your friend.</p>
 		`;
 	} else {
 		const friendRequestsList = document.getElementById("friend-requests-list");
@@ -405,7 +388,7 @@ function updateGameStats(gameType, stats) {
 
 			const resultText = game.is_winner ? 'Victory' : 'Defeat';
 			listItem.innerHTML = `
-				<strong>${resultText}</strong> | 
+				<strong>${resultText}</strong> |
 				Opponent: <a href="/user/${game.opponent}" class="text-white" data-link>${game.opponent}</a> |
 				Score: ${game.personal_score} - ${game.opponent_score} |
 				Duration: ${game.game_duration} |
@@ -465,12 +448,12 @@ const UserProfile = async (username) => {
 		<h1 class="fw-bold text-dark">${data.username}</h1>
 
 		<div id="friendship" class="my-4"></div>
-		
+
 		<h3 class="mt-5 text-secondary">Stats</h3>
 		<div id="user-stats" class="row justify-content-center mt-4"></div>
 	</div>
 	`;
-	
+
 	document.getElementById('app').innerHTML = app_content;
 
 	const userStats = document.getElementById('user-stats');
@@ -555,7 +538,7 @@ const UserProfile = async (username) => {
 				<div class="col-md-5 card p-4 mx-2 mb-4 shadow-sm">
 					<p class="h5"><strong>Win Percentage:</strong> <span class="text-success fw-bold">${snakeStats.win_percentage}%</span></p>
 					<p class="h5"><strong>High Score:</strong> <span class="text-danger fw-bold">${snakeStats.high_score}</span></p>
-				</div>	
+				</div>
 
 				<div class="col-10 mt-3">
 					<p class="mb-2">Win Percentage</p>

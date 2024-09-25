@@ -6,6 +6,8 @@ const UP = true;
 const DOWN = false;
 const START = true;
 const STOP = false;
+const LEFT = false;
+const RIGHT = true;
 
 const NOT_JOINED = 0;
 const CONNECTING = 1;
@@ -30,47 +32,52 @@ var game_data = {
 
 var socket;
 var canvas;
-var scene = undefined;
-var object_ids = {
-	alight: -1,
-	light: [-1, -1],
-	floor: -1,
-	line: -1,
-	racket: [-1, -1],
-	ball: -1,
-	score: [-1, -1],
-	message: -1,
-	message_light: -1
+var scene = null;
+var object_ids;
+function reset_ids_dict() {
+	return {
+		alight: -1,
+		light: [-1, -1],
+		floor: -1,
+		line: -1,
+		racket: [-1, -1],
+		ball: -1,
+		score: [-1, -1],
+		message: -1,
+		message_light: -1
+	};
 }
 var renderer;
-var render;
+var animation_id;
 var camera;
 var font;
 var is_focus = false;
 var game_status = NOT_JOINED;
+var bytes_array = new Uint8Array(4);
 
 
-document.addEventListener("DOMContentLoaded", function () {
-	window.addEventListener("pong", loadPong);
-});
-
-function loadPong() {
-	canvas = document.getElementById("gameCanvas");
-	canvas.setAttribute("tabindex", "-1");
-	canvas.addEventListener("focus", function () { is_focus = true; });
-	canvas.addEventListener("blur", function () { is_focus = false; });
-	window.addEventListener("resize", resizeCanvas, false);
-	window.addEventListener("keydown", takeInputDown, true);
-	window.addEventListener("keyup", takeInputUp, true);
-	if (game_status >= WON)
-		game_status = NOT_JOINED;
-	changeButton();
-	loadThreejs();
-}
+// function loadPong() {
+// 	canvas = document.getElementById("gameCanvas");
+// 	canvas.setAttribute("tabindex", "-1");
+// 	canvas.addEventListener("focus", function () { is_focus = true; });
+// 	canvas.addEventListener("blur", function () { is_focus = false; });
+// 	window.addEventListener("resize", resizeCanvas, false);
+// 	window.addEventListener("keydown", takeInputDown, true);
+// 	window.addEventListener("keyup", takeInputUp, true);
+// 	if (game_status >= WON)
+// 		game_status = NOT_JOINED;
+// 	changeButton();
+// 	loadThreejs();
+// }
 
 function loadThreejs() {
+	if (scene)
+		return ;
+	object_ids = reset_ids_dict();
 	scene = new THREE.Scene();
 	renderer = new THREE.WebGLRenderer( { canvas: canvas } );
+	if (!scene || !renderer)
+		return -1;
 	renderer.setClearColor(0xebebf5);
 	renderer.shadowMap.enabled = true;
 	renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -85,8 +92,8 @@ function loadThreejs() {
 	// tool stuff ...
 	// scene.add(new THREE.AxesHelper(10));						// DEBUG
 	// scene.add(new THREE.CameraHelper(light.shadow.camera));	// DEBUG
-	render = function() {
-		requestAnimationFrame(render);
+	let render = function() {
+		animation_id = requestAnimationFrame(render);
 		renderer.render(scene, camera);
 	};
 	render();
@@ -176,6 +183,7 @@ function loadFloor() {
 	var border = new THREE.Mesh(geometry, material);
 	border.receiveShadow = true;
 	scene.add(border);
+	object_ids.line = border.id;
 }
 
 function loadGear() {
@@ -251,52 +259,53 @@ function createScoreGeometry(index) {
 	return score_geo;
 }
 
-function connectGameRoom() {
-	fetch("/games/create_game/", {
-		method: "POST",
-		headers: {
-			"X-CSRFToken": getCookie("csrftoken"),
-			"Authorization": "Bearer " + localStorage.getItem("auth_token")
-		},
-		credentials: "include",
-			body: JSON.stringify({
-				"game": "pong"
-			})
-	})
-	.then((response) => {
-		if(!response.ok)
-			throw new Error(response.status);
-		return response.json();
-		})
-	.then(data => {
-		socket = new WebSocket("wss://" + data.ip_address + "/ws/game/pong/" + data.game_room_id + "/?csrf_token=" + getCookie("csrftoken") + "&token=" + localStorage.getItem("auth_token"));
-		if (socket.readyState > socket.OPEN)
-			throw new Error("WebSocket error: " + socket.readyState);
-		socket.addEventListener("close", disconnected);
-		socket.addEventListener("open", function () {
-			game_status = CONNECTING;
-			updateMessage();
-			changeButton();
-			socket.addEventListener("message", waitRoom);
-		});
-	})
-	.catch((error) => {
-		game_status = ERROR
-		updateMessage();
-		console.log(error);
-	});
-}
+// function connectGameRoom() {
+// 	fetch("/games/create_game/", {
+// 		method: "POST",
+// 		headers: {
+// 			"X-CSRFToken": getCookie("csrftoken"),
+// 			"Authorization": "Bearer " + localStorage.getItem("auth_token")
+// 		},
+// 		credentials: "include",
+// 			body: JSON.stringify({
+// 				"game": "pong"
+// 			})
+// 	})
+// 	.then((response) => {
+// 		if(!response.ok)
+// 			throw new Error(response.status);
+// 		return response.json();
+// 		})
+// 	.then(data => {
+// 		socket = new WebSocket("wss://" + data.ip_address + "/ws/game/pong/" + data.game_room_id + "/?csrf_token=" + getCookie("csrftoken") + "&token=" + localStorage.getItem("auth_token"));
+// 		if (socket.readyState > socket.OPEN)
+// 			throw new Error("WebSocket error: " + socket.readyState);
+// 		socket.addEventListener("close", disconnected);
+// 		socket.addEventListener("open", function () {
+// 			game_status = CONNECTING;
+// 			updateMessage();
+// 			changeButton();
+// 			socket.addEventListener("message", waitRoom);
+// 		});
+// 	})
+// 	.catch((error) => {
+// 		game_status = ERROR
+// 		updateMessage();
+// 		console.log(error);
+// 	});
+// }
 
 function cancel() {
 	socket.close();
+	socket = null;
 }
 
-function disconnected() {
-	if (game_status <= PLAYING)
-		game_status = DISCONNECTED;
-	updateMessage();
-	changeButton();
-}
+// function disconnected() {
+// 	if (game_status <= PLAYING)
+// 		game_status = DISCONNECTED;
+// 	updateMessage();
+// 	changeButton();
+// }
 
 function waitRoom(e) {
 	if (JSON.parse(e.data).status != "ready")
@@ -306,13 +315,13 @@ function waitRoom(e) {
 
 function changeButton() {
 	switch (game_status) {
-		case NOT_JOINED:
-		case WON:
-		case LOST:
-		case DISCONNECTED:
-			var title = "find game";
-			var btn_class = "success";
-			break ;
+		// case NOT_JOINED:
+		// case WON:
+		// case LOST:
+		// case DISCONNECTED:
+		// 	var title = "find game";
+		// 	var btn_class = "success";
+		// 	break ;
 		case CONNECTING:
 			var title = "cancel";
 			var btn_class = "danger";
@@ -326,12 +335,12 @@ function changeButton() {
 `;
 	var button = document.getElementById("game-button");
 	switch (game_status) {
-		case NOT_JOINED:
-		case WON:
-		case LOST:
-		case DISCONNECTED:
-			button.addEventListener("click", connectGameRoom);
-			break ;
+		// case NOT_JOINED:
+		// case WON:
+		// case LOST:
+		// case DISCONNECTED:
+		// 	button.addEventListener("click", connectGameRoom);
+		// 	break ;
 		case CONNECTING:
 			button.addEventListener("click", cancel);
 			break ;
@@ -346,12 +355,16 @@ function takeInputDown(e) {
 	}
 	switch (e.key) {
 		case "w":
+			submitInput(UP, START, LEFT);
+			break ;
 		case "ArrowUp":
-			submitInput(UP, START);
+			submitInput(UP, START, RIGHT);
 			break ;
 		case "s":
+			submitInput(DOWN, START, LEFT);
+			break ;
 		case "ArrowDown":
-			submitInput(DOWN, START);
+			submitInput(DOWN, START, RIGHT);
 			break ;
 	}
 	e.preventDefault();
@@ -363,12 +376,16 @@ function takeInputUp(e) {
 	}
 	switch (e.key) {
 		case "w":
+			submitInput(UP, STOP, LEFT);
+			break ;
 		case "ArrowUp":
-			submitInput(UP, STOP);
+			submitInput(UP, STOP, RIGHT);
 			break ;
 		case "s":
+			submitInput(DOWN, STOP, LEFT);
+			break ;
 		case "ArrowDown":
-			submitInput(DOWN, STOP);
+			submitInput(DOWN, STOP, RIGHT);
 			break ;
 	}
 	e.preventDefault();
@@ -416,58 +433,65 @@ function makeYHeight(number) {
 	return number * HEIGHT / 1000;
 }
 
-function gameStart() {
-	socket.removeEventListener("message", waitRoom);
-	socket.addEventListener("message", update);
-	game_status = PLAYING;
-	changeButton();
-	updateMessage();
-	canvas.focus();
-}
+// function gameStart() {
+// 	socket.removeEventListener("message", waitRoom);
+// 	socket.addEventListener("message", update);
+// 	game_status = PLAYING;
+// 	changeButton();
+// 	updateMessage();
+// 	canvas.focus();
+// }
 
 function gameOver(is_winner) {
 	game_status = LOST;
 	if (is_winner)
 		game_status = WON;
 	socket.close();
+	socket = null;
 	updateMessage();
+	canvas = null;
 }
 
-function submitInput(dir, action) {
-	socket.send(new Uint8Array([false, dir, action]));
+function submitInput(dir, action, side) {
+	bytes_array[0] = false;
+	bytes_array[1] = dir;
+	bytes_array[2] = action;
+	bytes_array[3] = side;
+	socket.send(bytes_array);
 }
 
 function GiveUp() {
-	socket.send(new Uint8Array([true, false, false]));
+	bytes_array[0] = true;
+	socket.send(bytes_array);
 }
 
-function update(event) {
-	var received_data = JSON.parse(event.data);
-	if (received_data.type == "tick") {
-		game_data.ball_pos = received_data.b;
-		game_data.racket_pos = received_data.r;
-		updatePositions();
-		return ;
-	}
-	if (received_data.type == "goal") {
-		game_data.score = received_data.score;
-		updateScore();
-		return ;
-	}
-	if (received_data.type == "start") {
-		game_data.ball_size = received_data.ball_size;
-		game_data.racket_size = received_data.racket_size;
-		game_data.score = received_data.score;
-		updateSizes();
-		updatePositions();
-		updateScore();
-		return ;
-	}
-	if (received_data.type == "win") {
-		gameOver(received_data.player);
-		return ;
-	}
-}
+// function update(event) {
+// 	var received_data = JSON.parse(event.data);
+// 	if (received_data.type == "tick") {
+// 		game_data.ball_pos = received_data.b;
+// 		game_data.racket_pos = received_data.r;
+// 		updatePositions();
+// 		return ;
+// 	}
+// 	if (received_data.type == "goal") {
+// 		game_data.score = received_data.score;
+// 		updateScore();
+// 		return ;
+// 	}
+// 	if (received_data.type == "start") {
+// 		game_data.ball_size = received_data.ball_size;
+// 		game_data.racket_size = received_data.racket_size;
+// 		game_data.score = received_data.score;
+// 		updateSizes();
+// 		updatePositions();
+// 		updateScore();
+// 		return ;
+// 	}
+// 	if (received_data.type == "win") {
+// 		gameOver(received_data.player);
+// 		return ;
+// 	}
+// }
 
 function updateSizes() {
 	// ball
@@ -497,13 +521,17 @@ function updatePositions() {
 function updateScore() {
 	if (game_data.score[0] != game_data.score_old[0]) {
 		let temp = scene.getObjectById(object_ids.score[0]);
-		temp.geometry.dispose();
-		temp.geometry = createScoreGeometry(0);
+		if (temp) {
+			temp.geometry.dispose();
+			temp.geometry = createScoreGeometry(0);
+		}
 	}
 	if (game_data.score[1] != game_data.score_old[1]) {
 		let temp = scene.getObjectById(object_ids.score[1]);
-		temp.geometry.dispose();
-		temp.geometry = createScoreGeometry(1);
+		if (temp) {
+			temp.geometry.dispose();
+			temp.geometry = createScoreGeometry(1);
+		}
 	}
 	game_data.score_old = game_data.score;
 }
@@ -542,6 +570,72 @@ function clearMessage() {
 	scene.getObjectById(object_ids.light[1]).visible = true;
 }
 
-// need this ?
-function clearAll() {
-}
+export var Pong3d = {
+	name: "pong",
+	load(canv) {
+		canvas = canv;
+		canvas.setAttribute("tabindex", "-1");
+		canvas.addEventListener("focus", () => { is_focus = true; });
+		canvas.addEventListener("blur", () => { is_focus = false; });
+		if (loadThreejs() == -1)
+			throw Error("Couldn't create 3D drawing context");
+		game_status = PLAYING;
+		changeButton();
+		window.addEventListener("resize", resizeCanvas, false);
+		canvas.focus();
+	},
+	start(sockt) {
+		socket = sockt;
+		game_status = PLAYING;
+		changeButton();
+		canvas.focus();
+		window.addEventListener("keydown", takeInputDown, true);
+		window.addEventListener("keyup", takeInputUp, true);
+	},
+	clear() {
+		window.removeEventListener("keydown", takeInputDown, true);
+		window.removeEventListener("keyup", takeInputUp, true);
+		window.removeEventListener("resize", resizeCanvas, false);
+		cancelAnimationFrame(animation_id);
+		renderer = null;
+		scene = null;
+		camera = null;
+		font = null;
+		if (socket) {
+			socket.close();
+			socket = null;
+		}
+	},
+	update(data) {
+		if (game_status != PLAYING)
+			return ;
+		if (data.type == "tick") {
+			game_data.ball_pos = data.b;
+			game_data.racket_pos = data.r;
+			updatePositions();
+			return ;
+		}
+		if (data.type == "goal") {
+			game_data.score = data.score;
+			updateScore();
+			return ;
+		}
+		if (data.type == "start") {
+			game_data.ball_size = data.ball_size;
+			game_data.racket_size = data.racket_size;
+			game_data.score = data.score;
+			updateSizes();
+			updatePositions();
+			updateScore();
+			return ;
+		}
+		if (data.type == "win") {
+			gameOver(data.player);
+			return ;
+		}
+	},
+	giveUp(socket) {
+		bytes_array[0] = true;
+		socket.send(bytes_array);
+	}
+};

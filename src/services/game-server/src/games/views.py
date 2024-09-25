@@ -8,11 +8,11 @@ import datetime
 from django.db.models import Subquery
 
 from .models import (
-	GameRoom, 
-	PlayerRoom, 
-	Player, 
-	Game, 
-	Tournament, 
+	GameRoom,
+	PlayerRoom,
+	Player,
+	Game,
+	Tournament,
 	TournamentGameRoom,
 	TournamentParticipant,
 	GameResult
@@ -33,7 +33,7 @@ def check_request(func):
 		user_data = auth.get_user(request)
 		if not user_data:
 			return JsonResponse({
-				'status': 0, 
+				'status': 0,
 				'message': 'Invalid token'
 			}, status=401)
 		try:
@@ -74,7 +74,7 @@ def tournament_request(func):
 				return JsonResponse({
 					'status': 0,
 					'message': f"Tournament {json_request['tournament_id']} does not exist"
-					}, 
+					},
 					status=404)
 			return func(request, user_data, game, json_request, local, tournament)
 		return func(request, user_data, game, json_request, local)
@@ -83,7 +83,7 @@ def tournament_request(func):
 def get_player_room(user_id, player_name="host"):
 	# get the player room excluding tournament rooms.
 	return PlayerRoom.objects.filter(
-		player__user_id=int(user_id), 
+		player__user_id=int(user_id),
 		player__player_name=player_name).exclude(
 			game_room__in=Subquery(TournamentGameRoom.objects.values('game_room'))).first()
 
@@ -108,7 +108,7 @@ def create_game(request: HttpRequest, user_data: dict, game: Game, game_request,
 
 	if local:
 		'''
-		NOTE: there should always be a guest name in local mode even for the host. 
+		NOTE: there should always be a guest name in local mode even for the host.
 			  Guest players data is not saved.
 		'''
 		'''
@@ -123,7 +123,7 @@ def create_game(request: HttpRequest, user_data: dict, game: Game, game_request,
 		player, created = Player.objects.get_or_create(
 			player_name="host",
 			user_id=int(user_data['user_id']))
-	
+
 	# if the player is not found in any room, either assign it the oldest room that isn't full
 	# or create a new room
 	rooms = GameRoom.objects.filter(
@@ -137,8 +137,8 @@ def create_game(request: HttpRequest, user_data: dict, game: Game, game_request,
 		room.num_players += 1
 		room.save(update_fields=['num_players'])
 		PlayerRoom(
-			player=player, 
-			game_room=room, 
+			player=player,
+			game_room=room,
 			player_position=room.num_players - 1).save()
 		return JsonResponse({
 			'ip_address': os.environ.get('IP_ADDRESS'),
@@ -149,14 +149,14 @@ def create_game(request: HttpRequest, user_data: dict, game: Game, game_request,
 
 	# create new room if room does not exist
 	room = GameRoom(
-		room_name=str(uuid.uuid4()), 
+		room_name=str(uuid.uuid4()),
 		game=game,
 		is_local=local)
 	room.num_players += 1
 	room.save()
 	PlayerRoom(
 		player=player,
-		game_room=room, 
+		game_room=room,
 		player_position=room.num_players - 1).save()
 	return JsonResponse({
 		'ip_address': os.environ.get('IP_ADDRESS'),
@@ -167,7 +167,7 @@ def create_game(request: HttpRequest, user_data: dict, game: Game, game_request,
 
 def add_player_to_room(player: Player, game_room: GameRoom) -> PlayerRoom:
 	player_room = PlayerRoom(
-		player=player, 
+		player=player,
 		game_room=game_room,
 		player_position=game_room.num_players)
 
@@ -185,13 +185,13 @@ def create_game_room(player: Player, game: Game) -> GameRoom:
 	return game_room
 
 def add_participant(
-	player: Player, 
-	tournament: Tournament, 
+	player: Player,
+	tournament: Tournament,
 	is_host=False) -> TournamentParticipant:
 
 	participant = TournamentParticipant(
-		player=player, 
-		tournament=tournament, 
+		player=player,
+		tournament=tournament,
 		status="PLAYING",
 		is_host=is_host)
 
@@ -203,9 +203,9 @@ def add_participant(
 	participant.save()
 	return participant
 
-def tournament_response( 
-	player:Player, 
-	game_room:GameRoom, 
+def tournament_response(
+	player:Player,
+	game_room:GameRoom,
 	tournament: Tournament,
 	internal_status: str,
 	http_status: int) -> JsonResponse:
@@ -224,7 +224,7 @@ def _join_tournament(
 	tournament: Tournament,
 	participant: TournamentParticipant=None) -> JsonResponse:
 
-	# join the tournament by either reconnecting, 
+	# join the tournament by either reconnecting,
 	# joining a room or create a new room.
 
 	if not participant:
@@ -239,7 +239,7 @@ def _join_tournament(
 			).values_list('game_room', flat=True)
 
 	player_room = PlayerRoom.objects.filter(
-		player=player, 
+		player=player,
 		game_room__in=game_rooms_in_tournament).first()
 
 	# if player is already in a room return it (reconnecting him to the room)
@@ -271,8 +271,8 @@ def _join_tournament(
 
 def _create_tournament(player: Player, game:Game, max_participants=MAX_TOURNAMENT_PARTICIPANTS, local=False) -> GameRoom:
 	tournament = Tournament(
-		game=game, 
-		tournament_id=str(uuid.uuid4()), 
+		game=game,
+		tournament_id=str(uuid.uuid4()),
 		max_participants=max_participants,
 		local=local)
 	print("NEW TOURNAMENT", tournament.tournament_id, flush=True)
@@ -287,7 +287,7 @@ def _create_tournament(player: Player, game:Game, max_participants=MAX_TOURNAMEN
 	return tournament, game_room
 
 def create_or_join_tournament(player: Player, game:Game, max_participants=MAX_TOURNAMENT_PARTICIPANTS) -> JsonResponse:
-	# if the player is not a participant, 
+	# if the player is not a participant,
 	# try to join the oldest tournament that isn't full.
 	tournament = Tournament.objects.filter(
 		game__game_name=game.game_name,
@@ -304,7 +304,7 @@ def create_or_join_tournament(player: Player, game:Game, max_participants=MAX_TO
 @check_request
 def create_tournament_view(request: HttpRequest, user_data: dict, game:Game, json_request, local) -> JsonResponse:
 	'''
-	TODO: 
+	TODO:
 	this creates a tournament and returns the tournament id.
 	NOTE: if it is a named tournament, it becomes public.
 	'''
@@ -313,10 +313,10 @@ def create_tournament_view(request: HttpRequest, user_data: dict, game:Game, jso
 		return JsonResponse({
 				'status': 0,
 				'message': f"Missing required field: max_players"
-				}, 
+				},
 				status=400)
 	player, created = Player.objects.get_or_create(
-		player_name="host", 
+		player_name="host",
 		user_id=int(user_data['user_id']))
 	try:
 		max_players = int(json_request['max_players'])
@@ -324,11 +324,11 @@ def create_tournament_view(request: HttpRequest, user_data: dict, game:Game, jso
 		if not (max_players > 3 and (max_players & (max_players - 1)) == 0 and max_players < 17):
 			return JsonResponse({
 			'status': 0,
-			'message': f"Invalid amount of players, should be one of 4, 8 or 16"}, 
+			'message': f"Invalid amount of players, should be one of 4, 8 or 16"},
 			status=400)
 		tournament = Tournament(
-			game=game, 
-			tournament_id=str(uuid.uuid4()), 
+			game=game,
+			tournament_id=str(uuid.uuid4()),
 			max_participants=max_players,
 			local=local
 		)
@@ -339,7 +339,7 @@ def create_tournament_view(request: HttpRequest, user_data: dict, game:Game, jso
 	except ValueError:
 		return JsonResponse({
 			'status': 0,
-			'message': f"max_players is not an integer"}, 
+			'message': f"max_players is not an integer"},
 			status=400)
 
 @check_request
@@ -352,13 +352,13 @@ def get_tournament_room(request: HttpRequest, user_data: dict, game:Game, json_r
 		if not 'round' in json_request:
 			return JsonResponse({
 				'status': 0,
-				'message': f"Missing required field: round"}, 
+				'message': f"Missing required field: round"},
 				status=400)
 		current_round = int(json_request['round'])
 		if current_round > 3 and current_round < 0:
 			return JsonResponse({
 				'status': 0,
-				'message': f"Invalid round number"}, 
+				'message': f"Invalid round number"},
 				status=400)
 		earliest_room = TournamentGameRoom.objects.filter(
 			tournament=tournament.tournament_id,
@@ -366,13 +366,13 @@ def get_tournament_room(request: HttpRequest, user_data: dict, game:Game, json_r
 		if not earliest_room:
 			return JsonResponse({
 			'status': 0,
-			'message': f"No more rooms for current round"}, 
+			'message': f"No more rooms for current round"},
 			status=404)
 		players = [player for player in PlayerRoom.objects.filter(game_room=earliest_room.game_room)]
 		if not players:
 			return JsonResponse({
 			'status': 0,
-			'message': f"room is empty"}, 
+			'message': f"room is empty"},
 			status=400)
 		print("EARLIEST ROOM", earliest_room.tournament_round, flush=True)
 		return JsonResponse({
@@ -387,7 +387,7 @@ def get_tournament_room(request: HttpRequest, user_data: dict, game:Game, json_r
 		print("ERROR", e, flush=True)
 		return JsonResponse({
 			'status': 0,
-			'message': f"round is not an integer"}, 
+			'message': f"round is not an integer"},
 			status=400)
 
 @check_request
@@ -395,7 +395,7 @@ def get_tournament_room(request: HttpRequest, user_data: dict, game:Game, json_r
 def	find_tournament_view(request: HttpRequest, user_data: dict, game: Game, json_request, local, tournament=None) -> JsonResponse:
 	if not local:
 		player, created = Player.objects.get_or_create(
-			player_name="host", 
+			player_name="host",
 			user_id=int(user_data['user_id']))
 	else:
 		player, created = Player.objects.get_or_create(
@@ -411,7 +411,7 @@ def	find_tournament_view(request: HttpRequest, user_data: dict, game: Game, json
 			if tournament:
 				return JsonResponse({
 					'status': 0,
-					'message': f"Cannot join tournament reason: {participant.status}"}, 
+					'message': f"Cannot join tournament reason: {participant.status}"},
 					status=400)
 			return create_or_join_tournament(player, game)
 		elif participant.status == "PLAYING":
@@ -457,7 +457,7 @@ def game_stats(request: HttpRequest, user_id : int) -> JsonResponse:
 			}
 			continue
 		nb_games += 1
-	
+
 		games_data = []
 		total_points = 0
 		total_total_points = 0

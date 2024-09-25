@@ -35,6 +35,7 @@ INSTALLED_APPS = [
 	'common',
 	'channels',
 	'pong',
+    'snake',
 	'games',
     'django.contrib.admin',
     'django.contrib.auth',
