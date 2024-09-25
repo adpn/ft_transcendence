@@ -58,8 +58,8 @@ const Games = async () => `
 <div class="row">
 <div class="row text-center">
 	<div class="canvas-container position-relative" >
-		<canvas id="gameCanvas2D" class="w-100 border"></canvas>
-        <canvas id="gameCanvas3D" class="w-100 border"></canvas>
+		<canvas id="gameCanvas2D" class="w-100 border" display="none"></canvas>
+        <canvas id="gameCanvas3D" class="w-100 border" display="none"></canvas>
 		<div id="game-ui" class="position-absolute top-0 start-0 w-100 h-100 flex-column align-items-center justify-content-center bg-dark">
 			<div id="loading-overlay" class="loading-overlay position-absolute top-0 start-0 w-100 h-100 flex-column align-items-center justify-content-center bg-dark" aria-hidden="true">
 				<div class="spinner"></div>
