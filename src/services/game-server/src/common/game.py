@@ -4,6 +4,8 @@ import asyncio
 import os
 import django
 import time
+import urllib
+import html
 
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
@@ -262,6 +264,7 @@ class GameSession(object):
 class QuickGameMode(object):
 	def __init__(self, channel_layer: BaseChannelLayer) -> None:
 		self.channel_layer = channel_layer
+		self.game_room = None
 
 	async def ready(self, session: GameSession, room_name: str, game_room: GameRoom, state_callback) -> None:
 		await self.channel_layer.group_send(
@@ -272,6 +275,7 @@ class QuickGameMode(object):
 				'status': 'ready'
 				}
 		})
+		self.game_room = game_room
 		if not await in_session(game_room):
 			asyncio.create_task(session.start(state_callback))
 			session.resume()
@@ -284,7 +288,20 @@ class QuickGameMode(object):
 		return data
 
 	async def handle_disconnection(self):
+		# TODO: delete room if there is only one player.
 		pass
+	
+	async def get_participants(self, user):
+		players = Player.objects.filter(
+			playerroom__game_room=self.game_room)
+		result = []
+		async for player in players:
+			result.append({
+				'player_name': player.player_name if player.is_guest 
+					else user['username'],
+				'game_mode': 'quick-game'
+				})
+		return result
 
 class TournamentMode(object):
 	def __init__(self,
@@ -354,6 +371,22 @@ class TournamentMode(object):
 		await self.channel_layer.group_discard(
 			self._tournament_id,
 			self._channel_name)
+	
+	async def get_participants(self, user):
+		participants = TournamentParticipant.objects.filter(
+			tournament=self._tournament)
+		# Get all players for the given tournament
+		# You can loop through and access player information
+		result = []
+		async for participant in participants:
+			player = participant.player
+			result.append({
+				'user_id': player.user_id, 
+				'player_name': player.player_name if player.is_guest else user['username'],
+				'player_status': participant.status.lower(),
+				'game_mode': 'tournament'
+				})
+		return result
 
 class GameServer(object):
 	def __init__(self, game_factory):
@@ -498,8 +531,6 @@ class LocalMode(object):
 
 	# in local mode there is no waiting time.
 	async def tournament_message(self, event, game_mode):
-		# TODO: since there is only one client no need for tournament messages ?
-		# TODO:
 		pass
 
 	async def flush_game_session(self, data):
@@ -655,7 +686,6 @@ class OnlineMode(object):
 				self.room_name,
 				self.game_room,
 				self.state_callback)
-		# TODO: send all participants to clients.
 
 	async def flush_game_session(self, data):
 		if data['player'] == self.player_position:
@@ -734,9 +764,11 @@ class GameConsumer(AsyncWebsocketConsumer):
 	async def connect(self):
 		self.room_name = room_name = self.scope['url_route']['kwargs']['room_name']
 		query_string = self.scope.get('query_string').decode('utf-8')
-		params = dict(param.split('=') for param in query_string.split('&') if '=' in param)
-		token = params.get('token')
-		csrf = params.get('csrf_token')
+		params = urllib.parse.parse_qs(query_string)
+		token = params.get('token', [''])[0]  # Use the first element if available
+		csrf = params.get('csrf_token', [''])[0]
+		token = html.escape(token)
+		csrf = html.escape(csrf)
 
 		if not token and not csrf:
 			print("NOT TOKEN!!!", flush=True)
@@ -766,8 +798,16 @@ class GameConsumer(AsyncWebsocketConsumer):
 		# create game locality mode.
 		if params.get('local'):
 			# TODO: return an error of player1 and player2 fields are missing.
-			player1 = params.get('player1')
-			player2 = params.get('player2')
+			player1 = params.get('player1', [''])[0]
+			player2 = params.get('player2', [''])[0]
+			if player1 == player2:
+				await self.accept()
+				await self.send_json({
+					"type": "websocket.close",
+					"code": 4000,  # Custom close code
+					"reason": "Invalid player names!"
+				})
+				await self.close()
 			self._game_locality = game_locality = LocalMode(
 				self._game_server,
 				[player1, player2],
@@ -832,6 +872,17 @@ class GameConsumer(AsyncWebsocketConsumer):
 		else:
 			self._game_mode = game_mode = QuickGameMode(self.channel_layer)
 		await self.channel_layer.group_add(self.room_name, self.channel_name)
+		# send participants to clients.
+		await self.channel_layer.group_send(
+			self.room_name,
+			{
+				'type': 'game_state',
+				'message': {
+					'type': 'participants',
+					'participants': await self._game_mode.get_participants(user)
+				}
+			})
+		# TODO: need to query all the participants of a room or tournament and send them to clients.
 		# TODO: (fix for same player reconnection )store the channel name in the database. along with the player_id.
 		# if there is match, close the previous channel. decrement current players.
 		# previous_channel_name = await self.get_channel(self.client_id)
@@ -871,4 +922,5 @@ class GameConsumer(AsyncWebsocketConsumer):
 		await self.send(text_data=json.dumps(event['message']))
 
 	async def tournament_message(self, event):
-		await self._game_locality.tournament_message(event, self._game_mode)
+		await self._game_locality.tournament_message(
+			event, self._game_mode)

@@ -1,0 +1,13 @@
+GAME SERVER
+
+- display end message and winner in the game end state
+- display participants (tournament)
+- display playing order (local only ?)
+- add a next round state with a countdown before moving to the next round.
+- change the websocket connections to be /games/room-id and put game servers in game.py
+
+- send player id in the from the Game Server when players join.
+- add connection protections (if the same player connects twice he should be disconnected)
+- remove "round" requirement in the next_room request.
+
+- put the django SECRET_KEY in .env

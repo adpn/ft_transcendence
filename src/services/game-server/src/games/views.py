@@ -31,6 +31,7 @@ def check_request(func):
 			Game.objects.get_or_create(game_name='snake', min_players=2)
 			INITIALIZED = True
 		user_data = auth.get_user(request)
+		print("USER", user_data, flush=True)
 		if not user_data:
 			return JsonResponse({
 				'status': 0,
