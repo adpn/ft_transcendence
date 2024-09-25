@@ -3,13 +3,8 @@ import { getCookie } from "./auth.js";
 export const navigateTo = async url => {
 	history.pushState(null, null, url);
 	await router();
-	// const matches = url.match('https://[^/]*/');
-	// if (matches && matches.length) {
-	//     window.dispatchEvent(new Event(url.substr(matches[0].length)));
-	// }
 };
 
-// Router function to handle routes
 const router = async () => {
 	const routes = [
 		{ path: "/", view: Home },
@@ -20,7 +15,6 @@ const router = async () => {
 		{ path: "/user/:username", view: UserProfile }
 	];
 
-	// Find a matching route or return 404
 	const potentialMatches = routes.map(route => {
 		const pathRegex = new RegExp("^" + route.path.replace(/:\w+/g, "(.+)") + "$");
 		return {
@@ -39,14 +33,12 @@ const router = async () => {
 	}
 
 	const params = match.result.slice(1);
-	// Render the view
 	document.getElementById('app').innerHTML = await match.route.view(...params);
 
 	if (match.route.path == "/game")
 		window.dispatchEvent(new Event("game"));
 };
 
-// View functions
 const Home = () => `
 	<div class="text-center">
 		<h1>Home Page</h1>
@@ -59,7 +51,7 @@ const Games = async () => `
 <div class="row text-center">
 	<div class="canvas-container position-relative" >
 		<canvas id="gameCanvas2D" class="w-100 border"></canvas>
-        <canvas id="gameCanvas3D" class="w-100 border"></canvas>
+		<canvas id="gameCanvas3D" class="w-100 border"></canvas>
 		<div id="game-ui" class="position-absolute top-0 start-0 w-100 h-100 flex-column align-items-center justify-content-center bg-dark">
 			<div id="loading-overlay" class="loading-overlay position-absolute top-0 start-0 w-100 h-100 flex-column align-items-center justify-content-center bg-dark" aria-hidden="true">
 				<div class="spinner"></div>
@@ -265,16 +257,14 @@ const Friends = async () => {
 	return document.getElementById('app').innerHTML;
 };
 
-// change so that it manages two games, snake and pong
 const Stats = async () => {
 	const token = localStorage.getItem('auth_token');
 
-	// Render the basic structure of the Stats page
 	const app_content = `
 	<div class="container bg-light py-4">
 		<div class="text-center">
 			<h1 class="mb-4">Stats Page</h1>
-			<div id="total-stats" class="mb-5 row">
+			<div id="total-stats" class="mb-5 row d-flex justify-content-center">
 				<div class="col-md-6" id="pong-stats">
 					<p class="font-weight-bold text-primary">Loading pong stats...</p>
 				</div>
@@ -284,7 +274,7 @@ const Stats = async () => {
 			</div>
 		</div>
 
-		<div id="game-history">
+		<div id="game-history" class="container mt-5">
 			<h2 class="text-center mb-4">Game History</h2>
 			<div class="row">
 				<div class="col-md-6">
@@ -325,16 +315,6 @@ const Stats = async () => {
 		return document.getElementById('app').innerHTML;
 	}
 
-	if (statsData.status === 0) {
-		document.getElementById('app').innerHTML = `
-			<div class="container text-center py-5">
-				<h1>Stats Page</h1>
-				<p>No games played yet.</p>
-			</div>
-		`;
-		return document.getElementById('app').innerHTML;
-	}
-
 	updateGameStats('pong', statsData.pong);
 	updateGameStats('snake', statsData.snake);
 
@@ -345,10 +325,9 @@ function updateGameStats(gameType, stats) {
 	const statsContainer = document.getElementById(`${gameType}-stats`);
 	const gameHistoryList = document.getElementById(`${gameType}-history-list`);
 
-	// Update stats section
-	if (stats) {
+	if (stats && stats.total_games > 0) {
 		statsContainer.innerHTML = `
-		<div class="row">
+		<div class="row d-flex justify-content-center">
 			<h3 class="text-center">${gameType.charAt(0).toUpperCase() + gameType.slice(1)}</h3>
 			<div class="col-md-6 card p-4 mx-2 mb-4 shadow-sm">
 				<p class="h5"><strong>Total Games:</strong> ${stats.total_games}</p>
@@ -380,8 +359,8 @@ function updateGameStats(gameType, stats) {
 		</div>
 		`;
 
-		// Update game history
 		gameHistoryList.innerHTML = '';
+		console.log(stats.games);
 		stats.games.forEach(game => {
 			const listItem = document.createElement("li");
 			listItem.className = `list-group-item game-stat ${game.is_winner ? 'bg-success text-white' : 'bg-danger text-white'}`;
@@ -399,7 +378,7 @@ function updateGameStats(gameType, stats) {
 		});
 	} else {
 		statsContainer.innerHTML = `
-		<div class="row">
+		<div class="row d-flex justify-content-center">
 			<h3 class="text-center">${gameType.charAt(0).toUpperCase() + gameType.slice(1)}</h3>
 			<div class="col-md-6 card p-4 mx-2 mb-4 shadow-sm">
 				<p class="h5">No games played yet.</p>
@@ -460,105 +439,83 @@ const UserProfile = async (username) => {
 	const friendship = document.getElementById('friendship');
 	friendship.innerHTML = get_friendship_content(data.friendship, data.id);
 
-		if (Object.keys(data.stats).length === 0) {
-			userStats.innerHTML = `
-			<div class="col-12 mb-3">
+	if (data.stats.pong && data.stats.pong.total_games > 0) {
+		const pongStats = data.stats.pong;
+		userStats.innerHTML += `
+		<div class="col-12 mb-3">
 			<h4 class="text-dark">Pong Stats</h4>
-			</div>
-			<div class="col-md-5 card p-4 mx-2 mb-4 shadow-sm">
-				<p class="h5">No games played yet.</p>
-			</div>
+		</div>
+		<div class="col-md-5 card p-4 mx-2 mb-4 shadow-sm">
+			<p class="h5"><strong>Total Games:</strong> ${pongStats.total_games}</p>
+			<p class="h5"><strong>Average Score:</strong> ${pongStats.average_score}</p>
+			<p class="h5"><strong>Total Playtime:</strong> ${pongStats.playtime}</p>
+		</div>
 
-			<div class="col-12 mb-3 mt-4">
+		<div class="col-md-5 card p-4 mx-2 mb-4 shadow-sm">
+			<p class="h5"><strong>Win Percentage:</strong> <span class="text-success fw-bold">${pongStats.win_percentage}%</span></p>
+			<p class="h5"><strong>Precision:</strong> <span class="text-primary fw-bold">${pongStats.precision}%</span></p>
+		</div>
+
+		<div class="col-10 mt-3">
+			<p class="mb-2">Win Percentage</p>
+			<div class="progress">
+				<div class="progress-bar bg-success" role="progressbar" style="width: ${pongStats.win_percentage}%;" aria-valuenow="${pongStats.win_percentage}" aria-valuemin="0" aria-valuemax="100">${pongStats.win_percentage}%</div>
+			</div>
+		</div>
+
+		<div class="col-10 mt-3">
+			<p class="mb-2">Precision</p>
+			<div class="progress">
+				<div class="progress-bar bg-primary" role="progressbar" style="width: ${pongStats.precision}%;" aria-valuenow="${pongStats.precision}" aria-valuemin="0" aria-valuemax="100">${pongStats.precision}%</div>
+			</div>
+		</div>
+		`;
+	} else {
+		userStats.innerHTML += `
+		<div class="col-12 mb-3">
+			<h4 class="text-dark">Pong Stats</h4>
+		</div>
+		<div class="col-md-5 card p-4 mx-2 mb-4 shadow-sm">
+			<p class="h5">No games played yet.</p>
+		</div>
+		`;
+	}
+
+	if (data.stats.snake && data.stats.snake.total_games > 0) {
+		const snakeStats = data.stats.snake;
+		userStats.innerHTML += `
+		<div class="col-12 mb-3 mt-4">
 			<h4 class="text-dark">Snake Stats</h4>
+		</div>
+		<div class="col-md-5 card p-4 mx-2 mb-4 shadow-sm">
+			<p class="h5"><strong>Total Games:</strong> ${snakeStats.total_games}</p>
+			<p class="h5"><strong>Average Score:</strong> ${snakeStats.average_score}</p>
+			<p class="h5"><strong>Total Playtime:</strong> ${snakeStats.playtime}</p>
+		</div>
+
+		<div class="col-md-5 card p-4 mx-2 mb-4 shadow-sm">
+			<p class="h5"><strong>Win Percentage:</strong> <span class="text-success fw-bold">${snakeStats.win_percentage}%</span></p>
+			<p class="h5"><strong>High Score:</strong> <span class="text-primary fw-bold">${snakeStats.high_score}</span></p>
+		</div>
+
+		<div class="col-10 mt-3">
+			<p class="mb-2">Win Percentage</p>
+			<div class="progress">
+				<div class="progress-bar bg-success" role="progressbar" style="width: ${snakeStats.win_percentage}%;" aria-valuenow="${snakeStats.win_percentage}" aria-valuemin="0" aria-valuemax="100">${snakeStats.win_percentage}%</div>
 			</div>
-			<div class="col-md-5 card p-4 mx-2 mb-4 shadow-sm">
-				<p class="h5">No games played yet.</p>
-			</div>
-			`;
-		}
-		else {
-			// Check if Pong stats exist
-			if (data.stats.pong) {
-				const pongStats = data.stats.pong;
-				userStats.innerHTML += `
-				<div class="col-12 mb-3">
-					<h4 class="text-dark">Pong Stats</h4>
-				</div>
-				<div class="col-md-5 card p-4 mx-2 mb-4 shadow-sm">
-					<p class="h5"><strong>Total Games:</strong> ${pongStats.total_games}</p>
-					<p class="h5"><strong>Average Score:</strong> ${pongStats.average_score}</p>
-					<p class="h5"><strong>Total Playtime:</strong> ${pongStats.playtime}</p>
-				</div>
-
-				<div class="col-md-5 card p-4 mx-2 mb-4 shadow-sm">
-					<p class="h5"><strong>Win Percentage:</strong> <span class="text-success fw-bold">${pongStats.win_percentage}%</span></p>
-					<p class="h5"><strong>Precision:</strong> <span class="text-primary fw-bold">${pongStats.precision}%</span></p>
-				</div>
-
-				<div class="col-10 mt-3">
-					<p class="mb-2">Win Percentage</p>
-					<div class="progress">
-						<div class="progress-bar bg-success" role="progressbar" style="width: ${pongStats.win_percentage}%;" aria-valuenow="${pongStats.win_percentage}" aria-valuemin="0" aria-valuemax="100">${pongStats.win_percentage}%</div>
-					</div>
-				</div>
-
-				<div class="col-10 mt-3">
-					<p class="mb-2">Precision</p>
-					<div class="progress">
-						<div class="progress-bar bg-primary" role="progressbar" style="width: ${pongStats.precision}%;" aria-valuenow="${pongStats.precision}" aria-valuemin="0" aria-valuemax="100">${pongStats.precision}%</div>
-					</div>
-				</div>
-				`;
-			} else {
-				userStats.innerHTML += `
-				<div class="col-12 mb-3">
-					<h4 class="text-dark">Pong Stats</h4>
-				</div>
-				<div class="col-md-5 card p-4 mx-2 mb-4 shadow-sm">
-					<p class="h5">No games played yet.</p>
-				</div>
-				`
-
-			}
-
-			// Check if Snake stats exist
-			if (data.stats.snake) {
-				const snakeStats = data.stats.snake;
-				userStats.innerHTML += `
-				<div class="col-12 mb-3 mt-4">
-					<h4 class="text-dark">Snake Stats</h4>
-				</div>
-				<div class="col-md-5 card p-4 mx-2 mb-4 shadow-sm">
-					<p class="h5"><strong>Total Games:</strong> ${snakeStats.total_games}</p>
-					<p class="h5"><strong>Average Score:</strong> ${snakeStats.average_score}</p>
-					<p class="h5"><strong>Total Playtime:</strong> ${snakeStats.playtime}</p>
-				</div>
-
-				<div class="col-md-5 card p-4 mx-2 mb-4 shadow-sm">
-					<p class="h5"><strong>Win Percentage:</strong> <span class="text-success fw-bold">${snakeStats.win_percentage}%</span></p>
-					<p class="h5"><strong>High Score:</strong> <span class="text-danger fw-bold">${snakeStats.high_score}</span></p>
-				</div>
-
-				<div class="col-10 mt-3">
-					<p class="mb-2">Win Percentage</p>
-					<div class="progress">
-						<div class="progress-bar bg-success" role="progressbar" style="width: ${snakeStats.win_percentage}%;" aria-valuenow="${snakeStats.win_percentage}" aria-valuemin="0" aria-valuemax="100">${snakeStats.win_percentage}%</div>
-					</div>
-				</div>
-				`;
-			}
-			else {
-				userStats.innerHTML += `
-				<div class="col-12 mb-3 mt-4">
-					<h4 class="text-dark">Snake Stats</h4>
-				</div>
-				<div class="col-md-5 card p-4 mx-2 mb-4 shadow-sm">
-					<p class="h5">No games played yet.</p>
-				</div>
-				`
-			}
-		}
+		</div>
+		`;
+	}
+	else {
+		userStats.innerHTML += `
+		<div class="col-12 mb-3 mt-4">
+			<h4 class="text-dark">Snake Stats</h4>
+		</div>
+		<div class="col-md-5 card p-4 mx-2 mb-4 shadow-sm">
+			<p class="h5">No games played yet.</p>
+		</div>
+		`;
+	}
 
 	return document.getElementById('app').innerHTML;
 };

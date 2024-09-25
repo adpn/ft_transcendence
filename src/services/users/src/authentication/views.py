@@ -376,8 +376,11 @@ def change_username_view(request : HttpRequest) -> JsonResponse:
 	if User.objects.filter(username=data["username"]).exists():
 		return JsonResponse({'status': 0, 'message' : 'Username already exists'}, status=400)
 	user = User.objects.get(id=request.user.id)
-	user.username = data["username"]
-	user.save()
+	try:
+		user.username = data["username"]
+		user.save()
+	except DataError:
+		return JsonResponse({'status': 0, 'message': "Username too long"}, status=400)		
 	return JsonResponse({'status': 1, 'message': 'Username changed', 'username': data['username']}, status=200)
 
 def change_password_view(request : HttpRequest) -> JsonResponse:

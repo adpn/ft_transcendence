@@ -6,7 +6,6 @@ export function getCookie(name) {
 		var cookies = document.cookie.split(';');
 		for (var i = 0; i < cookies.length; i++) {
 			var cookie = cookies[i].trim();
-			// Does this cookie string begin with the name we want?
 			if (cookie.substring(0, name.length + 1) == (name + '=')) {
 				cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
 				break;
@@ -105,7 +104,6 @@ document.addEventListener("DOMContentLoaded", function() {
 		if (data.status === 1) {
 			localStorage.setItem('auth_token', data.token);
 			replaceLoginButtons(data.user);
-			console.log("HOST", window.location.host);
 			socket = new WebSocket('wss://' + window.location.host + '/users/status/');
 		}
 	});
@@ -156,7 +154,6 @@ document.addEventListener("DOMContentLoaded", function() {
 		});
 	});
 
-	// Signup form handling
 	var signupForm = document.getElementById("signup-form");
 	var signupUserName = document.getElementById("signup-username");
 	var signupPassword = document.getElementById("signup-password");
@@ -221,18 +218,4 @@ document.addEventListener("DOMContentLoaded", function() {
 			});
 		}
 	});
-
-	if (socket != null) {
-		socket.onopen = function(e) {
-			console.log("Connection established");
-		};
-
-		socket.onclose = function(e) {
-			console.log("Connection closed");
-		};
-
-		socket.onerror = function(error) {
-			console.error("WebSocket Error:", error);
-		};
-	}
 });
