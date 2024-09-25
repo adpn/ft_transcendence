@@ -22,6 +22,7 @@ from games.models import (
 	GameRoom,
 	Tournament,
 	TournamentParticipant)
+from games.views import _join_tournament
 
 @database_sync_to_async
 def get_player_room(user_id: str, game_room: str, player_name="host") -> PlayerRoom:
@@ -108,10 +109,11 @@ def qualify_player(player: Player, tournament: Tournament) -> None:
 	participant = TournamentParticipant.objects.filter(player=player, tournament=tournament).first()
 	participant.tournament_round += 1
 	participant.save(update_fields=['tournament_round'])
+	# creates or joins a room in the tournament.
+	_join_tournament(tournament.game, player, tournament, participant)
 
 @database_sync_to_async
 def eliminate_player(player: Player, tournament: Tournament) -> TournamentParticipant:
-	print("ELIMINATING", player, tournament, flush=True)
 	participant = TournamentParticipant.objects.filter(player=player, tournament=tournament).first()
 	participant.status = "ELIMINATED"
 	participant.save(update_fields=["status"])
@@ -343,6 +345,7 @@ class TournamentMode(object):
 			data["type"] = "win"
 			return data
 		await close_game_room(self._game_room)
+		# TODO: this should create a new game room for the tournament
 		await qualify_player(game_result.winner, tournament)
 		data["type"] = "round"
 		return data

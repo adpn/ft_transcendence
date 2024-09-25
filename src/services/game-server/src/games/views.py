@@ -222,7 +222,7 @@ def _join_tournament(
 	game: Game,
 	player: Player,
 	tournament: Tournament,
-	participant: TournamentParticipant=None):
+	participant: TournamentParticipant=None) -> JsonResponse:
 
 	# join the tournament by either reconnecting,
 	# joining a room or create a new room.
@@ -245,18 +245,12 @@ def _join_tournament(
 	# if player is already in a room return it (reconnecting him to the room)
 	if player_room:
 		print("RECONNECTION", player_room, flush=True)
-		return JsonResponse({
-			'ip_address': os.environ.get('IP_ADDRESS'),
-			'game_room_id': player_room.game_room.room_name,
-			'status': 'playing',
-			'player_id': player_room.player.player_name
-		}, status=200)
+		return tournament_response(player, player_room.game_room, tournament, 'playing', 200)
 
 	if not participant:
 		add_participant(player, tournament)
 
-	# get the oldest game_room in the tournament that isn't full
-	# TODO: (Maybe select the game room at a certain position given the participant position ?)
+	# get the oldest game_room in the tournament that isn't full 
 	game_room = GameRoom.objects.filter(
 		room_name__in=game_rooms_in_tournament,
 		num_players__lt=game.min_players
@@ -366,10 +360,8 @@ def get_tournament_room(request: HttpRequest, user_data: dict, game:Game, json_r
 				'status': 0,
 				'message': f"Invalid round number"},
 				status=400)
-		print("NEXT ROUND", current_round)
 		earliest_room = TournamentGameRoom.objects.filter(
 			tournament=tournament.tournament_id,
-			tournament_round=current_round,
 			game_room__closed=False).order_by('game_room__created_at').first()
 		if not earliest_room:
 			return JsonResponse({
@@ -382,12 +374,14 @@ def get_tournament_room(request: HttpRequest, user_data: dict, game:Game, json_r
 			'status': 0,
 			'message': f"room is empty"},
 			status=400)
+		print("EARLIEST ROOM", earliest_room.tournament_round, flush=True)
 		return JsonResponse({
 			'ip_address': os.environ.get('IP_ADDRESS'),
 			'game_room_id': earliest_room.game_room.room_name,
 			'status': 'playing',
 			'player1': players[0].player.player_name,
 			'player2': players[1].player.player_name,
+			'round': earliest_room.tournament_round
 		})
 	except ValueError as e:
 		print("ERROR", e, flush=True)

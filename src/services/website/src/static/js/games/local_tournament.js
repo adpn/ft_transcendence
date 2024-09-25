@@ -32,8 +32,8 @@ class ParticipantFormState {
 	generateForm(index) {
 		return `
 		<div class="col col-md-3 justify-content-center">
-			<form justify-content-center flex-column room-tag">
-				<h10 class="text-center">Room ${index + 1}</h10>
+			<form justify-content-center class="flex-column mb-2">
+				<h10 class="text-center mb-2">Room ${index + 1}</h10>
 				<input type="text" class="form-control player-tag bg-dark text-light flex-column mb-2 white-placeholder" id="player1-${index}" placeholder="Player Name">
 				<input type="text" class="form-control player-tag bg-dark text-light flex-column white-placeholder" id="player2-${index}" placeholder="Player Name">
 			</form>
@@ -112,10 +112,10 @@ class LocalTournamentGameState {
 		this.buttonGrid = new CustomGrid(context, 4);
 		this.context = context;
 		this.game = game;
-		this.endGameState = new GameEndedState(
+		this.gameEndState = new GameEndedState(
 			game, context, prevState, this)
 		this.playingState = new PlayingState(
-			game, context, this, this.endGameState);
+			game, context, this, this.gameEndState);
 		this.currentRound = 0;
 		this.tournament = null;
 	}
@@ -175,7 +175,7 @@ class LocalTournamentGameState {
 
 	startGame(data) {
 		console.log("STARTING GAME", data);
-		this.socket = new WebSocket(`wss://${data.ip_address}/ws/game/pong/${data.game_room_id}/?csrf_token=${getCookie("csrftoken")}&token=${localStorage.getItem("auth_token")}&local=true&player1=${data.player1}&player2=${data.player2}`);
+		this.socket = new WebSocket(`wss://${data.ip_address}/ws/game/${this.game.name}/${data.game_room_id}/?csrf_token=${getCookie("csrftoken")}&token=${localStorage.getItem("auth_token")}&local=true&player1=${data.player1}&player2=${data.player2}`);
 		if (this.socket.readyState > this.socket.OPEN) {
 			// todo: display error message in the loading window.
 			// this.cancel();
@@ -191,7 +191,6 @@ class LocalTournamentGameState {
 
 	async nextRoom() {
 		// plays the next room
-		console.log("CURRENT ROUND", this.currentRound);
 		const response = await fetch("/games/next_tournament_room/", {
 			method: "POST",
 			headers: {
@@ -212,10 +211,8 @@ class LocalTournamentGameState {
 			return
 		}
 		else if (response.status == 404) {
-			// try to move to the next round.
-			// TODO: call joinTournament again.
-			this.currentRound++;
-			return await this.nextRoom();
+			// stop when the're no more rooms.
+			return;
 		}
 		console.log("ERROR", await response.json());
 		throw new Error(`Error ${response.status}: Failed to start tournament`);
