@@ -26,6 +26,8 @@ function successAlertPlaceholder(message) {
 
 	setTimeout(() => {
 		var successAlert = document.getElementById('success-alert');
+		if (!successAlert)
+			return;
 		successAlert.classList.add('fade-out');
 		successAlert.addEventListener('transitionend', () => {
 			successAlert.remove();
@@ -224,11 +226,11 @@ document.addEventListener("DOMContentLoaded", function() {
 		socket.onopen = function(e) {
 			console.log("Connection established");
 		};
-		
+
 		socket.onclose = function(e) {
 			console.log("Connection closed");
 		};
-		
+
 		socket.onerror = function(error) {
 			console.error("WebSocket Error:", error);
 		};

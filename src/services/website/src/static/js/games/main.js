@@ -146,8 +146,8 @@ class GameMenu {
 		this.context.gameMenu.style.display = 'flex';
 		this.gamesGrid.render();
 		this.context.gameMenuHeader.textContent = 'CHOOSE GAME';
-		this.gamesGrid.addHTMLElement(`<button type="button" id="pongButton" class= btn btn-outline-light w-100 h-100">Pong</button>`);
-		this.gamesGrid.addHTMLElement(`<button type="button" id="pong3dButton" class= btn btn-outline-light w-100 h-100">Pong 3D</button>`);
+		this.gamesGrid.addHTMLElement(`<button type="button" id="pongButton" class= "btn btn-outline-light w-100 h-100">Pong</button>`);
+		this.gamesGrid.addHTMLElement(`<button type="button" id="pong3dButton" class= "btn btn-outline-light w-100 h-100">Pong 3D</button>`);
 		this.gamesGrid.addHTMLElement(`<button type="button" id="snakeButton" class="btn btn-outline-light w-100 h-100">Snake</button>`);
 		const pongButton = document.getElementById("pongButton");
 		const pong3dButton = document.getElementById("pong3dButton");

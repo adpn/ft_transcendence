@@ -519,8 +519,6 @@ function updatePositions() {
 }
 
 function updateScore() {
-	// console.log("updatescore ids:", object_ids);			// DEBUG
-	// console.log("updatescore score ids:", object_ids.score);			// DEBUG
 	if (game_data.score[0] != game_data.score_old[0]) {
 		let temp = scene.getObjectById(object_ids.score[0]);
 		if (temp) {
@@ -618,17 +616,11 @@ export var Pong3d = {
 			return ;
 		}
 		if (data.type == "goal") {
-			// console.log("goal event");						// DEBUG
 			game_data.score = data.score;
 			updateScore();
 			return ;
 		}
 		if (data.type == "start") {
-			// console.log("start event");						// DEBUG
-			// console.log("start ids:", object_ids);			// DEBUG
-			// console.log("start score ids:", object_ids.score);			// DEBUG
-			// console.log("start ball ids:", object_ids.ball);			// DEBUG
-			// console.log("start light ids:", object_ids.light);			// DEBUG
 			game_data.ball_size = data.ball_size;
 			game_data.racket_size = data.racket_size;
 			game_data.score = data.score;
