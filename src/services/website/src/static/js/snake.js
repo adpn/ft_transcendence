@@ -12,6 +12,8 @@ const DIR_UP = 0;
 const DIR_DOWN = 3;
 const DIR_LEFT = 1;
 const DIR_RIGHT = 2;
+const SIDE_LEFT = false;
+const SIDE_RIGHT = true;
 
 var grid_size = [20, 20];
 var block_size = 50;
@@ -26,80 +28,81 @@ var border_width;
 
 var socket;
 var canvas;
-var ctx;
+var ctx = null;
 var is_focus = false;
 var game_status = NOT_JOINED;
+var bytes_array = new Uint8Array(4);
 
 
-document.addEventListener("DOMContentLoaded", function () {
-	window.addEventListener("snake", loadSnake);
-});
+// document.addEventListener("DOMContentLoaded", function () {
+// 	window.addEventListener("snake", loadSnake);
+// });
 
-function loadSnake() {
-	canvas = document.getElementById("gameCanvas");
-	canvas.setAttribute("tabindex", "-1");
-	canvas.addEventListener("focus", function () { is_focus = true; });
-	canvas.addEventListener("blur", function () { is_focus = false; });
-	ctx = canvas.getContext("2d", { alpha: false });
-	window.addEventListener("resize", resizeCanvas, false);
-	if (game_status >= WON)
-		game_status = NOT_JOINED;
-	changeButton();
-	resizeCanvas();
-}
+// function loadSnake() {
+// 	canvas = document.getElementById("gameCanvas");
+// 	canvas.setAttribute("tabindex", "-1");
+// 	canvas.addEventListener("focus", function () { is_focus = true; });
+// 	canvas.addEventListener("blur", function () { is_focus = false; });
+// 	ctx = canvas.getContext("2d", { alpha: false });
+// 	window.addEventListener("resize", resizeCanvas, false);
+// 	if (game_status >= WON)
+// 		game_status = NOT_JOINED;
+// 	changeButton();
+// 	resizeCanvas();
+// }
 
-function connectGameRoom() {
-	fetch("/games/create_game/", {
-		method: "POST",
-		headers: {
-			"X-CSRFToken": getCookie("csrftoken"),
-			"Authorization": "Bearer " + localStorage.getItem("auth_token")
-		},
-		credentials: "include",
-			body: JSON.stringify({
-				"game": "snake"
-			})
-	})
-	.then((response) => {
-		if(!response.ok)
-			throw new Error(response.status);
-		return response.json();
-		})
-	.then(data => {
-		socket = new WebSocket("wss://" + data.ip_address + "/ws/game/snake/" + data.game_room_id + "/?csrf_token=" + getCookie("csrftoken") + "&token=" + localStorage.getItem("auth_token"));
-		if (socket.readyState > socket.OPEN)
-			throw new Error("WebSocket error: " + socket.readyState);
-		socket.addEventListener("close", disconnected);
-		socket.addEventListener("open", function () {
-			game_status = CONNECTING;
-			resizeCanvas();
-			changeButton();
-			socket.addEventListener("message", waitRoom);
-		});
-	})
-	.catch((error) => {
-		game_status = ERROR
-		resizeCanvas();
-		console.log(error);
-	});
-}
+// function connectGameRoom() {
+// 	fetch("/games/create_game/", {
+// 		method: "POST",
+// 		headers: {
+// 			"X-CSRFToken": getCookie("csrftoken"),
+// 			"Authorization": "Bearer " + localStorage.getItem("auth_token")
+// 		},
+// 		credentials: "include",
+// 			body: JSON.stringify({
+// 				"game": "snake"
+// 			})
+// 	})
+// 	.then((response) => {
+// 		if(!response.ok)
+// 			throw new Error(response.status);
+// 		return response.json();
+// 		})
+// 	.then(data => {
+// 		socket = new WebSocket("wss://" + data.ip_address + "/ws/game/snake/" + data.game_room_id + "/?csrf_token=" + getCookie("csrftoken") + "&token=" + localStorage.getItem("auth_token"));
+// 		if (socket.readyState > socket.OPEN)
+// 			throw new Error("WebSocket error: " + socket.readyState);
+// 		socket.addEventListener("close", disconnected);
+// 		socket.addEventListener("open", function () {
+// 			game_status = CONNECTING;
+// 			resizeCanvas();
+// 			changeButton();
+// 			socket.addEventListener("message", waitRoom);
+// 		});
+// 	})
+// 	.catch((error) => {
+// 		game_status = ERROR
+// 		resizeCanvas();
+// 		console.log(error);
+// 	});
+// }
 
 function cancel() {
 	socket.close();
 }
 
-function disconnected() {
-	if (game_status <= PLAYING)
-		game_status = DISCONNECTED;
-	resizeCanvas();
-	changeButton();
-}
+// function disconnected() {
+// 	if (game_status <= PLAYING)
+// 		game_status = DISCONNECTED;
+// 	resizeCanvas();
+// 	changeButton();
+// }
 
-function waitRoom(e) {
-	if (JSON.parse(e.data).status != "ready")
-		return ;
-	gameStart();
-}
+// function waitRoom(e) {
+// 	if (JSON.parse(e.data).status != "ready")
+// 		return ;
+// 	gameStart();
+// }
 
 function changeButton() {
 	switch (game_status) {
@@ -141,7 +144,10 @@ function takeInputDown(e) {
 	if (!is_focus || e.defaultPrevented) {
 		return ;
 	}
-	submitInput(extractDir(e.key), KEY_DOWN);
+	let dir = extractDir(e.key);
+	if (dir == -1)
+		return ;
+	submitInput(dir, KEY_DOWN, extractSide(e.key));
 	e.preventDefault();
 }
 
@@ -159,6 +165,23 @@ function extractDir(key) {
 		case "d":
 		case "ArrowRight":
 			return DIR_RIGHT;
+		default :
+			return -1;
+	}
+}
+
+function extractSide(key) {
+	switch (key) {
+		case "w":
+		case "a":
+		case "s":
+		case "d":
+			return SIDE_LEFT;
+		case "ArrowUp":
+		case "ArrowLeft":
+		case "ArrowDown":
+		case "ArrowRight":
+			return SIDE_RIGHT;
 	}
 }
 
@@ -170,41 +193,40 @@ function resizeCanvas() {
 	margins[0] = (canvas.width - block_size * grid_size[0]) / 2;
 	margins[1] = (canvas.height - block_size * grid_size[1]) / 2;
 	switch (game_status) {
-		case NOT_JOINED:
-			drawMessage("Welcome");
-			break ;
-		case CONNECTING:
-			drawMessage("Connecting...");
-			break ;
+		// case NOT_JOINED:
+		// 	drawMessage("Welcome");
+		// 	break ;
+		// case CONNECTING:
+		// 	drawMessage("Connecting...");
+		// 	break ;
 		case PLAYING:
 			drawFrame();
-			break ;
-		case WON:
-			drawMessage("Victory");
-			break ;
-		case LOST:
-			drawMessage("Defeat");
-			break ;
-		case DISCONNECTED:
-			drawMessage("Disconnected");
-			break ;
-		case ERROR:
-			drawMessage("Something went wrong");
+		// 	break ;
+		// case WON:
+		// 	drawMessage("Victory");
+		// 	break ;
+		// case LOST:
+		// 	drawMessage("Defeat");
+		// 	break ;
+		// case DISCONNECTED:
+		// 	drawMessage("Disconnected");
+		// 	break ;
+		// case ERROR:
+		// 	drawMessage("Something went wrong");
 	}
 }
 
-function gameStart() {
-	socket.removeEventListener("message", waitRoom);
-	socket.addEventListener("message", update);
-	game_status = PLAYING;
-	changeButton();
-	resizeCanvas();
-	window.addEventListener("keydown", takeInputDown, true);
-	canvas.focus();
-}
+// function gameStart() {
+// 	socket.removeEventListener("message", waitRoom);
+// 	socket.addEventListener("message", update);
+// 	game_status = PLAYING;
+// 	changeButton();
+// 	resizeCanvas();
+// 	window.addEventListener("keydown", takeInputDown, true);
+// 	canvas.focus();
+// }
 
 function gameOver(status) {
-	window.removeEventListener("keydown", takeInputDown, true);
 	game_status = LOST;
 	if (status == "win")
 		game_status = WON;
@@ -216,49 +238,53 @@ function gameTick() {
 	updateFrame();
 }
 
-function submitInput(dir, action) {
-	socket.send(new Uint8Array([false, dir, action]));
+function submitInput(dir, action, side) {
+	bytes_array[0] = false;
+	bytes_array[1] = dir;
+	bytes_array[2] = action;
+	bytes_array[3] = side;
+	socket.send(bytes_array);
 }
 
 function GiveUp() {
 	socket.send(new Uint8Array([true, false, false]));
 }
 
-function update(event) {
-	var received_data = JSON.parse(event.data);
-	if (received_data.type == "tick") {
-		if (received_data.tiles.length) {
-			for (const tile of received_data.tiles)
-				to_add.push(tile);
-			gameTick();
-		}
-		return ;
-	}
-	if (received_data.type == "grow") {
-		let updateUI = false;
-		if (snake_length[0] - snake_length[1] == 0)
-		{
-			current_ui = 0;
-			if (received_data.len[1] > received_data.len[0])
-				current_ui = 1;
-			updateUI = true;
-		}
-		snake_length = received_data.len;
-		if (updateUI)
-			drawFrame();
-		else
-			updateLengthScore();
-		return ;
-	}
-	if (received_data.type == "start") {
-		updateStart(received_data);
-		return ;
-	}
-	if (received_data.type == "end") {
-		gameOver(received_data.status);
-		return ;
-	}
-}
+// function update(event) {
+// 	var received_data = JSON.parse(event.data);
+// 	if (received_data.type == "tick") {
+// 		if (received_data.tiles.length) {
+// 			for (const tile of received_data.tiles)
+// 				to_add.push(tile);
+// 			gameTick();
+// 		}
+// 		return ;
+// 	}
+// 	if (received_data.type == "grow") {
+// 		let updateUI = false;
+// 		if (snake_length[0] - snake_length[1] == 0)
+// 		{
+// 			current_ui = 0;
+// 			if (received_data.len[1] > received_data.len[0])
+// 				current_ui = 1;
+// 			updateUI = true;
+// 		}
+// 		snake_length = received_data.len;
+// 		if (updateUI)
+// 			drawFrame();
+// 		else
+// 			updateLengthScore();
+// 		return ;
+// 	}
+// 	if (received_data.type == "start") {
+// 		updateStart(received_data);
+// 		return ;
+// 	}
+// 	if (received_data.type == "end") {
+// 		gameOver(received_data.status);
+// 		return ;
+// 	}
+// }
 
 function updateStart(data) {
 	grid_size = data.grid;
@@ -342,13 +368,90 @@ function drawTile(coords, value) {
 	}
 }
 
-function drawMessage(message) {
-	clearCanvas();
-	ctx.fillStyle = "white";
-	if (colors[ui_colors[current_ui]])
-		ctx.fillStyle = colors[ui_colors[current_ui]];
-	ctx.font = canvas.height / 15 + "px arial";
-	ctx.textBaseline = "middle";
-	ctx.textAlign = "center";
-	ctx.fillText(message, canvas.width / 2, canvas.height / 2);
-}
+// function drawMessage(message) {
+// 	clearCanvas();
+// 	ctx.fillStyle = "white";
+// 	if (colors[ui_colors[current_ui]])
+// 		ctx.fillStyle = colors[ui_colors[current_ui]];
+// 	ctx.font = canvas.height / 15 + "px arial";
+// 	ctx.textBaseline = "middle";
+// 	ctx.textAlign = "center";
+// 	ctx.fillText(message, canvas.width / 2, canvas.height / 2);
+// }
+
+export var Snake = {
+	name: "snake",
+	load(canv) {
+		canvas = canv;
+		canvas.setAttribute("tabindex", "-1");
+		canvas.addEventListener("focus", () => { is_focus = true; });
+		canvas.addEventListener("blur", () => { is_focus = false; });
+		if (!ctx) {
+			ctx = canvas.getContext("2d", { alpha: false });
+			if (!ctx)
+				throw Error("Couldn't create 2D drawing context");
+		}
+		window.addEventListener("resize", resizeCanvas, false);
+		game_status = PLAYING;
+		changeButton();
+		resizeCanvas();
+		canvas.focus();
+	},
+	start(sockt) {
+		socket = sockt;
+		game_status = PLAYING;
+		changeButton();
+		resizeCanvas();
+		canvas.focus();
+		window.addEventListener("keydown", takeInputDown, true);
+	},
+	clear() {
+		window.removeEventListener("keydown", takeInputDown, true);
+		window.removeEventListener("resize", resizeCanvas, false);
+		ctx = null;
+		if (socket) {
+			socket.close();
+			socket = null;
+		}
+	},
+	update(data) {
+		if (game_status != PLAYING)
+			return ;
+		if (data.type == "tick") {
+			if (data.tiles.length) {
+				for (const tile of data.tiles)
+					to_add.push(tile);
+				gameTick();
+			}
+			return ;
+		}
+		if (data.type == "grow") {
+			let updateUI = false;
+			if (snake_length[0] - snake_length[1] == 0)
+			{
+				current_ui = 0;
+				if (data.len[1] > data.len[0])
+					current_ui = 1;
+				updateUI = true;
+			}
+			snake_length = data.len;
+			if (updateUI)
+				drawFrame();
+			else
+				updateLengthScore();
+			return ;
+		}
+		if (data.type == "start") {
+			updateStart(data);
+			return ;
+		}
+		if (data.type == "end") {
+			gameOver(data.status);
+			return ;
+		}
+	},
+	giveUp(socket) {
+		bytes_array[0] = true;
+		socket.send(bytes_array);
+	}
+};

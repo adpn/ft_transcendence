@@ -54,29 +54,30 @@ const Home = () => `
     </div>
 `;
 
-const Pong = () => `
-<div class="row">
-<div class="row text-center">
-	<div class="canvas-container position-relative">
-		<canvas id="gameCanvas" class="w-100 border"></canvas>
-		<div id="game-menu" class="position-absolute top-50 start-50 translate-middle">
-			<button class="btn btn-primary mb-2" id="quick-game-button" type="button">Quick Game</button>
-		<br>
-			<button class="btn btn-secondary" id="tournament-button" type="button">Tournament</button>
-		</div>
-	</div>
-</div>
-<div id="game-button-container" class="text-center mt-3">
-	<button class="btn btn-success me-2" id="game-button" type="button">Find Game</button>
-</div>
-</div>
-`;
+// const Pong = () => `
+// <div class="row">
+// <div class="row text-center">
+// 	<div class="canvas-container position-relative">
+// 		<canvas id="gameCanvas" class="w-100 border"></canvas>
+// 		<div id="game-menu" class="position-absolute top-50 start-50 translate-middle">
+// 			<button class="btn btn-primary mb-2" id="quick-game-button" type="button">Quick Game</button>
+// 		<br>
+// 			<button class="btn btn-secondary" id="tournament-button" type="button">Tournament</button>
+// 		</div>
+// 	</div>
+// </div>
+// <div id="game-button-container" class="text-center mt-3">
+// 	<button class="btn btn-success me-2" id="game-button" type="button">Find Game</button>
+// </div>
+// </div>
+// `;
 
 const Games = async () => `
 <div class="row">
 <div class="row text-center">
 	<div class="canvas-container position-relative" >
-		<canvas id="gameCanvas" class="w-100 border"></canvas>
+		<canvas id="gameCanvas2D" class="w-100 border"></canvas>
+        <canvas id="gameCanvas3D" class="w-100 border"></canvas>
 		<div id="game-ui" class="position-absolute top-0 start-0 w-100 h-100 flex-column align-items-center justify-content-center bg-dark">
 		    <div id="loading-overlay" class="loading-overlay position-absolute top-0 start-0 w-100 h-100 flex-column align-items-center justify-content-center bg-dark" aria-hidden="true">
                 <div class="spinner"></div>

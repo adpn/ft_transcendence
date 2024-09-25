@@ -32,6 +32,8 @@ def get_player_room(user_id, player_name="host"):
 def create_game(request):
 	# add pong game in database
 	Game.objects.get_or_create(game_name='pong', min_players=2)
+	# add snake game in database
+	Game.objects.get_or_create(game_name='snake', min_players=2)
 	local = False
 
 	user_data = auth.get_user(request)

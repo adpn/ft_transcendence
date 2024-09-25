@@ -9,6 +9,9 @@
     <script type="importmap"> { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@v0.167.1/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.167.1/examples/jsm/" } } </script>
     {% load static %}
 	<link rel="icon" href="{% static 'favicon.ico' %}" type="image/x-icon">
+	<script type="module" src="{% static 'js/pong.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
+	<script type="module" src="{% static 'js/pong3d.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
+	<script type="module" src="{% static 'js/snake.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
     <script src="{% static 'js/games/common_states.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
     <script src="{% static 'js/games/locality.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
     <script src="{% static 'js/games/local_quick_game.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
@@ -16,9 +19,6 @@
     <script src="{% static 'js/games/online_quick_game.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
     <script src="{% static 'js/games/online_tournament.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
 	<script type="module" src="{% static 'js/games/main.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
-	<script type="module" src="{% static 'js/pong.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
-	<script type="module" src="{% static 'js/pong3d.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
-	<script type="module" src="{% static 'js/snake.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
     <script src="{% static 'js/settings.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
     <script type="module" src="{% static 'js/auth.js' %}">var CSRF_TOKEN = '{{ csrf_token }}';</script>
     <script type="module" src="{% static 'js/router.js' %}"></script>

@@ -1,4 +1,3 @@
-from common import game
 import time
 import asyncio
 from random import randrange
@@ -19,7 +18,15 @@ SNAKE1 = 2
 HEAD = 3
 HEAD1 = 4
 APPLE = 5
-GRID_COLORS = {EMPTY: "#202020", SNAKE: "#b0b0b0", SNAKE1: "#1cad33", HEAD: "#ffffff", HEAD1: "#5ced73", APPLE: "#f01e2c"}
+
+GRID_COLORS = ["#202020"]*(APPLE + 1)
+GRID_COLORS[EMPTY] = "#202020"
+GRID_COLORS[SNAKE] = "#b0b0b0"
+GRID_COLORS[SNAKE1] = "#1cad33"
+GRID_COLORS[HEAD] = "#ffffff"
+GRID_COLORS[HEAD1] = "#5ced73"
+GRID_COLORS[APPLE] = "#f01e2c"
+# GRID_COLORS = {EMPTY: "#202020", SNAKE: "#b0b0b0", SNAKE1: "#1cad33", HEAD: "#ffffff", HEAD1: "#5ced73", APPLE: "#f01e2c"}
 
 DIR_UP = 0
 DIR_DOWN = 3
@@ -27,7 +34,7 @@ DIR_LEFT = 1
 DIR_RIGHT = 2
 OPPOSITES = 3		# always equals sum of opposite directions
 
-class SnakeLogic(game.GameLogic):
+class SnakeLogic(object):
 	def __init__(self):
 		# client data
 		# server data

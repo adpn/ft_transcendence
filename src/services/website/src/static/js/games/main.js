@@ -1,3 +1,7 @@
+import { Pong } from "../pong.js"
+import { Pong3d } from "../pong3d.js"
+import { Snake } from "../snake.js"
+
 document.addEventListener("DOMContentLoaded", function () {
 	window.addEventListener("game", load_games)
 });
@@ -13,6 +17,7 @@ var gameMenuHeader;
 var gameMenuFooter;
 
 var games_context = {
+	canvas_context: null,
 	canvas: null,
 	loadingOverlay: null,
 	overlayBody: null,
@@ -97,6 +102,12 @@ class GameMenu {
 		this.pongButton.textContent = 'Pong';
 		this.pongButton.className = "btn btn-outline-light mb-2 w-100 h-100";
 
+		this.pong3dState = new GameModes(context, Pong3d, this);
+		this.pong3dButton = document.createElement('button');
+		this.pong3dButton.textContent = 'Pong 3D';
+		this.pong3dButton.className = "btn btn-outline-light mb-2 w-100 h-100";
+
+		this.snakeState = new GameModes(context, Snake, this);
 		this.snakeButton = document.createElement('button');
 		this.snakeButton.textContent = 'Snake';
 		this.snakeButton.className = "btn btn-outline-light mb-2 w-100 h-100";
@@ -106,6 +117,7 @@ class GameMenu {
 		this.backButton.className = "btn btn-outline-light mb-2";
 
 		this.pongButton.addEventListener('click', () => this.launch_game("pong"));
+		this.pong3dButton.addEventListener('click', () => this.launch_game("pong3d"));
 		this.snakeButton.addEventListener('click', () => this.launch_game("snake"));
 		this.context = context;
 
@@ -113,11 +125,35 @@ class GameMenu {
 
 	launch_game(game) {
 		if (game == "pong") {
+			this.set_canvas("2d");
 			this.context.state = this.pongState;
 			this.context.state.execute()
 		}
+		else if (game == "pong3d") {
+			this.set_canvas("3d");
+			this.context.state = this.pong3dState;
+			this.context.state.execute()
+		}
 		else if (game == "snake") {
-			console.log("SNAKE ?! SNAAAAAAAAAAAKE !!!")
+			this.set_canvas("2d");
+			this.context.state = this.snakeState;
+			this.context.state.execute()
+		}
+	}
+
+	set_canvas(context) {
+		if (this.context.canvas_context == context)
+			return ;
+		this.context.canvas_context = context;
+		if (context == "2d") {
+			games_context.canvas = document.getElementById("gameCanvas2D");
+			games_context.canvas.style.display = "";
+			document.getElementById("gameCanvas3D").style.display = "none";
+		}
+		else if (context == "3d") {
+			games_context.canvas = document.getElementById("gameCanvas3D");
+			games_context.canvas.style.display = "";
+			document.getElementById("gameCanvas2D").style.display = "none";
 		}
 	}
 
@@ -126,13 +162,13 @@ class GameMenu {
 		this.context.gameMenuHeader.textContent = 'Game';
 		this.context.gameMenuBody.innerHTML = '';
 		this.context.gameMenuBody.appendChild(this.pongButton);
+		this.context.gameMenuBody.appendChild(this.pong3dButton);
 		this.context.gameMenuBody.appendChild(this.snakeButton);
 		this.context.gameMenuFooter.innerHTML = '';
 	}
 }
 
 function load_games() {
-	games_context.canvas = document.getElementById("gameCanvas");
 	games_context.gameMenu = document.getElementById('game-menu');
 	games_context.gameMenu.style.display = 'none';
 	games_context.gameMenuHeader = document.getElementById("game-menu-header");

@@ -1,4 +1,3 @@
-from common import game
 import time
 
 DEF_BALL_SIZE = 10
@@ -20,7 +19,7 @@ BOUNCE_DOWN = 1
 BOUNCE_LEFT = 2
 BOUNCE_RIGHT = 3
 
-class PongLogic(game.GameLogic):
+class PongLogic(object):
 	def __init__(self):
 		# client data
 		self.ball_pos = [500, 500]		# x,y

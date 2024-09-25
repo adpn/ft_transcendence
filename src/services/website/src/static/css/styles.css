@@ -19,7 +19,15 @@ html, body {
 	align-items: center;
   }
 
-#gameCanvas {
+#gameCanvas2D {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+}
+
+#gameCanvas3D {
 	position: absolute;
 	top: 0;
 	left: 0;
