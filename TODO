@@ -9,5 +9,7 @@ GAME SERVER
 - send player id in the from the Game Server when players join.
 - add connection protections (if the same player connects twice he should be disconnected)
 - remove "round" requirement in the next_room request.
+- DELETE participant of tournament if player cancels -> decrease number of participants
+- set participant as eliminated if he does not reconnect after some time.
 
 - put the django SECRET_KEY in .env
