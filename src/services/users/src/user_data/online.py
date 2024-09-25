@@ -24,6 +24,7 @@ class OnlineStatusConsumer(AsyncWebsocketConsumer):
             print("Connecting user: ", self.user.id, flush=True)
             await set_player_online_status(self.user, True)
             await self.accept()
+            await self.channel_layer.group_add(f"user_{self.user.id}", self.channel_name)
         else:
             await self.close()
 
@@ -32,3 +33,8 @@ class OnlineStatusConsumer(AsyncWebsocketConsumer):
             print("Disconnecting user: ", self.user.id, flush=True)
             print("Close code: ", close_code, flush=True)
             await set_player_online_status(self.user, False)
+            await self.channel_layer.group_discard(f"user_{self.user.id}", self.channel_name)
+
+    async def user_logout(self, event):
+        print(f"Logging out user {self.user.id} via channels", flush=True)
+        await self.close()

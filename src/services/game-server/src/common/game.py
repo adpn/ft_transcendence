@@ -111,6 +111,7 @@ def qualify_player(player: Player, tournament: Tournament) -> None:
 
 @database_sync_to_async
 def eliminate_player(player: Player, tournament: Tournament) -> TournamentParticipant:
+	print("ELIMINATING", player, tournament, flush=True)
 	participant = TournamentParticipant.objects.filter(player=player, tournament=tournament).first()
 	participant.status = "ELIMINATED"
 	participant.save(update_fields=["status"])
@@ -152,6 +153,11 @@ def get_tournament(tournament_id: str) -> GameRoom:
 @database_sync_to_async
 def delete_guest_players(user_id: int) -> int:
 	Player.objects.filter(is_guest=True, user_id=user_id).delete()
+
+@database_sync_to_async
+def close_game_room(game_room: GameRoom) -> None:
+	game_room.closed = True
+	game_room.save(update_fields=['closed'])
 
 class GameSession(object):
 	def __init__(self, game_logic, game_server, game_room, game_mode=None, pause_timeout=60):
@@ -221,7 +227,8 @@ class GameSession(object):
 				self._game_result.winner_score = data["score"][data["player"]]
 				self._game_result.loser_score = data["score"][data["loser"]]
 				self._game_result.game = await get_game_room_game(self._game_room)
-				data = await self._game_mode.handle_end_game(data, self._game_result)
+				if self._game_mode:
+					data = await self._game_mode.handle_end_game(data, self._game_result)
 				for end in self._end_callbacks:
 					await end(data)
 				self.is_running = False
@@ -278,12 +285,18 @@ class QuickGameMode(object):
 		pass
 
 class TournamentMode(object):
-	def __init__(self, tournament: Tournament, tournament_id, channel_name, channel_layer: BaseChannelLayer) -> None:
+	def __init__(self,
+		tournament: Tournament,
+		tournament_id,
+		game_room,
+		channel_name,
+		channel_layer: BaseChannelLayer) -> None:
 		self._tournament = tournament
 		self.channel_layer = channel_layer
 		self._channel_name = channel_name
 		self._ready = False
 		self._tournament_id = tournament_id
+		self._game_room = game_room
 
 	async def ready(self,
 		session: GameSession,
@@ -301,7 +314,7 @@ class TournamentMode(object):
 						}
 				})
 			return
-		game_room = await get_game_room(room_name)
+		self._game_room = game_room = await get_game_room(room_name)
 		if not game_room:
 			return
 		await self.channel_layer.group_send(
@@ -329,6 +342,7 @@ class TournamentMode(object):
 			await delete_tournament(tournament)
 			data["type"] = "win"
 			return data
+		await close_game_room(self._game_room)
 		await qualify_player(game_result.winner, tournament)
 		data["type"] = "round"
 		return data
@@ -405,6 +419,7 @@ class LocalMode(object):
 		self._player_rooms = [None, None]
 
 	async def _load_players(self):
+		print("PLAYERS", self._player_ids, flush=True)
 		self._player_rooms[0] = player1_room = await get_player_room(
 			self._host_user_id,
 			self.room_name,
@@ -421,6 +436,7 @@ class LocalMode(object):
 		return self._loaded
 
 	async def validate_player(self):
+		print("GAME ROOM", self.room_name, self._host_user_id, flush=True)
 		if not await self._load_players():
 			return False
 		return True
@@ -458,8 +474,7 @@ class LocalMode(object):
 				position = await get_player_position(player_room)
 				session.set_player(
 					position,
-					await get_player_room_player(player_room)
-				)
+					await get_player_room_player(player_room))
 				self._players_positions[i] = position
 			session.on_session_end(self.flush_game_session)
 			session.on_connection_lost(self.connection_lost)
@@ -528,7 +543,8 @@ class LocalMode(object):
 			# TODO: delete all guest players
 			await delete_guest_players(self._host_user_id)
 			await self.channel_layer.group_discard(self.room_name, self.consumer.channel_name)
-			await game_mode.handle_disconnection()
+			if game_mode:
+				await game_mode.handle_disconnection()
 			await self.channel_layer.group_discard(
 			self.room_name, self.consumer.channel_name)
 
@@ -680,7 +696,8 @@ class OnlineMode(object):
 			session.pause()
 			# todo: send a message to clients when a player disconnects.
 			await self.channel_layer.group_discard(self.room_name, self.consumer.channel_name)
-			await game_mode.handle_disconnection()
+			if game_mode:
+				await game_mode.handle_disconnection()
 			self._disconnected = True
 			# TODO: delete player room -> if there is only one player in the GameRoom.
 
@@ -691,6 +708,9 @@ class GameConsumer(AsyncWebsocketConsumer):
 		self._game_session = None
 		self._disconnected = False
 		self._lost_connection = False
+
+		self._game_mode = None
+		self.game_room = None
 
 	async def send_json(self, data: dict):
 		await self.send(text_data=json.dumps(data))
@@ -716,6 +736,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 		csrf = params.get('csrf_token')
 
 		if not token and not csrf:
+			print("NOT TOKEN!!!", flush=True)
 			# If the room does not exist, close the connection
 			await self.accept()
 			await self.send_json({
@@ -728,6 +749,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 
 		user = auth.get_user_with_token(token, csrf)
 		if not user:
+			print("NOT USER!!!", flush=True)
 			# If the room does not exist, close the connection
 			await self.accept()
 			await self.send_json({
@@ -766,6 +788,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 		'''
 
 		if not await game_locality.validate_player():
+			print("INVALID PLAYER!!!", flush=True)
 			await self.accept()
 			await self.send_json({
 				"type": "websocket.close",
@@ -784,6 +807,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 			self._game_mode = game_mode = TournamentMode(
 				await get_tournament_room_tournament(tournament_room),
 				tournament_id,
+				self.game_room,
 				self.channel_name,
 				self.channel_layer
 			)
@@ -829,6 +853,8 @@ class GameConsumer(AsyncWebsocketConsumer):
 
 	# todo: notify the game loop to pause the game
 	async def disconnect(self, close_code):
+		if not self.game_room:
+			return
 		await self._game_locality.disconnect(self._game_mode)
 
 	# receives data from websocket.

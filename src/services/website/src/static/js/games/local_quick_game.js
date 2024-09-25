@@ -6,11 +6,9 @@
 class LocalQuickGameState {
 	constructor(context, game, prevState) {
 		this.gameEndState = new GameEndedState(game, context, prevState, this);
-		this.playingState = new PlayingState(game, context, prevState, this);
-
+		this.playingState = new PlayingState(game, context, this, this.gameEndState);
 		this.game = game;
 		this.prevState = prevState;
-
 		this.context = context;
 	}
 
@@ -40,17 +38,13 @@ class LocalQuickGameState {
 	}
 
 	handleEvent(event) {
-		// if (JSON.parse(event.data).status == "ready") {
-		// 	// todo: if a player was found, display his profile and move to PlayingState.
-		// 	// move to playing state.
-		// 	// todo: wait for players to be ready. (click on button?)
-		// 	// this.loadingModal.hide();
-		// 	this.context.loadingOverlay.style.display = 'none';
-		// 	this.context.gameUI.style.display = 'none';
-		// 	this.context.state = this.playingState;
-		// 	this.context.state.execute();
-		// 	this.game.start(this.socket);
-		// }
+		if (JSON.parse(event.data).status == "ready") {
+			// TODO: check if game already started.
+			this.context.loadingOverlay.style.display = 'none';
+			this.context.gameUI.style.display = 'none';
+			this.context.changeState(this.playingState);
+			this.game.start(this.socket);
+		}
 	}
 
 	async startGame(player1, player2) {
@@ -67,7 +61,7 @@ class LocalQuickGameState {
 					"mode": "local",
 					"guest_name": player1
 				})
-			})
+			});
 
 			if (!response1.ok) {
 				throw new Error(`Error ${response1.status}: Failed to create game`);
@@ -124,17 +118,17 @@ class LocalQuickGameState {
 
 	execute() {
 		this.context.gameMenu.style.display = 'block';
-		this.context.gameMenuHeader.textContent = 'Local Quick Game';
+		this.context.gameMenuHeader.textContent = `${this.game.name.toUpperCase()} LOCAL QUICK GAME`;
 		this.context.gameMenuBody.innerHTML = `
 		<form id="playerForm" class="d-flex flex-column justify-content-center">
-			<h10 class="text-center">Room</h10>
+			<h10 class="text-center mb-2">Room</h10>
 			<input type="text" class="form-control custom-input text-light mb-2" id="player1" placeholder="Player 1 Name" required>
 			<input type="text" class="form-control custom-input text-light" id="player2" placeholder="Player 2 Name" required>
 		</form>`;
 		this.context.gameMenuFooter.innerHTML = `
 		<div class="d-flex flex-row justify-content-center align-items-center">
-			<button type="button" id="playButton" class="btn btn-outline-light mx-2" disabled>Play</button>
-			<button type="button" id="backButton" class="btn btn-outline-light">Back</button>
+			<button type="button" id="playButton" class="btn btn-outline-light mx-2 w-100" disabled>Play</button>
+			<button type="button" id="backButton" class="btn btn-outline-light w-100">Back</button>
 		</div>
 		`;
 		// const grid = document.getElementById('game-room-grid');
