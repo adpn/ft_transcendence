@@ -6,6 +6,7 @@ class Game(models.Model):
 
 class Player(models.Model):
 	player_name = models.CharField(max_length=50)
+	user_name = models.CharField(max_length=50)
 	user_id = models.IntegerField(null=False)
 	is_guest = models.BooleanField(default=False)
 

@@ -34,6 +34,10 @@ def get_player_room(user_id: str, game_room: str, player_name="host") -> PlayerR
 		game_room__room_name=game_room).first()
 
 @database_sync_to_async
+def get_tournament_room_name(tournament_room: TournamentGameRoom) -> str:
+	return tournament_room.game_room.room_name
+
+@database_sync_to_async
 def get_player_room_player(player_room: PlayerRoom) -> Player:
 	return player_room.player
 
@@ -93,6 +97,10 @@ def delete_game_room(game_room):
 @database_sync_to_async
 def store_game_result(game_result):
 	game_result.save()
+
+@database_sync_to_async
+def get_tournament_room(game_room: GameRoom) -> TournamentGameRoom:
+	return TournamentGameRoom.objects.filter(game_room=game_room).first()
 
 @database_sync_to_async
 def get_tournament_room(game_room: GameRoom) -> TournamentGameRoom:
@@ -216,6 +224,8 @@ class GameSession(object):
 				asyncio.sleep(0.03)) # about 30 loops/second
 		self._game_result.game_duration = time.time() - t0
 		# TODO: protect storage of result
+		if not self._disconnected:
+			await store_game_result(self._game_result)
 		await delete_game_room(self._game_room)
 
 	async def game_loop(self, callback):
@@ -232,6 +242,7 @@ class GameSession(object):
 					self._game_result)
 			await set_in_session(self._game_room, False)
 			self.is_running = False
+			self._disconnected = True
 			return
 		self._current_data = data = await self._game_logic.gameTick()
 		await callback(data)
@@ -309,15 +320,18 @@ class QuickGameMode(object):
 			await delete_game_room(game_room)
 	
 	async def get_participants(self, user, game_room):
-		players = Player.objects.filter(
-			playerroom__game_room=self.game_room)
+		player_rooms = PlayerRoom.objects.filter(
+			game_room=game_room
+		).order_by('player_position')
 		result = []
-		async for player in players:
+		async for player_room in player_rooms:
+			player = await get_player_room_player(player_room)
 			result.append({
-				'player_name': player.player_name if player.is_guest 
-					else user['username'],
-				'game_mode': 'quick-game'
-				})
+				'player_id': player.user_id,
+				'player_position': player_room.player_position,
+				'player_name': player.player_name if player.is_guest else player.user_name,
+				'player_type': 'guest' if player.is_guest else 'host',
+				'game_mode': 'quick-game'})
 		return result
 
 class TournamentMode(object):
@@ -413,18 +427,30 @@ class TournamentMode(object):
 	
 	async def get_participants(self, user, game_room):
 		participants = TournamentParticipant.objects.filter(
-			tournament=self._tournament).order_by('created_at')
-		# Get all players for the given tournament
-		# You can loop through and access player information
+			tournament=self._tournament).order_by('tournament_position')
 		result = []
+		rooms = TournamentGameRoom.objects.filter(
+			tournament=self._tournament)
 		async for participant in participants:
 			player = await get_participant_player(participant)
-			result.append({
-				'user_id': player.user_id, 
-				'player_name': player.player_name if player.is_guest else user['username'],
-				'player_status': participant.status.lower(),
-				'game_mode': 'tournament'
-				})
+			# look for the player room. TODO: need a better query for this.
+			async for room in rooms:
+				if player.is_guest:
+					player_room = await get_player_room(
+						player.user_id, await get_tournament_room_name(room), player.player_name)
+				else:
+					player_room = await get_player_room(
+						player.user_id, await get_tournament_room_name(room), player.player_name)
+				if player_room:
+					break
+			if player_room:
+				result.append({
+					'user_id': player.user_id,
+					'player_name': player.player_name if player.is_guest else player.user_name,
+					'player_type': 'guest' if player.is_guest else 'host',
+					'player_position': player_room.player_position,
+					'player_status': participant.status.lower(),
+					'game_mode': 'tournament'})
 		return result
 
 class GameServer(object):
@@ -532,7 +558,7 @@ class LocalMode(object):
 					'type': 'game_state',
 					'message': data
 				}
-			)
+)
 
 	async def start_session(self, game_mode, state_callback):
 		if not self._loaded:
@@ -659,12 +685,10 @@ class OnlineMode(object):
 
 	async def state_callback(self, data):
 		await self.channel_layer.group_send(
-				self.room_name,
-				{
-					'type': 'game_state',
-					'message': data
-				}
-			)
+			self.room_name, {
+				'type': 'game_state',
+				'message': data
+			})
 
 	async def start_session(self, game_mode, state_callback):
 		player_room = self._player_room
@@ -765,7 +789,6 @@ class OnlineMode(object):
 			return 
 
 	async def disconnect(self, game_mode):
-		print("CANCELED!", flush=True)
 		async with self._game_server as server:
 			if self.game_room:
 				session = server.get_game_session(self.game_room, game_mode)
@@ -931,7 +954,9 @@ class GameConsumer(AsyncWebsocketConsumer):
 				'type': 'game_state',
 				'message': {
 					'type': 'participants',
-					'participants': await self._game_mode.get_participants(user, self.game_room)
+					'values': await self._game_mode.get_participants(
+						user, 
+						self.game_room)
 				}
 			})
 		# TODO: need to query all the participants of a room or tournament and send them to clients.
@@ -968,6 +993,8 @@ class GameConsumer(AsyncWebsocketConsumer):
 		await self._game_locality.update(bytes_data)
 
 	async def game_state(self, event):
+		if event['message']['type'] == 'participants':
+			print("PARTICIPANTS", event['message'], flush=True)
 		await self.send(text_data=json.dumps(event['message']))
 
 	async def game_status(self, event):
