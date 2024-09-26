@@ -310,12 +310,13 @@ class QuickGameMode(object):
 	
 	async def get_participants(self, user, game_room):
 		players = Player.objects.filter(
-			playerroom__game_room=self.game_room)
+			playerroom__game_room=game_room)
 		result = []
 		async for player in players:
 			result.append({
-				'player_name': player.player_name if player.is_guest 
-					else user['username'],
+				'player_id': player.user_id,
+				'player_name': player.player_name if player.is_guest else user['username'],
+				'player_type': 'guest' if player.is_guest else 'host',
 				'game_mode': 'quick-game'
 				})
 		return result
