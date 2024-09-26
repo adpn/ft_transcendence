@@ -99,6 +99,10 @@ def get_tournament_room(game_room: GameRoom) -> TournamentGameRoom:
 	return TournamentGameRoom.objects.filter(game_room=game_room).first()
 
 @database_sync_to_async
+def get_tournament_room(game_room: GameRoom) -> TournamentGameRoom:
+	return TournamentGameRoom.objects.filter(game_room=game_room).first()
+
+@database_sync_to_async
 def get_tournament_room_tournament(tournament_room: TournamentGameRoom) -> Tournament:
 	return tournament_room.tournament
 
@@ -309,16 +313,18 @@ class QuickGameMode(object):
 			await delete_game_room(game_room)
 	
 	async def get_participants(self, user, game_room):
-		players = Player.objects.filter(
-			playerroom__game_room=game_room)
+		player_rooms = PlayerRoom.objects.filter(
+			gameroom=game_room
+		).order_by('player_position')
 		result = []
-		async for player in players:
+		async for player_room in player_rooms:
+			player = await get_player_room_player(player_room)
 			result.append({
 				'player_id': player.user_id,
+				'player_position': player_room.player_position,
 				'player_name': player.player_name if player.is_guest else user['username'],
 				'player_type': 'guest' if player.is_guest else 'host',
-				'game_mode': 'quick-game'
-				})
+				'game_mode': 'quick-game'})
 		return result
 
 class TournamentMode(object):
@@ -415,17 +421,22 @@ class TournamentMode(object):
 	async def get_participants(self, user, game_room):
 		participants = TournamentParticipant.objects.filter(
 			tournament=self._tournament).order_by('tournament_position')
-		# Get all players for the given tournament
-		# You can loop through and access player information
 		result = []
 		async for participant in participants:
 			player = await get_participant_player(participant)
+			if player.is_guest:
+				player_room = await get_player_room(
+					player.user_id, game_room.room_name, player.player_name)
+			else:
+				player_room = await get_player_room(
+					player.user_id, game_room.room_name, player.player_name)
 			result.append({
-				'user_id': player.user_id, 
+				'user_id': player.user_id,
 				'player_name': player.player_name if player.is_guest else user['username'],
+				'player_type': 'guest' if player.is_guest else 'host',
+				'player_position': player_room.player_position,
 				'player_status': participant.status.lower(),
-				'game_mode': 'tournament'
-				})
+				'game_mode': 'tournament'})
 		return result
 
 class GameServer(object):
