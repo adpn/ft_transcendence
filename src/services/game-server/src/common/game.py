@@ -967,7 +967,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 		await self._game_locality.update(bytes_data)
 
 	async def game_state(self, event):
-		if event['message'].type == 'participants':
+		if event['message']['type'] == 'participants':
 			print("PARTICIPANTS", event['message'], flush=True)
 		await self.send(text_data=json.dumps(event['message']))
 
