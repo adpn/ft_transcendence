@@ -413,7 +413,7 @@ class TournamentMode(object):
 	
 	async def get_participants(self, user, game_room):
 		participants = TournamentParticipant.objects.filter(
-			tournament=self._tournament)
+			tournament=self._tournament).order_by('created_at')
 		# Get all players for the given tournament
 		# You can loop through and access player information
 		result = []
