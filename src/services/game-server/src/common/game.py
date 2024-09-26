@@ -859,6 +859,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 					"reason": "Invalid player names!"
 				})
 				await self.close()
+				return
 			self._game_locality = game_locality = LocalMode(
 				self._game_server,
 				[player1, player2],
