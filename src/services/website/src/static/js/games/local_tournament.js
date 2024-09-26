@@ -88,7 +88,13 @@ class ParticipantFormState {
 		console.log("NUM PLAYERS", inputs.length);
 
 		// Create the tournament first
-		await this.localTournamentState.createTournament(this.num_players);
+		try {
+			await this.localTournamentState.createTournament(this.num_players);
+		} catch (error) {
+			console.log("couldn't create tournament:", error);
+			this.localTournamentState.execute();
+			return ;
+		}
 
 		// Iterate over the inputs one at a time
 		for (let input of inputs) {
@@ -99,6 +105,8 @@ class ParticipantFormState {
 				console.log(`Player ${playerTag} added:`, result);
 			} catch (error) {
 				console.error(`Error for player ${playerTag}:`, error);
+				this.localTournamentState.execute();
+				return ;
 			}
 		}
 
@@ -192,31 +200,35 @@ class LocalTournamentGameState {
 
 	async nextRoom() {
 		// plays the next room
-		const response = await fetch("/games/next_tournament_room/", {
-			method: "POST",
-			headers: {
-				"X-CSRFToken": getCookie("csrftoken"),
-				"Authorization": "Bearer " + localStorage.getItem("auth_token")
-			},
-			credentials: "include",
-			body: JSON.stringify({
-				"game": this.game.name,
-				"tournament_id": this.tournament.tournament_id,
-				"round": this.currentRound
-			})
-		});
-		if (response.status == 200 || response.status == 201) {
-			const room = await response.json();
-			this.startGame(room);
-			// this.context.changeState(this.playingState);
-			return
+		try {
+			const response = await fetch("/games/next_tournament_room/", {
+				method: "POST",
+				headers: {
+					"X-CSRFToken": getCookie("csrftoken"),
+					"Authorization": "Bearer " + localStorage.getItem("auth_token")
+				},
+				credentials: "include",
+				body: JSON.stringify({
+					"game": this.game.name,
+					"tournament_id": this.tournament.tournament_id,
+					"round": this.currentRound
+				})
+			});
+			if (response.status == 200 || response.status == 201) {
+				const room = await response.json();
+				this.startGame(room);
+				// this.context.changeState(this.playingState);
+				return
+			}
+			else if (response.status == 404) {
+				// stop when the're no more rooms.
+				return;
+			}
+			console.log("ERROR", await response.json());
+			throw new Error(`Error ${response.status}: Failed to start tournament`);
+		} catch (error) {
+			console.log("couldn't create tournament game:", error);
 		}
-		else if (response.status == 404) {
-			// stop when the're no more rooms.
-			return;
-		}
-		console.log("ERROR", await response.json());
-		throw new Error(`Error ${response.status}: Failed to start tournament`);
 	}
 
 	update(data) {
