@@ -16,3 +16,4 @@ GAME SERVER
 - set participant as eliminated if he does not reconnect after some time.
 
 - put the django SECRET_KEY in .env
+- put DEBUG false in Django

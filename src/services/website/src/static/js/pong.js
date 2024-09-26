@@ -55,9 +55,9 @@ function changeButton() {
 			var title = "give up";
 			var btn_class = "warning";
 	}
-	document.getElementById("game-button-container").innerHTML = `
-		<button class="btn btn-${btn_class} me-2" id="game-button" type="button">${title}</button>
-`;
+// 	document.getElementById("game-button-container").innerHTML = `
+// 		<button class="btn btn-${btn_class} me-2" id="game-button" type="button">${title}</button>
+// `;
 	// var button = document.getElementById("game-button");
 	// switch (game_status) {
 	// 	// case NOT_JOINED:

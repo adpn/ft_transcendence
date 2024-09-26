@@ -248,6 +248,16 @@ class LocalTournamentGameState {
 				return;
 			}
 		}
+		else if (data.type == "participants") {
+			console.log(data);
+			
+			// go through data.values and update opponent1 and opponent2
+			// count number of values[].player_status eliminated
+			// const eliminatedCount = data.values.filter(player => player.player_status === "eliminated").length;
+			// console.log(eliminatedCount);
+			//new participant joined. -> update view... (fetch user data of the new participant)
+			return;
+		}
 		this.game.update(data);
 	}
 

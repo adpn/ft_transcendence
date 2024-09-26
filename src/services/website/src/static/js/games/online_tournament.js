@@ -82,7 +82,8 @@ class OnlineTournamentGameState {
 				return;
 			}
 		}
-		else if (data.type == "participant") {
+		else if (data.type == "participants") {
+			console.log(data);
 			//new participant joined. -> update view... (fetch user data of the new participant)
 			return;
 		}

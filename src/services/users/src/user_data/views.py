@@ -111,23 +111,15 @@ def get_profile(request: HttpRequest, username: str) -> JsonResponse:
     data = json.loads(response.read().decode())
     connection.close()
 
-    stats = {}
-    if response.status == 200 and data['status'] != 0:
-        for game in data:
-            if game == 'status':
-                continue
-            if data[game]['total_games'] == 0:
-                stats[game] = {'total_games': 0}
-            else:
-                stats[game] = {'total_games': data[game]['total_games'],
-                                'total_wins': data[game]['total_wins'],
-                                'win_percentage': data[game]['win_percentage'],
-                                'average_score': data[game]['average_score'],
-                                'playtime': data[game]['playtime']}
-                if game == 'pong':
-                    stats[game]["precision"] = data[game]['precision']
-                elif game == 'snake':
-                    stats[game]["high_score"] = data[game]['high_score']
+    for game in data:
+        if game == 'status':
+            continue
+        if not 'games' in data[game]:
+            continue
+        for result in data[game]["games"]:
+            name = UserProfile.objects.get(user_id=result["opponent_id"]).user.username
+            result["opponent"] = name
+            result.pop("opponent_id")
 
     if not UserProfile.objects.filter(user=request.user).exists():
         return JsonResponse({'status': 0, 'message': 'Could not get user info'}, status=500)
@@ -152,4 +144,4 @@ def get_profile(request: HttpRequest, username: str) -> JsonResponse:
     if request_user_profile == user_profile:
         friendship = {'status': 0}
 
-    return JsonResponse({'status': 1, 'username': username, 'id': user.id, 'profile_picture': user_profile.profile_picture.url, 'stats': stats, 'friendship': friendship, 'is42': True if user.username42 else False}, status=200)
+    return JsonResponse({'status': 1, 'username': username, 'id': user.id, 'profile_picture': user_profile.profile_picture.url, 'stats': data, 'friendship': friendship, 'is42': True if user.username42 else False}, status=200)
