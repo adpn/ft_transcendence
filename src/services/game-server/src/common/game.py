@@ -413,7 +413,7 @@ class TournamentMode(object):
 	
 	async def get_participants(self, user, game_room):
 		participants = TournamentParticipant.objects.filter(
-			tournament=self._tournament).order_by('created_at')
+			tournament=self._tournament).order_by('tournament_position')
 		# Get all players for the given tournament
 		# You can loop through and access player information
 		result = []
@@ -532,7 +532,7 @@ class LocalMode(object):
 					'type': 'game_state',
 					'message': data
 				}
-			)
+)
 
 	async def start_session(self, game_mode, state_callback):
 		if not self._loaded:
@@ -659,12 +659,10 @@ class OnlineMode(object):
 
 	async def state_callback(self, data):
 		await self.channel_layer.group_send(
-				self.room_name,
-				{
-					'type': 'game_state',
-					'message': data
-				}
-			)
+			self.room_name, {
+				'type': 'game_state',
+				'message': data
+			})
 
 	async def start_session(self, game_mode, state_callback):
 		player_room = self._player_room
@@ -765,7 +763,6 @@ class OnlineMode(object):
 			return 
 
 	async def disconnect(self, game_mode):
-		print("CANCELED!", flush=True)
 		async with self._game_server as server:
 			if self.game_room:
 				session = server.get_game_session(self.game_room, game_mode)
@@ -931,7 +928,9 @@ class GameConsumer(AsyncWebsocketConsumer):
 				'type': 'game_state',
 				'message': {
 					'type': 'participants',
-					'participants': await self._game_mode.get_participants(user, self.game_room)
+					'values': await self._game_mode.get_participants(
+						user, 
+						self.game_room)
 				}
 			})
 		# TODO: need to query all the participants of a room or tournament and send them to clients.
@@ -968,6 +967,8 @@ class GameConsumer(AsyncWebsocketConsumer):
 		await self._game_locality.update(bytes_data)
 
 	async def game_state(self, event):
+		if event['message'].type == 'participants':
+			print("PARTICIPANTS", event['message'], flush=True)
 		await self.send(text_data=json.dumps(event['message']))
 
 	async def game_status(self, event):
