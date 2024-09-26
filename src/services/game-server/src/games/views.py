@@ -94,18 +94,19 @@ def create_game(request: HttpRequest, user_data: dict, game: Game, game_request,
 	TODO:
 	check if the game is local, if it is, create guest Player
 	'''
-	player_name = "host"
 
-	room_player = get_player_room(user_data['user_id'], player_name)
+	if not local:
+		# reconnection
+		room_player = get_player_room(user_data['user_id'], "host")
 
-	# the player is already into a game room so do nothing.
-	if room_player:
-		return JsonResponse({
-			'ip_address': os.environ.get('IP_ADDRESS'),
-			'game_room_id': room_player.game_room.room_name,
-			'status': 'playing',
-			'player_id': room_player.player.player_name
-			}, status=200)
+		# the player is already into a game room so do nothing.
+		if room_player:
+			return JsonResponse({
+				'ip_address': os.environ.get('IP_ADDRESS'),
+				'game_room_id': room_player.game_room.room_name,
+				'status': 'playing',
+				'player_id': room_player.player.player_name
+				}, status=200)
 
 	if local:
 		'''

@@ -167,6 +167,14 @@ def close_game_room(game_room: GameRoom) -> None:
 def get_participant_player(participant: TournamentParticipant):
 	return participant.player
 
+@database_sync_to_async
+def remove_participant(tournament: Tournament, player: Player):
+	TournamentParticipant.objects.filter(tournament=tournament, player=player).delete()
+
+@database_sync_to_async
+def update_tournament(tournament: Tournament, fields):
+	tournament.save(update_fields=fields)
+
 class GameSession(object):
 	def __init__(self, game_logic, game_server, game_room, game_mode=None, pause_timeout=5):
 		self._game_logic = game_logic
@@ -208,7 +216,6 @@ class GameSession(object):
 				asyncio.sleep(0.03)) # about 30 loops/second
 		self._game_result.game_duration = time.time() - t0
 		# TODO: protect storage of result
-		await store_game_result(self._game_result)
 		await delete_game_room(self._game_room)
 
 	async def game_loop(self, callback):
@@ -293,11 +300,15 @@ class QuickGameMode(object):
 	async def handle_end_game(self, data, game_result):
 		return data
 
-	async def handle_disconnection(self):
-		# TODO: delete room if there is only one player or if the room is not closed
-		pass
+	async def handle_disconnection(self, room_name, player: Player):
+		game_room = await get_game_room(room_name)
+		if not game_room:
+			return
+		# delete game room if not is session (means player canceled)
+		if not await in_session(game_room):
+			await delete_game_room(game_room)
 	
-	async def get_participants(self, user):
+	async def get_participants(self, user, game_room):
 		players = Player.objects.filter(
 			playerroom__game_room=self.game_room)
 		result = []
@@ -322,6 +333,7 @@ class TournamentMode(object):
 		self._ready = False
 		self._tournament_id = tournament_id
 		self._game_room = game_room
+		self.room_name = None
 		self.started = False
 
 	async def ready(self,
@@ -374,16 +386,34 @@ class TournamentMode(object):
 		data["type"] = "round"
 		return data
 
-	async def handle_disconnection(self):
+	async def handle_disconnection(self, room_name, player: Player):
 		# TODO: if the tournament is not closed, delete the player and decrement the
 		# number of participants.
 		await self.channel_layer.group_discard(
 			self._tournament_id,
 			self._channel_name)
+		# delete game room if not is session (means player canceled)
+		tournament = await get_tournament(self._tournament_id)
+		if not tournament:
+			return
+		if not await tournament_is_closed(tournament):
+			game_room = await get_game_room(room_name)
+			if game_room:
+				if not await in_session(game_room):
+					await delete_game_room(game_room)
+			# TODO: delete participant
+			tournament.participants -= 1
+			if player:
+				await remove_participant(tournament, player)
+			if tournament.participants == 0:
+				await delete_tournament(tournament)
+			else:
+				await update_tournament(tournament, ['participants'])
+
 	
-	async def get_participants(self, user):
+	async def get_participants(self, user, game_room):
 		participants = TournamentParticipant.objects.filter(
-			tournament=self._tournament)
+			tournament=self._tournament).order_by('created_at')
 		# Get all players for the given tournament
 		# You can loop through and access player information
 		result = []
@@ -405,6 +435,8 @@ class GameServer(object):
 		self._game_factory = game_factory
 
 	def get_game_session(self, game_room, game_mode, pause_timeout=10) -> GameSession:
+		if not game_room:
+			return
 		if game_room.room_name not in self._game_sessions:
 			self._game_sessions[game_room.room_name] = GameSession(
 				self._game_factory(),
@@ -511,6 +543,8 @@ class LocalMode(object):
 			need to cancel the connection and reconnect.
 		'''
 		async with self._game_server as server:
+			if not self.game_room:
+				self.game_room = await self.get_game_room()
 			session = server.get_game_session(self.game_room, game_mode)
 			session.current_players = 2
 			for i, player_room in enumerate(self._player_rooms):
@@ -571,16 +605,20 @@ class LocalMode(object):
 		self._loaded = False
 		self._disconnected = True
 		async with self._game_server as server:
-			session = server.get_game_session(self.game_room, game_mode)
-			# todo: if both players disconnected, end the game
-			session.remove_callback(
-				'session-end',
-				self.flush_game_session)
-			# TODO: only remove sessions when all players disconnected.
-			server.remove_session(session._session_id)
+			game_room = await get_game_room(self.room_name)
+			if game_room:
+				session = server.get_game_session(game_room, game_mode)
+				# todo: if both players disconnected, end the game
+				session.remove_callback(
+					'session-end',
+					self.flush_game_session)
+				# TODO: only remove sessions when all players disconnected.
+				server.remove_session(session._session_id)
+				await delete_game_room(game_room)
 			await delete_guest_players(self._host_user_id)
-			if game_mode:
-				await game_mode.handle_disconnection()
+			# if game_mode:
+			# 	await game_mode.handle_disconnection(self.game_room, session.get_player(0))
+			# 	await game_mode.handle_disconnection(self.game_room, session.get_player(1))
 			await self.channel_layer.group_discard(self.room_name, self.consumer.channel_name)
 
 class OnlineMode(object):
@@ -600,6 +638,7 @@ class OnlineMode(object):
 		self.consumer = consumer
 		self._lost_connection = False
 		self._disconnected = False
+		self.player_position = 0
 
 	async def validate_player(self):
 		if not self._player_room:
@@ -628,7 +667,6 @@ class OnlineMode(object):
 			)
 
 	async def start_session(self, game_mode, state_callback):
-		print("START SESSION", self.room_name, flush=True)
 		player_room = self._player_room
 		if not player_room:
 			await self.get_game_room()
@@ -721,27 +759,31 @@ class OnlineMode(object):
 			data['reason'] = 'disconnection'
 			data['player'] = self.player_position
 			# the remaining player stores the game_result
-			# await store_game_result(game_result)
+			await store_game_result(game_result)
 			await self.flush_game_session(data)
 			self._lost_connection = True
 			return 
 
 	async def disconnect(self, game_mode):
+		print("CANCELED!", flush=True)
 		async with self._game_server as server:
-			session = server.get_game_session(self.game_room, game_mode)
-			# todo: if both players disconnected, end the game
-			if session.current_players > 0:
-				session.current_players -= 1
-			session.remove_callback(
-				'session-end',
-				self.flush_game_session)
-			session.pause()
+			if self.game_room:
+				session = server.get_game_session(self.game_room, game_mode)
+				# todo: if both players disconnected, end the game
+				if session.current_players > 0:
+					session.current_players -= 1
+				session.remove_callback(
+					'session-end',
+					self.flush_game_session)
+				session.pause()
 			# todo: send a message to clients when a player disconnects.
 			await self.channel_layer.group_discard(self.room_name, self.consumer.channel_name)
 			if game_mode:
-				await game_mode.handle_disconnection()
+				await game_mode.handle_disconnection(
+					self.room_name, 
+					session.get_player(self.player_position))
 			self._disconnected = True
-			# TODO: delete player room -> if there is only one player in the GameRoom.
+			# delete game room if it is not in session.
 
 class GameConsumer(AsyncWebsocketConsumer):
 	def __init__(self, game_server: GameServer, *args, **kwargs):
@@ -817,6 +859,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 					"reason": "Invalid player names!"
 				})
 				await self.close()
+				return
 			self._game_locality = game_locality = LocalMode(
 				self._game_server,
 				[player1, player2],
@@ -888,7 +931,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 				'type': 'game_state',
 				'message': {
 					'type': 'participants',
-					'participants': await self._game_mode.get_participants(user)
+					'participants': await self._game_mode.get_participants(user, self.game_room)
 				}
 			})
 		# TODO: need to query all the participants of a room or tournament and send them to clients.
