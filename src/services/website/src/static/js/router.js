@@ -48,6 +48,17 @@ const Home = () => `
 
 const Games = async () => `
 <div class="row">
+<!-- Opponents Header-->
+<div class="row justify-content-between align-items-center mb-2">
+	<div class="col-4 text-start d-flex align-items-center">
+		<img id="opponent1-img" src="default-profile1.jpg" alt="Opponent 1" class="rounded-circle me-2" width="50" height="50">
+		<span id="opponent1" class="text-light">Player 1</span>
+	</div>
+	<div class="col-4 text-end d-flex justify-content-end align-items-center">
+		<span id="opponent2" class="text-light me-2">Player 2</span>
+		<img id="opponent2-img" src="default-profile2.jpg" alt="Opponent 2" class="rounded-circle" width="50" height="50">
+	</div>
+</div>
 <div class="row text-center">
 	<div class="canvas-container position-relative" >
 		<canvas id="gameCanvas2D" class="w-100 border" display="none"></canvas>
