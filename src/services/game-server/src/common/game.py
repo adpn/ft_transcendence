@@ -224,6 +224,8 @@ class GameSession(object):
 				asyncio.sleep(0.03)) # about 30 loops/second
 		self._game_result.game_duration = time.time() - t0
 		# TODO: protect storage of result
+		if not self._disconnected:
+			await store_game_result(self._game_result)
 		await delete_game_room(self._game_room)
 
 	async def game_loop(self, callback):
@@ -240,6 +242,7 @@ class GameSession(object):
 					self._game_result)
 			await set_in_session(self._game_room, False)
 			self.is_running = False
+			self._disconnected = True
 			return
 		self._current_data = data = await self._game_logic.gameTick()
 		await callback(data)
@@ -318,7 +321,7 @@ class QuickGameMode(object):
 	
 	async def get_participants(self, user, game_room):
 		player_rooms = PlayerRoom.objects.filter(
-			gameroom=game_room
+			game_room=game_room
 		).order_by('player_position')
 		result = []
 		async for player_room in player_rooms:
@@ -326,7 +329,7 @@ class QuickGameMode(object):
 			result.append({
 				'player_id': player.user_id,
 				'player_position': player_room.player_position,
-				'player_name': player.player_name if player.is_guest else user['username'],
+				'player_name': player.player_name if player.is_guest else player.user_name,
 				'player_type': 'guest' if player.is_guest else 'host',
 				'game_mode': 'quick-game'})
 		return result
@@ -443,7 +446,7 @@ class TournamentMode(object):
 			if player_room:
 				result.append({
 					'user_id': player.user_id,
-					'player_name': player.player_name if player.is_guest else user['username'],
+					'player_name': player.player_name if player.is_guest else player.user_name,
 					'player_type': 'guest' if player.is_guest else 'host',
 					'player_position': player_room.player_position,
 					'player_status': participant.status.lower(),

@@ -23,6 +23,14 @@ from common import auth_client as auth
 MAX_TOURNAMENT_PARTICIPANTS = 4
 INITIALIZED = False
 
+def get_host_player(user_data: dict) -> Player:
+	player, created = Player.objects.get_or_create(
+		player_name="host",
+		user_id=int(user_data['user_id']))
+	player.user_name = user_data['username']
+	player.save(update_fields=['user_name'])
+	return player
+
 def check_request(func):
 	def wrapper(request:HttpRequest) -> JsonResponse:
 		global INITIALIZED
@@ -122,9 +130,7 @@ def create_game(request: HttpRequest, user_data: dict, game: Game, game_request,
 			is_guest=True)
 		print("NEW GUEST", game_request['guest_name'], flush=True)
 	else:
-		player, created = Player.objects.get_or_create(
-			player_name="host",
-			user_id=int(user_data['user_id']))
+		player = get_host_player(user_data)
 
 	# if the player is not found in any room, either assign it the oldest room that isn't full
 	# or create a new room
@@ -317,9 +323,7 @@ def create_tournament_view(request: HttpRequest, user_data: dict, game:Game, jso
 				'message': f"Missing required field: max_players"
 				},
 				status=400)
-	player, created = Player.objects.get_or_create(
-		player_name="host",
-		user_id=int(user_data['user_id']))
+	player = get_host_player(user_data)
 	try:
 		max_players = int(json_request['max_players'])
 		# check if the max amount of players is a power of 2 and is at least for and at most 16
@@ -396,9 +400,7 @@ def get_tournament_room(request: HttpRequest, user_data: dict, game:Game, json_r
 @tournament_request
 def	find_tournament_view(request: HttpRequest, user_data: dict, game: Game, json_request, local, tournament=None) -> JsonResponse:
 	if not local:
-		player, created = Player.objects.get_or_create(
-			player_name="host",
-			user_id=int(user_data['user_id']))
+		player = get_host_player(user_data)
 	else:
 		player, created = Player.objects.get_or_create(
 			is_guest=True,
