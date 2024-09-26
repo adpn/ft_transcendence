@@ -72,10 +72,16 @@ const Games = async () => {
 		<!-- Opponents Header-->
 		<div class="row justify-content-between align-items-center mb-2">
 			<div class="col-4 text-start d-flex align-items-center">
-				<span id="opponent1" class="text-light">Player 1</span>
+				<span id="opponent1" class="text-dark"></span>
 			</div>
+			<div class="col-auto d-flex flex-column align-items-center">
+			<h3 id="tournament-title" class="text-dark"></h3>
+				<ul id="playersList" class="list-unstyled text-dark d-grid">
+				</ul>
+			</div>
+
 			<div class="col-4 text-end d-flex justify-content-end align-items-center">
-				<span id="opponent2" class="text-light me-2">Player 2</span>
+				<span id="opponent2" class="text-dark"></span>
 			</div>
 		</div>
 		<div class="row text-center">

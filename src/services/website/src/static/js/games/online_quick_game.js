@@ -41,8 +41,7 @@ class OnlineQuickGameState {
 			this.gameStatus = "ended";
 			opponent1.innerHTML = "";
 			opponent2.innerHTML = "";
-			opponent1.className = "text-light";
-			opponent2.className = "text-light";
+
 			if (this.gameStatus == "win")
 				this.gameEndState.setMessage("You Won!", true);
 			else
@@ -61,7 +60,6 @@ class OnlineQuickGameState {
 				opponent1.innerHTML = data.values.filter(player => player.player_position === 0)[0].player_name;
 				opponent2.innerHTML = data.values.filter(player => player.player_position === 1)[0].player_name;
 
-				opponent1.className = "text-dark";
 				if (this.game.name === "snake")
 					opponent2.className = "text-success";
 				else

@@ -9,10 +9,9 @@ html, body {
 	position: relative;
 	width: 100%;
 	padding-top: 60%;
+	margin-top: 20px;
 }
 
-
-/* Optional: Center the spinner */
 .modal-dialog-centered {
 	display: flex;
 	justify-content: center;
@@ -128,8 +127,8 @@ footer {
 	margin-bottom: 20px;
 	max-width: 600px;
 	margin: 0 auto;
-	padding: 10px; /* Optional: Adds padding inside each friend request item */
-	border-bottom: 1px solid #ddd; /* Optional: Adds a bottom border for separation */
+	padding: 10px;
+	border-bottom: 1px solid #ddd;
 }
 
 .friend-info {
@@ -317,3 +316,19 @@ footer {
   	border-radius: 5px;
   	/* Optional: Rounded corners */
   }
+
+#opponent1, #opponent2 {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+#playersList {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    text-align: center;
+}
