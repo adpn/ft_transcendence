@@ -430,13 +430,14 @@ class TournamentMode(object):
 			else:
 				player_room = await get_player_room(
 					player.user_id, game_room.room_name, player.player_name)
-			result.append({
-				'user_id': player.user_id,
-				'player_name': player.player_name if player.is_guest else user['username'],
-				'player_type': 'guest' if player.is_guest else 'host',
-				'player_position': player_room.player_position,
-				'player_status': participant.status.lower(),
-				'game_mode': 'tournament'})
+			if player_room is not None:
+				result.append({
+					'user_id': player.user_id,
+					'player_name': player.player_name if player.is_guest else user['username'],
+					'player_type': 'guest' if player.is_guest else 'host',
+					'player_position': player_room.player_position,
+					'player_status': participant.status.lower(),
+					'game_mode': 'tournament'})
 		return result
 
 class GameServer(object):
