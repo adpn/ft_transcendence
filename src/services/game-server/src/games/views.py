@@ -374,7 +374,7 @@ def get_tournament_room(request: HttpRequest, user_data: dict, game:Game, json_r
 			'status': 0,
 			'message': f"No more rooms for current round"},
 			status=404)
-		players = [player for player in PlayerRoom.objects.filter(game_room=earliest_room.game_room)]
+		players = [player for player in PlayerRoom.objects.filter(game_room=earliest_room.game_room).order_by('player_position')]
 		if not players:
 			return JsonResponse({
 			'status': 0,
@@ -387,6 +387,8 @@ def get_tournament_room(request: HttpRequest, user_data: dict, game:Game, json_r
 			'status': 'playing',
 			'player1': players[0].player.player_name,
 			'player2': players[1].player.player_name,
+			'player1_position': players[0].player_position,
+			'player2_position': players[1].player_position,
 			'round': earliest_room.tournament_round
 		})
 	except ValueError as e:
