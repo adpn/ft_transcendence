@@ -381,6 +381,7 @@ function drawTile(coords, value) {
 
 export var Snake = {
 	name: "snake",
+	canvas_context: "2D",
 	load(canv) {
 		canvas = canv;
 		canvas.setAttribute("tabindex", "-1");
@@ -388,8 +389,10 @@ export var Snake = {
 		canvas.addEventListener("blur", () => { is_focus = false; });
 		if (!ctx) {
 			ctx = canvas.getContext("2d", { alpha: false });
-			if (!ctx)
-				throw Error("Couldn't create 2D drawing context");
+			if (!ctx) {
+				console.log("ERROR: pong.js: Couldn't create 2D drawing context");
+				return ;
+			}
 		}
 		window.addEventListener("resize", resizeCanvas, false);
 		game_status = PLAYING;

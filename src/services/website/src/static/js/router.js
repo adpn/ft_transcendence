@@ -46,31 +46,53 @@ const Home = () => `
 	</div>
 `;
 
-const Games = async () => `
-<div class="row">
-<div class="row text-center">
-	<div class="canvas-container position-relative" >
-		<canvas id="gameCanvas2D" class="w-100 border" display="none"></canvas>
-		<canvas id="gameCanvas3D" class="w-100 border" display="none"></canvas>
-		<div id="game-ui" class="position-absolute top-0 start-0 w-100 h-100 flex-column align-items-center justify-content-center bg-dark">
-			<div id="loading-overlay" class="loading-overlay position-absolute top-0 start-0 w-100 h-100 flex-column align-items-center justify-content-center bg-dark" aria-hidden="true">
-				<div class="spinner"></div>
-				<p class="text-light mt-3">Waiting for opponent...</p>
-				<div id="overlay-body" class=text-center></div>
+const Games = async () => {
+	const token = localStorage.getItem('auth_token');
+	const response = await fetch('/auth/is_authenticated/', {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			'X-CSRFToken': getCookie('csrftoken'),
+			'Authorization': `Bearer ${token}`
+		}
+	});
+	const data = await response.json();
+
+	if (data.status === 0) {
+		return `
+			<div class="text-center">
+				<h1>Access Denied</h1>
+				<p>You need to be logged in to view this page.</p>
 			</div>
-			<div id="game-menu" class="card position-absolute top-50 start-50 translate-middle bg-dark text-light" aria-hidden="true">
-				<div id="game-menu-header" class="card-header d-flex flex-column justify-content-center align-items-center"></div>
-				<div id="game-menu-body" class="card-body d-flex flex-column justify-content-center align-items-center"></div>
-				<div id="game-menu-footer" class="card-footer d-flex flex-column justify-content-center align-items-center"></div>
+		`;
+	}
+
+	return `
+	<div class="row">
+		<div class="row text-center">
+			<div class="canvas-container position-relative" >
+				<canvas id="gameCanvas2D" class="w-100 border"></canvas>
+				<canvas id="gameCanvas3D" class="w-100 border"></canvas>
+				<div id="game-ui" class="position-absolute top-0 start-0 w-100 h-100 flex-column align-items-center justify-content-center bg-dark">
+					<div id="loading-overlay" class="loading-overlay position-absolute top-0 start-0 w-100 h-100 flex-column align-items-center justify-content-center bg-dark" aria-hidden="true">
+						<div class="spinner"></div>
+						<p class="text-light mt-3">Waiting for opponent...</p>
+						<div id="overlay-body" class=text-center></div>
+					</div>
+					<div id="game-menu" class="card position-absolute top-50 start-50 translate-middle bg-dark text-light" aria-hidden="true">
+						<div id="game-menu-header" class="card-header d-flex flex-column justify-content-center align-items-center"></div>
+						<div id="game-menu-body" class="card-body d-flex flex-column justify-content-center align-items-center"></div>
+						<div id="game-menu-footer" class="card-footer d-flex flex-column justify-content-center align-items-center"></div>
+					</div>
+				</div>
 			</div>
 		</div>
+		<div id="game-button-container" class="text-center mt-3">
+			<button class="btn btn-success me-2" id="game-button" type="button">Find Game</button>
+		</div>
 	</div>
-</div>
-<div id="game-button-container" class="text-center mt-3">
-	<button class="btn btn-success me-2" id="game-button" type="button">Find Game</button>
-</div>
-</div>
-`;
+	`;
+}
 
 // todo: need a container that displays the participants. (a list ?)
 

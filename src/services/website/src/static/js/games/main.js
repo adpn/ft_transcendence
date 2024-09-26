@@ -35,7 +35,11 @@ var games_context = {
 
 class GameModes {
 	constructor(context, game, prevState) {
-		this.game = game
+		this.game = game;
+		this.prevState = prevState;
+		this.context = context;
+		this.modesGrid = new CustomGrid(context, 6);
+
 		this.tournamentState = new GameLocality(
 			context,
 			game, this,
@@ -47,10 +51,6 @@ class GameModes {
 			this,
 			new LocalQuickGameState(context, game, this),
 			new OnlineQuickGameState(context, game, this));
-
-		this.prevState = prevState;
-		this.context = context;
-		this.modesGrid = new CustomGrid(context, 6);
 	};
 	goBack() {
 		this.context.changeState(this.prevState);
@@ -62,6 +62,7 @@ class GameModes {
 		this.context.changeState(this.quickGameState);
 	}
 	execute() {
+		this.context.canvas = document.getElementById("gameCanvas" + this.game.canvas_context);
 		this.context.gameMenu.style.display = 'flex';
 		this.modesGrid.render();
 		this.context.gameMenuHeader.textContent = `${this.game.name.toUpperCase()} GAME MODE`;
@@ -76,7 +77,7 @@ class GameModes {
 		const backButton = document.getElementById("backButton");
 		quickGameButton.addEventListener('click', () => this.quickGame());
 		tournamentButton.addEventListener('click', () => this.joinTournament());
-		backButton.addEventListener('click', () => this.goBack())
+		backButton.addEventListener('click', () => this.goBack());
 	}
 }
 
@@ -110,39 +111,21 @@ class GameMenu {
 
 	launchGame(game) {
 		if (game == "pong") {
-			this.set_canvas("2d");
 			this.context.state = this.pongState;
-			this.context.state.execute()
+			this.context.state.execute();
 		}
 		else if (game == "pong3d") {
-			this.set_canvas("3d");
 			this.context.state = this.pong3dState;
-			this.context.state.execute()
+			this.context.state.execute();
 		}
 		else if (game == "snake") {
-			this.set_canvas("2d");
 			this.context.state = this.snakeState;
-			this.context.state.execute()
-		}
-	}
-
-	set_canvas(context) {
-		if (this.context.canvas_context == context)
-			return ;
-		this.context.canvas_context = context;
-		if (context == "2d") {
-			games_context.canvas = document.getElementById("gameCanvas2D");
-			games_context.canvas.style.display = "";
-			document.getElementById("gameCanvas3D").style.display = "none";
-		}
-		else if (context == "3d") {
-			games_context.canvas = document.getElementById("gameCanvas3D");
-			games_context.canvas.style.display = "";
-			document.getElementById("gameCanvas2D").style.display = "none";
+			this.context.state.execute();
 		}
 	}
 
 	execute() {
+		// if not logged in exeCUTE ErorrState instead
 		this.context.gameMenu.style.display = 'flex';
 		this.gamesGrid.render();
 		this.context.gameMenuHeader.textContent = 'CHOOSE GAME';
@@ -161,6 +144,8 @@ class GameMenu {
 
 function load_games() {
 	games_context.gameMenu = document.getElementById('game-menu');
+	if (!games_context.gameMenu)
+		return;
 	games_context.gameMenu.style.display = 'none';
 	games_context.gameMenuHeader = document.getElementById("game-menu-header");
 	games_context.gameMenuBody = document.getElementById("game-menu-body");
@@ -168,8 +153,34 @@ function load_games() {
 	games_context.loadingOverlay = document.getElementById('loading-overlay');
 	games_context.overlayBody = document.getElementById('overlay-body');
 	games_context.gameUI = document.getElementById('game-ui');
+	document.getElementById('gameCanvas2D').style.display = "none";
+	document.getElementById('gameCanvas3D').style.display = "none";
 	// todo: check if the user is signed-in first ?
 	if (games_context.state == null)
 		games_context.state = new GameMenu(games_context);
 	games_context.state.execute();
+}
+
+// not used :)
+class ErrorState {
+	constructor(context, mainState, error) {
+		this.context = context;
+		this.mainState = mainState;
+		this.error = error;
+
+	};
+	returnMain() {
+		this.context.changeState(this.mainState);
+	}
+	execute() {
+		this.context.gameMenu.style.display = 'flex';
+		this.context.gameMenuHeader.textContent = `ERROR`;
+		this.context.gameMenuBody.textContent = this.error;
+		this.context.gameMenuFooter.innerHTML = `
+		<div class="d-flex flex-row align-items-center mt-2">
+			<button type="button" id="backButton" class="btn btn-outline-light mx-2 w-100">Return to main</button>
+		</div>`;
+		const backButton = document.getElementById("backButton");
+		backButton.addEventListener('click', () => this.returnMain());
+	}
 }

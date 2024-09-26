@@ -14,14 +14,6 @@ class LocalQuickGameState {
 
 	update(data) {
 		// todo: move to result state
-		if (data.status == "ready") {
-			this.context.loadingOverlay.style.display = 'none';
-			this.context.gameUI.style.display = 'none';
-			this.context.state = this.playingState;
-			this.context.state.execute();
-			this.game.start(this.socket);
-			return;
-		}
 		if (data.type == "end") {
 			this.gameStatus = "ended";
 			if (this.gameStatus == "win")
@@ -30,6 +22,7 @@ class LocalQuickGameState {
 				this.gameEndState.setMessage("You Lost!", false);
 			if (this.socket)
 				this.socket.close();
+			this.context.canvas.style.display = "none";
 			this.context.state = this.gameEndState;
 			this.context.state.execute();
 			return;
@@ -40,6 +33,7 @@ class LocalQuickGameState {
 	handleEvent(event) {
 		if (JSON.parse(event.data).status == "ready") {
 			// TODO: check if game already started.
+			this.context.canvas.style.display = "";
 			this.context.loadingOverlay.style.display = 'none';
 			this.context.gameUI.style.display = 'none';
 			this.context.changeState(this.playingState);

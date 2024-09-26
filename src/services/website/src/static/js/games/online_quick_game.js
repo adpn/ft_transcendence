@@ -42,6 +42,7 @@ class OnlineQuickGameState {
 				this.gameEndState.setMessage("You Lost!", false);
 			if (this.socket)
 				this.socket.close();
+			this.context.canvas.style.display = "none";
 			this.context.state = this.gameEndState;
 			this.context.state.execute();
 			return;
@@ -55,6 +56,7 @@ class OnlineQuickGameState {
 			// move to playing this.context.state.
 			// todo: wait for players to be ready. (click on button?)
 			// this.loadingModal.hide();
+			this.context.canvas.style.display = "";
 			this.context.loadingOverlay.style.display = 'none';
 			this.context.gameUI.style.display = 'none';
 			this.context.state = this.playingState;

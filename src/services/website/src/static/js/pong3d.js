@@ -572,13 +572,16 @@ function clearMessage() {
 
 export var Pong3d = {
 	name: "pong",
+	canvas_context: "3D",
 	load(canv) {
 		canvas = canv;
 		canvas.setAttribute("tabindex", "-1");
 		canvas.addEventListener("focus", () => { is_focus = true; });
 		canvas.addEventListener("blur", () => { is_focus = false; });
-		if (loadThreejs() == -1)
-			throw Error("Couldn't create 3D drawing context");
+		if (loadThreejs() == -1) {
+			console.log("ERROR: pong3d.js: Couldn't create 3D drawing context");
+			return ;
+		}
 		game_status = PLAYING;
 		changeButton();
 		window.addEventListener("resize", resizeCanvas, false);

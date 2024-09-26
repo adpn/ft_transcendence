@@ -37,6 +37,7 @@ class OnlineTournamentGameState {
 			// move to playing state.
 			// todo: wait for players to be ready. (click on button?)
 			// this.loadingModal.hide();
+			this.context.canvas.style.display = "";
 			this.context.loadingOverlay.style.display = 'none';
 			this.context.gameUI.style.display = 'none';
 			this.context.state = this.playingState;
@@ -47,6 +48,7 @@ class OnlineTournamentGameState {
 
 	update(data) {
 		if (data.type == "end") {
+			this.context.canvas.style.display = "none";
 			if (data.status == "lost") {
 				this.gameStatus = "ended";
 				if (this.gameStatus == "win")

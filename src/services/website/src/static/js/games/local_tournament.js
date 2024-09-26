@@ -166,6 +166,7 @@ class LocalTournamentGameState {
 	handleEvent(event) {
 		if (JSON.parse(event.data).status == "ready") {
 			// TODO: check if game already started.
+			this.context.canvas.style.display = "";
 			this.context.loadingOverlay.style.display = 'none';
 			this.context.gameUI.style.display = 'none';
 			this.context.changeState(this.playingState);
@@ -207,7 +208,7 @@ class LocalTournamentGameState {
 		if (response.status == 200 || response.status == 201) {
 			const room = await response.json();
 			this.startGame(room);
-			this.context.changeState(this.playingState);
+			// this.context.changeState(this.playingState);
 			return
 		}
 		else if (response.status == 404) {
@@ -220,6 +221,7 @@ class LocalTournamentGameState {
 
 	update(data) {
 		if (data.type == "end") {
+			this.context.canvas.style.display = "none";
 			if (data.status == "lost") {
 				this.gameStatus = "ended";
 				// todo: display winner.

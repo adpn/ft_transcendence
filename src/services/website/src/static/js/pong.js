@@ -228,6 +228,7 @@ function drawScore(canvas, ctx, game_data) {
 
 export var Pong = {
 	name: "pong",
+	canvas_context: "2D",
 	load(canv) {
 		canvas = canv;
 		canvas.setAttribute("tabindex", "-1");
@@ -235,8 +236,10 @@ export var Pong = {
 		canvas.addEventListener("blur", () => { is_focus = false; });
 		if (!ctx) {
 			ctx = canvas.getContext("2d", { alpha: false });
-			if (!ctx)
-				throw Error("Couldn't create 2D drawing context");
+			if (!ctx) {
+				console.log("ERROR: pong.js: Couldn't create 2D drawing context");
+				return ;
+			}
 		}
 		window.addEventListener("resize", resizeCanvas, false);
 		game_status = PLAYING;
@@ -282,7 +285,7 @@ export var Pong = {
 			game_data.score = data.score;
 			return ;
 		}
-		if (data.type == "end") {
+		if (data.type == "end") {		// this is never called i think, the gameModesStates don't pass it along
 			gameOver(data.status);
 			return ;
 		}
