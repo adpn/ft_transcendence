@@ -34,6 +34,10 @@ def get_player_room(user_id: str, game_room: str, player_name="host") -> PlayerR
 		game_room__room_name=game_room).first()
 
 @database_sync_to_async
+def get_tournament_room_name(tournament_room: TournamentGameRoom) -> str:
+	return tournament_room.game_room.room_name
+
+@database_sync_to_async
 def get_player_room_player(player_room: PlayerRoom) -> Player:
 	return player_room.player
 
@@ -422,15 +426,21 @@ class TournamentMode(object):
 		participants = TournamentParticipant.objects.filter(
 			tournament=self._tournament).order_by('tournament_position')
 		result = []
+		rooms = TournamentGameRoom.objects.filter(
+			tournament=self._tournament)
 		async for participant in participants:
 			player = await get_participant_player(participant)
-			if player.is_guest:
-				player_room = await get_player_room(
-					player.user_id, game_room.room_name, player.player_name)
-			else:
-				player_room = await get_player_room(
-					player.user_id, game_room.room_name, player.player_name)
-			if player_room is not None:
+			# look for the player room. TODO: need a better query for this.
+			async for room in rooms:
+				if player.is_guest:
+					player_room = await get_player_room(
+						player.user_id, await get_tournament_room_name(room), player.player_name)
+				else:
+					player_room = await get_player_room(
+						player.user_id, await get_tournament_room_name(room), player.player_name)
+				if player_room:
+					break
+			if player_room:
 				result.append({
 					'user_id': player.user_id,
 					'player_name': player.player_name if player.is_guest else user['username'],
