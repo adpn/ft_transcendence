@@ -168,7 +168,7 @@ def get_participant_player(participant: TournamentParticipant):
 	return participant.player
 
 class GameSession(object):
-	def __init__(self, game_logic, game_server, game_room, game_mode=None, pause_timeout=60):
+	def __init__(self, game_logic, game_server, game_room, game_mode=None, pause_timeout=5):
 		self._game_logic = game_logic
 		self.current_players = 0
 		self._game_room = game_room
@@ -183,6 +183,11 @@ class GameSession(object):
 		self.is_running = True
 		self._players = [None, None]
 		self._game_result = GameResult()
+		self._disconnected = False
+		self._current_data = {
+			"player": -1, 
+			"loser": -1, 
+			"score": [-1, -1]}
 
 	def set_player(self, position, player):
 		self._players[position] = player
@@ -194,6 +199,7 @@ class GameSession(object):
 		await self._game_logic.update(data, player)
 
 	async def start(self, callback):
+		self._game_result.game = await get_game_room_game(self._game_room)
 		await callback(await self._game_logic.startEvent())
 		t0 = time.time()
 		while self.is_running:
@@ -201,6 +207,7 @@ class GameSession(object):
 				self.game_loop(callback),
 				asyncio.sleep(0.03)) # about 30 loops/second
 		self._game_result.game_duration = time.time() - t0
+		# TODO: protect storage of result
 		await store_game_result(self._game_result)
 		await delete_game_room(self._game_room)
 
@@ -209,31 +216,28 @@ class GameSession(object):
 			await asyncio.wait_for(self._pause_event.wait(), self._timeout)
 		except asyncio.TimeoutError:
 			for end in self._connection_lost_callbacks:
-				await end(self._game_mode)
+				# get the current score.
+				self._current_data['score'] = self._game_logic.score
+				await end(
+					self, 
+					self._game_mode, 
+					self._current_data, 
+					self._game_result)
 			await set_in_session(self._game_room, False)
-			# todo: on connection lost, game results should be stored
-			# TODO: handle results storage on connection lost.
-			# TODO: on connection lost, game results should be stored
-			#await store_game_result(game_result)
+			self.is_running = False
 			return
-		data = await self._game_logic.gameTick()
+		self._current_data = data = await self._game_logic.gameTick()
 		await callback(data)
 		async for data in self._game_logic.sendEvent():
 			if data["type"] == "win":
 				self._game_server.remove_session(self._session_id)
 				await set_in_session(self._game_room, False)
 				# todo: store game results and delete the game room
-				self._game_result = GameResult(
-					winner=self._players[data["player"]],
-					loser=self._players[data["loser"]],
-					winner_score=data["score"][data["player"]],
-					loser_score=data["score"][data["loser"]],
-					game=await get_game_room_game(self._game_room))
 				self._game_result.winner = self._players[data["player"]]
 				self._game_result.loser = self._players[data["loser"]]
 				self._game_result.winner_score = data["score"][data["player"]]
 				self._game_result.loser_score = data["score"][data["loser"]]
-				self._game_result.game = await get_game_room_game(self._game_room)
+				#self._game_result.game = await get_game_room_game(self._game_room)
 				if self._game_mode:
 					data = await self._game_mode.handle_end_game(data, self._game_result)
 				for end in self._end_callbacks:
@@ -271,8 +275,7 @@ class QuickGameMode(object):
 
 	async def ready(self, session: GameSession, room_name: str, game_room: GameRoom, state_callback) -> None:
 		await self.channel_layer.group_send(
-		room_name,
-		{
+		room_name, {
 			'type': 'game_status',
 			'message': {
 				'status': 'ready'
@@ -319,12 +322,15 @@ class TournamentMode(object):
 		self._ready = False
 		self._tournament_id = tournament_id
 		self._game_room = game_room
+		self.started = False
 
 	async def ready(self,
 		session: GameSession,
 		room_name: str,
 		game_room: GameRoom,
 		state_callback) -> None:
+		if self.started:
+			return
 		closed = await tournament_is_closed(self._tournament)
 		if not closed:
 			await self.channel_layer.group_send(
@@ -364,14 +370,9 @@ class TournamentMode(object):
 			data["type"] = "win"
 			return data
 		await close_game_room(self._game_room)
-		# TODO: this should create a new game room for the tournament
 		await qualify_player(game_result.winner, tournament)
 		data["type"] = "round"
 		return data
-
-	async def connection_lost(self, player: Player):
-		# eliminate player from the tournament.
-		await eliminate_player(player, self._tournament)
 
 	async def handle_disconnection(self):
 		# TODO: if the tournament is not closed, delete the player and decrement the
@@ -463,7 +464,6 @@ class LocalMode(object):
 		self._player_rooms = [None, None]
 
 	async def _load_players(self):
-		print("PLAYERS", self._player_ids, flush=True)
 		self._player_rooms[0] = player1_room = await get_player_room(
 			self._host_user_id,
 			self.room_name,
@@ -480,7 +480,6 @@ class LocalMode(object):
 		return self._loaded
 
 	async def validate_player(self):
-		print("GAME ROOM", self.room_name, self._host_user_id, flush=True)
 		if not await self._load_players():
 			return False
 		return True
@@ -577,6 +576,7 @@ class LocalMode(object):
 			session.remove_callback(
 				'session-end',
 				self.flush_game_session)
+			# TODO: only remove sessions when all players disconnected.
 			server.remove_session(session._session_id)
 			await delete_guest_players(self._host_user_id)
 			if game_mode:
@@ -628,6 +628,7 @@ class OnlineMode(object):
 			)
 
 	async def start_session(self, game_mode, state_callback):
+		print("START SESSION", self.room_name, flush=True)
 		player_room = self._player_room
 		if not player_room:
 			await self.get_game_room()
@@ -681,12 +682,13 @@ class OnlineMode(object):
 		# attempt to launch tournament.
 		if not self._game_session:
 			return
-		async with self._game_server:
-			await game_mode.ready(
-				self._game_session,
-				self.room_name,
-				self.game_room,
-				self.state_callback)
+		if not game_mode.started:
+			async with self._game_server:
+				await game_mode.ready(
+					self._game_session,
+					self.room_name,
+					self.game_room,
+					self.state_callback)
 
 	async def flush_game_session(self, data):
 		if data['player'] == self.player_position:
@@ -702,22 +704,27 @@ class OnlineMode(object):
 				'status': 'lost',
 				'winner': 1 - self.player_position}
 		await self.consumer.send(text_data=json.dumps(data))
-		# TODO: close connection here.
-		await self.consumer.close()
-
-	async def connection_lost(self, game_mode, session: GameSession):
-		if not self._disconnected:
-			# if did not disconnect then it is the winner.
-			await self.consumer.send_json({
-				'type': 'end',
-				'status': 'win',
-				'reason': 'disconnection'})
-			await self.consumer.close()
-		await game_mode.connection_lost(session.get_player(self.player_position))
-		self._lost_connection = True
-		# todo: need to delete the game room...
 		await self.channel_layer.group_discard(
 			self.room_name, self.consumer.channel_name)
+		await self.consumer.close()
+
+	async def connection_lost(self, session: GameSession, game_mode, data: dict, game_result: GameResult):
+		if not self._disconnected:
+			# if did not disconnect then it is the winner.
+			winner_index = self.player_position
+			loser_index = 1 - self.player_position
+			game_result.winner = session.get_player(winner_index)
+			game_result.loser = session.get_player(loser_index)
+			game_result.winner_score = data["score"][winner_index]
+			game_result.loser_score = data["score"][loser_index]
+			data = await game_mode.handle_end_game(data, game_result)
+			data['reason'] = 'disconnection'
+			data['player'] = self.player_position
+			# the remaining player stores the game_result
+			# await store_game_result(game_result)
+			await self.flush_game_session(data)
+			self._lost_connection = True
+			return 
 
 	async def disconnect(self, game_mode):
 		async with self._game_server as server:
@@ -786,7 +793,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 
 		user = auth.get_user_with_token(token, csrf)
 		if not user:
-			print("NOT USER!!!", flush=True)
+			print("NOT A USER!!!", flush=True)
 			# If the room does not exist, close the connection
 			await self.accept()
 			await self.send_json({

@@ -245,7 +245,7 @@ def _join_tournament(
 
 	# if player is already in a room return it (reconnecting him to the room)
 	if player_room:
-		print("RECONNECTION", player_room, flush=True)
+		print("RECONNECTION", player_room, player_room.player.user_id, flush=True)
 		return tournament_response(player, player_room.game_room, tournament, 'playing', 200)
 
 	if not participant:
