@@ -23,12 +23,12 @@ sys.path.append(os.path.join(BASE_DIR, 'common'))
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-&ch=0_il%a$0o5kc_irh_^*wxm07(m5^w(&9y86d&$p99*uyt@'
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', str(os.environ.get('IP_ADDRESS'))]
+ALLOWED_HOSTS = [str(os.environ.get('IP_ADDRESS'))]
 
 # Application definition
 INSTALLED_APPS = [
