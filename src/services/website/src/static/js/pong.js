@@ -261,10 +261,6 @@ export var Pong = {
 		window.removeEventListener("keyup", takeInputUp, true);
 		window.removeEventListener("resize", resizeCanvas, false);
 		ctx = null;
-		if (socket) {
-			socket.close();
-			socket = null;
-		}
 	},
 	update(data) {
 		if (game_status != PLAYING)

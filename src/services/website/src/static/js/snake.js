@@ -412,10 +412,10 @@ export var Snake = {
 		window.removeEventListener("keydown", takeInputDown, true);
 		window.removeEventListener("resize", resizeCanvas, false);
 		ctx = null;
-		if (socket) {
-			socket.close();
-			socket = null;
-		}
+		// if (socket) {
+		// 	socket.close();
+		// 	socket = null;
+		// }
 	},
 	update(data) {
 		if (game_status != PLAYING)

@@ -604,10 +604,10 @@ export var Pong3d = {
 		scene = null;
 		camera = null;
 		font = null;
-		if (socket) {
-			socket.close();
-			socket = null;
-		}
+		// if (socket) {
+		// 	socket.close();
+		// 	socket = null;
+		// }
 	},
 	update(data) {
 		if (game_status != PLAYING)
