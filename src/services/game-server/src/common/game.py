@@ -1003,7 +1003,6 @@ class GameConsumer(AsyncWebsocketConsumer):
 		if not self.game_room:
 			return
 		await self._game_locality.disconnect(self._game_mode)
-		self.close()
 
 	# receives data from websocket.
 	async def receive(self, bytes_data):
