@@ -25,8 +25,7 @@ class ParticipantFormState {
 	}
 
 	back() {
-		this.context.state = this.localTournamentState;
-		this.context.state.execute();
+		this.context.state = this.localTournamentState.back();
 	}
 
 	generateForm(index) {
@@ -115,26 +114,24 @@ class ParticipantFormState {
 	}
 }
 
-class InBetweenState {
+class WaitScreen {
 	constructor(context, gameState, room) {
 		this.context = context;
 		this.gameState = gameState;
 		this.room = room;
-		this.player1 = this.room.player1;
-		this.player2 = this.room.player2;
 	};
 	startCirylGane() {
 		this.gameState.startGame(this.room);
 	}
 
 	execute() {
-
+		this.context.gameUI.style.display = 'flex';
 		this.context.gameMenu.style.display = 'flex';
 		this.context.gameMenuHeader.textContent = `NEXT PLAYERS`;
-		this.context.gameMenuBody.textContent = this.player1 + " " + this.player2;
+		this.context.gameMenuBody.innerHTML = `Next up are:<br>${this.room.player1}<br>${this.room.player2}`;
 		this.context.gameMenuFooter.innerHTML = `
 		<div class="d-flex flex-row align-items-center mt-2">
-			<button type="button" id="nextGame" class="btn btn-outline-light mx-2 w-100">Start game</button>
+			<button type="button" id="nextGame" class="btn btn-outline-light mx-2 w-100">Ready</button>
 		</div>`;
 		const nextGame = document.getElementById("nextGame");
 		nextGame.addEventListener('click', () => this.startCirylGane());
@@ -153,6 +150,11 @@ class LocalTournamentGameState {
 		this.currentRound = 0;
 		this.tournament = null;
 		this.socket = null;
+		this.prevState = prevState;
+	}
+
+	back() {
+		this.context.changeState(this.prevState);
 	}
 
 	async addTournamentPlayer(player_name) {
@@ -257,8 +259,8 @@ class LocalTournamentGameState {
 				// 	this.socket.close();
 				// 	this.socket = null;
 				// }
-				const inBetweenState = new InBetweenState(this.context, this, room);
-				inBetweenState.execute();
+				const waitScreen = new WaitScreen(this.context, this, room);
+				waitScreen.execute();
 				// this.startGame(room);	// FORMER FUNCTION KEEP IT HERE WE NEVER KNOW
 				return
 			}
