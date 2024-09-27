@@ -218,6 +218,12 @@ def remove_participant(tournament: Tournament, player: Player):
 def update_tournament(tournament: Tournament, fields):
 	tournament.save(update_fields=fields)
 
+@database_sync_to_async
+def player_at_position(room_name: str, position: int):
+	return PlayerRoom.objects.filter(
+		room_name=room_name, 
+		player_position=position).first().player
+
 class GameSession(object):
 	def __init__(self, game_logic, game_server, game_room, game_mode=None, pause_timeout=5):
 		self._game_logic = game_logic
@@ -772,13 +778,14 @@ class OnlineMode(object):
 				'player_id': self.player.user_id
 				}
 		else:
+			player = await player_at_position(self.room_name, 1 - self.player_position)
 			data = {
 				'type': 'end',
 				'context': data['type'],
 				'status': 'lost',
 				'winner': 1 - self.player_position,
-				'player_name': self.player.player_name if self.player.is_guest else self.player.user_name,
-				'player_id': self.player.user_id
+				'player_name': player.player_name if player.is_guest else player.user_name,
+				'player_id': player.user_id
 				}
 		await self.consumer.send(text_data=json.dumps(data))
 		await self.channel_layer.group_discard(
