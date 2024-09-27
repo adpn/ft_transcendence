@@ -37,13 +37,13 @@ def get_user_channel(user_id: str) -> UserChannel:
 @database_sync_to_async
 def store_user_channel(user_id: str, channel_name):
 	UserChannel(
-		user_id=user_id, 
+		user_id=user_id,
 		channel_name=channel_name).save()
 
 @database_sync_to_async
 def delete_user_channel(user_id: str, channel_name):
 	UserChannel.objects.filter(
-		user_id=user_id, 
+		user_id=user_id,
 		channel_name=channel_name).delete()
 
 @database_sync_to_async
@@ -237,8 +237,8 @@ class GameSession(object):
 		self._disconnected = False
 		self._start_time = 0
 		self._current_data = {
-			"player": -1, 
-			"loser": -1, 
+			"player": -1,
+			"loser": -1,
 			"score": [-1, -1]}
 
 	def set_player(self, position, player):
@@ -276,9 +276,9 @@ class GameSession(object):
 				self._current_data['score'] = self._game_logic.score
 				self._game_result.game_duration = time.time() - self._start_time
 				await end(
-					self, 
-					self._game_mode, 
-					self._current_data, 
+					self,
+					self._game_mode,
+					self._current_data,
 					self._game_result)
 			await set_in_session(self._game_room, False)
 			self.is_running = False
@@ -357,7 +357,7 @@ class QuickGameMode(object):
 		# delete game room if not is session (means player canceled)
 		if not await in_session(game_room):
 			await delete_game_room(game_room)
-	
+
 	async def get_participants(self, user, game_room):
 		player_rooms = PlayerRoom.objects.filter(
 			game_room=game_room
@@ -469,7 +469,7 @@ class TournamentMode(object):
 			if participant.round > 0:
 				await eliminate_player(player, tournament)
 
-	
+
 	async def get_participants(self, user, game_room):
 		participants = TournamentParticipant.objects.filter(
 			tournament=self._tournament).order_by('tournament_position')
@@ -626,7 +626,7 @@ class LocalMode(object):
 
 	async def flush_game_session(self, data):
 		# just send the winner to client in local mode.
-		async for position in self._players_positions:
+		for position in self._players_positions:
 			player = await get_player_room_player(self._player_rooms[position])
 			if data['player'] == position:
 				data = {
@@ -805,7 +805,7 @@ class OnlineMode(object):
 			await store_game_result(game_result)
 			await self.flush_game_session(data)
 			self._lost_connection = True
-			return 
+			return
 
 	async def disconnect(self, game_mode):
 		async with self._game_server as server:
@@ -822,7 +822,7 @@ class OnlineMode(object):
 			await self.channel_layer.group_discard(self.room_name, self.consumer.channel_name)
 			if game_mode:
 				await game_mode.handle_disconnection(
-					self.room_name, 
+					self.room_name,
 					session.get_player(self.player_position))
 			self._disconnected = True
 			# delete game room if it is not in session.
@@ -987,7 +987,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 				'message': {
 					'type': 'participants',
 					'values': await self._game_mode.get_participants(
-						user, 
+						user,
 						self.game_room)
 				}
 			})

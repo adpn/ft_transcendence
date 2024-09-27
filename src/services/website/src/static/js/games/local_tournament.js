@@ -253,7 +253,7 @@ class LocalTournamentGameState {
 			this.context.canvas.style.display = "none";
 			if (data.status == "lost") {
 				this.gameStatus = "ended";
-				this.gameEndState.setMessage(data.player_name);		// todo: add a winner in there lmao
+				this.gameEndState.setMessage(data.player_name);
 				this.context.changeState(this.gameEndState);
 				return;
 			}
@@ -266,7 +266,7 @@ class LocalTournamentGameState {
 				tournament_title.innerHTML = "";
 				playersList.innerHTML = "";
 				this.gameStatus = "ended";
-				this.gameEndState.setMessage(data.player_name);		// todo: add a winner in there lmao
+				this.gameEndState.setMessage(data.player_name);
 				this.context.changeState(this.gameEndState);
 				return;
 			}

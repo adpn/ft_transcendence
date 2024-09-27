@@ -14,8 +14,10 @@ class OnlineTournamentGameState {
 		this.context = context;
 	};
 	cancel() {
-		if (this.socket)
+		if (this.socket) {
 			this.socket.close();
+			this.socket = null;
+		}
 		this.context.loadingOverlay.style.display = 'none';
 		this.context.gameUI.style.display = 'flex'
 		this.context.state = this.prevState;
@@ -58,9 +60,11 @@ class OnlineTournamentGameState {
 			opponent2.innerHTML = "";
 			if (data.status == "lost") {
 				this.gameStatus = "ended";
-				this.gameEndState.setMessage(data.player_name);		// todo: nothing :) all good here :) no worries :)
-				if (this.socket)
+				this.gameEndState.setMessage(data.player_name);
+				if (this.socket) {
 					this.socket.close();
+					this.socket = null;
+				}
 				this.context.state = this.gameEndState;
 				this.context.state.execute();
 				return;
@@ -77,9 +81,11 @@ class OnlineTournamentGameState {
 				tournament_title.innerHTML = "";
 				playersList.innerHTML = "";
 				this.gameStatus = "ended";
-				this.gameEndState.setMessage(data.player_name);		// todo: nothing :) all good here :) no worries :)
-				if (this.socket)
+				this.gameEndState.setMessage(data.player_name);
+				if (this.socket) {
 					this.socket.close();
+					this.socket = null;
+				}
 				this.context.state = this.gameEndState;
 				this.context.state.execute();
 				return;

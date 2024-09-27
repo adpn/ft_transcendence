@@ -15,8 +15,10 @@ class OnlineQuickGameState {
 	}
 
 	cancel() {
-		if (this.socket)
+		if (this.socket) {
 			this.socket.close();
+			this.socket = null;
+		}
 		this.context.loadingOverlay.style.display = 'none';
 		this.context.gameUI.style.display = 'flex'
 		this.context.state = this.prevState;
@@ -42,9 +44,11 @@ class OnlineQuickGameState {
 			this.gameStatus = "ended";
 			opponent1.innerHTML = "";
 			opponent2.innerHTML = "";
-			this.gameEndState.setMessage(data.player_name);		// todo: mec, add winner
-			if (this.socket)
+			this.gameEndState.setMessage(data.player_name);
+			if (this.socket) {
 				this.socket.close();
+				this.socket = null;
+			}
 			this.context.canvas.style.display = "none";
 			this.context.state = this.gameEndState;
 			this.context.state.execute();

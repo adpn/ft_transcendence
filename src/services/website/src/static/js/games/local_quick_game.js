@@ -18,13 +18,14 @@ class LocalQuickGameState {
 		const opponent2 = document.getElementById("opponent2");
 
 		if (data.type == "end") {
-			console.log(data);				// debug
 			this.gameStatus = "ended";
 			opponent1.innerHTML = "";
 			opponent2.innerHTML = "";
-			this.gameEndState.setMessage(data.player_name);			// todo: add winner
-			if (this.socket)
+			this.gameEndState.setMessage(data.player_name);
+			if (this.socket) {
 				this.socket.close();
+				this.socket = null;
+			}
 			this.context.canvas.style.display = "none";
 			this.context.state = this.gameEndState;
 			this.context.state.execute();
