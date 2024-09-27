@@ -6,13 +6,8 @@ class GameEndedState {
 		this.context = context;
 		this.game = game;
 	}
-	setMessage(is_winner) {
-		this.context.gameMenuBody.textContent = "You Won!";
-		this.context.gameMenuBody.style.color = 'green';
-		if (!is_winner) {
-			this.context.gameMenuBody.textContent = "You Lost!";
-			this.context.gameMenuBody.style.color = 'red';
-		}
+	setMessage(winner) {
+		this.context.gameMenuBody.textContent = "The winner is " + winner;
 	}
 
 	replay() {

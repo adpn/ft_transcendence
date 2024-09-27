@@ -51,10 +51,7 @@ class OnlineTournamentGameState {
 			this.context.canvas.style.display = "none";
 			if (data.status == "lost") {
 				this.gameStatus = "ended";
-				if (this.gameStatus == "win")
-					this.gameEndState.setMessage("You Won!", true);
-				else
-					this.gameEndState.setMessage("You Lost!", false);
+				this.gameEndState.setMessage("winner");		// todo: nothing :) all good here :) no worries :)
 				if (this.socket)
 					this.socket.close();
 				this.context.state = this.gameEndState;
@@ -71,10 +68,7 @@ class OnlineTournamentGameState {
 					return;
 				}
 				this.gameStatus = "ended";
-				if (this.gameStatus == "win")
-					this.gameEndState.setMessage("You Won!", true);
-				else
-					this.gameEndState.setMessage("You Lost!", false);
+				this.gameEndState.setMessage("winner");		// todo: nothing :) all good here :) no worries :)
 				if (this.socket)
 					this.socket.close();
 				this.context.state = this.gameEndState;

@@ -237,11 +237,7 @@ class LocalTournamentGameState {
 			if (data.status == "lost") {
 				this.gameStatus = "ended";
 				// todo: display winner.
-				if (this.gameStatus == "win")
-					//this.gameEndState.setWinner(data.winner);
-					this.gameEndState.setMessage("You Won!", true);
-				else
-					this.gameEndState.setMessage("You Lost!", false);
+				this.gameEndState.setMessage("winner");		// todo: add a winner in there lmao
 				this.context.changeState(this.gameEndState);
 				return;
 			}
@@ -252,10 +248,7 @@ class LocalTournamentGameState {
 					return;
 				}
 				this.gameStatus = "ended";
-				if (this.gameStatus == "win")
-					this.gameEndState.setMessage("You Won!", true);
-				else
-					this.gameEndState.setMessage("You Lost!", false);
+				this.gameEndState.setMessage("winner");		// todo: add a winner in there lmao
 				this.context.changeState(this.gameEndState);
 				return;
 			}

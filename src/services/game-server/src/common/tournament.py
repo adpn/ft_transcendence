@@ -15,7 +15,7 @@ class TournamentConsumer(AsyncWebsocketConsumer):
 		self._game_session = None
 		self.disconnected = False
 		self._lost_connection = False
-	
+
 	async def send_json(self, data: dict):
 		await self.send(text_data=json.dumps(data))
 
@@ -140,7 +140,7 @@ class TournamentConsumer(AsyncWebsocketConsumer):
 			if session.current_players > 0:
 				session.current_players -= 1
 			session.remove_callback(
-				'session-end', 
+				'session-end',
 				self.flush_game_session)
 			session.pause()
 			# todo: send a message to clients when a player disconnects.

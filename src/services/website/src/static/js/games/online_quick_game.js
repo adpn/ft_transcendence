@@ -36,10 +36,7 @@ class OnlineQuickGameState {
 		// todo: move to result state
 		if (data.type == "end") {
 			this.gameStatus = "ended";
-			if (this.gameStatus == "win")
-				this.gameEndState.setMessage("You Won!", true);
-			else
-				this.gameEndState.setMessage("You Lost!", false);
+			this.gameEndState.setMessage("winner");		// todo: mec, add winner
 			if (this.socket)
 				this.socket.close();
 			this.context.canvas.style.display = "none";
