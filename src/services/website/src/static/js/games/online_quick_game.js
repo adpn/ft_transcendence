@@ -42,7 +42,7 @@ class OnlineQuickGameState {
 			this.gameStatus = "ended";
 			opponent1.innerHTML = "";
 			opponent2.innerHTML = "";
-			this.gameEndState.setMessage("winner");		// todo: mec, add winner
+			this.gameEndState.setMessage(data.player_name);		// todo: mec, add winner
 			if (this.socket)
 				this.socket.close();
 			this.context.canvas.style.display = "none";

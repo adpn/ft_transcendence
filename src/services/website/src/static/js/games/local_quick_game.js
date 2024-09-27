@@ -22,7 +22,7 @@ class LocalQuickGameState {
 			this.gameStatus = "ended";
 			opponent1.innerHTML = "";
 			opponent2.innerHTML = "";
-			this.gameEndState.setMessage("winner");			// todo: add winner
+			this.gameEndState.setMessage(data.player_name);			// todo: add winner
 			if (this.socket)
 				this.socket.close();
 			this.context.canvas.style.display = "none";

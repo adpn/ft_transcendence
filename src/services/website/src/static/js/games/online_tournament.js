@@ -58,7 +58,7 @@ class OnlineTournamentGameState {
 			opponent2.innerHTML = "";
 			if (data.status == "lost") {
 				this.gameStatus = "ended";
-				this.gameEndState.setMessage("winner");		// todo: nothing :) all good here :) no worries :)
+				this.gameEndState.setMessage(data.player_name);		// todo: nothing :) all good here :) no worries :)
 				if (this.socket)
 					this.socket.close();
 				this.context.state = this.gameEndState;
@@ -77,7 +77,7 @@ class OnlineTournamentGameState {
 				tournament_title.innerHTML = "";
 				playersList.innerHTML = "";
 				this.gameStatus = "ended";
-				this.gameEndState.setMessage("winner");		// todo: nothing :) all good here :) no worries :)
+				this.gameEndState.setMessage(data.player_name);		// todo: nothing :) all good here :) no worries :)
 				if (this.socket)
 					this.socket.close();
 				this.context.state = this.gameEndState;
