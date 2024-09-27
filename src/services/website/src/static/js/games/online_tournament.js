@@ -24,6 +24,7 @@ class OnlineTournamentGameState {
 	execute() {
 		//todo launch loading screen and animations.
 		// Clear the game menu content
+		this.context.gameUI.style.display = 'flex';
 		this.context.gameMenu.style.display = 'none';
 		this.context.overlayBody.innerHTML = '';
 		this.context.loadingOverlay.style.display = 'flex';

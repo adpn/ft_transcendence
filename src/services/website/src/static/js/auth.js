@@ -212,6 +212,8 @@ document.addEventListener("DOMContentLoaded", function() {
 			})
 			.then(response => response.json())
 			.then(data => {
+				const logoutEvent = new CustomEvent("logout", { detail: { message: "User logged out" } });
+				document.dispatchEvent(logoutEvent);
 				successAlertPlaceholder('You have been logged out! Bye bye!');
 				resetLoginButtons();
 				navigateTo('/');

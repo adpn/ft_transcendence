@@ -26,6 +26,7 @@ class OnlineQuickGameState {
 	execute() {
 		// Clear the game menu content
 		this.context.gameMenu.style.display = 'none';
+		this.context.gameUI.style.display = 'flex';
 		this.context.loadingOverlay.style.display = 'flex';
 		this.context.overlayBody.innerHTML = '';
 		this.context.overlayBody.appendChild(this.cancelBtn);

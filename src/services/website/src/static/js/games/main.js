@@ -63,6 +63,7 @@ class GameModes {
 	}
 	execute() {
 		this.context.canvas = document.getElementById("gameCanvas" + this.game.canvas_context);
+		this.context.gameUI.style.display = 'flex';
 		this.context.gameMenu.style.display = 'flex';
 		this.modesGrid.render();
 		this.context.gameMenuHeader.textContent = `${this.game.name.toUpperCase()} GAME MODE`;
@@ -142,7 +143,18 @@ class GameMenu {
 	}
 }
 
+function reset_games() {
+	games_context.state = new GameMenu(games_context)
+}
+
+document.addEventListener(
+	"logout", 
+	reset_games)
+
 function load_games() {
+	games_context.gameUI = document.getElementById('game-ui');
+	if (!games_context.gameUI)
+		return;
 	games_context.gameMenu = document.getElementById('game-menu');
 	if (!games_context.gameMenu)
 		return;
@@ -155,7 +167,6 @@ function load_games() {
 	games_context.gameUI = document.getElementById('game-ui');
 	document.getElementById('gameCanvas2D').style.display = "none";
 	document.getElementById('gameCanvas3D').style.display = "none";
-	// todo: check if the user is signed-in first ?
 	if (games_context.state == null)
 		games_context.state = new GameMenu(games_context);
 	games_context.state.execute();

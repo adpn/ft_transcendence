@@ -128,7 +128,8 @@ class LocalQuickGameState {
 	}
 
 	execute() {
-		this.context.gameMenu.style.display = 'block';
+		this.context.gameUI.style.display = 'flex';
+		this.context.gameMenu.style.display = 'flex';
 		this.context.gameMenuHeader.textContent = `${this.game.name.toUpperCase()} LOCAL QUICK GAME`;
 		this.context.gameMenuBody.innerHTML = `
 		<form id="playerForm" class="d-flex flex-column justify-content-center">

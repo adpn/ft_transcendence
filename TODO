@@ -5,15 +5,16 @@ GAME SERVER
 - display playing order (local only ?)
 - add a next round state with a countdown before moving to the next round.
 - change the websocket connections to be /games/room-id and put game servers in game.py
+- implement back button when in local tournament players choice.
 
 - DELETE session when online game ends.
-- REMOVE player from tournament when player cancels
-- FIX: when a player disconnects during a tournament and does not reconnect, when the other players move to the next round, the previous round resumes before moving to the next round WHY ? -> timeout is too long and other player move to the next round which triggers the disconnected game to resume (WHY ?) -> all session get resumed ? -> it's because of tournament message !
-- send player id in the from the Game Server when players join.
++ REMOVE player from tournament when player cancels
++ FIX: when a player disconnects during a tournament and does not reconnect, when the other players move to the next round, the previous round resumes before moving to the next round WHY ? -> timeout is too long and other player move to the next round which triggers the disconnected game to resume (WHY ?) -> all session get resumed ? -> it's because of tournament message !
++ send player id in the from the Game Server when players join.
 - add connection protections (if the same player connects twice he should be disconnected)
 - remove "round" requirement in the next_room request.
-- DELETE participant of tournament if player cancels -> decrease number of participants
-- set participant as eliminated if he does not reconnect after some time.
++ DELETE participant of tournament if player cancels -> decrease number of participants
++ set participant as eliminated if he does not reconnect after some time.
 
 - put the django SECRET_KEY in .env
 - put DEBUG false in Django
