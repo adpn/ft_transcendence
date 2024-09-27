@@ -226,9 +226,11 @@ def update_tournament(tournament: Tournament, fields):
 
 @database_sync_to_async
 def player_at_position(room_name: str, position: int):
-	return PlayerRoom.objects.filter(
+	room = PlayerRoom.objects.filter(
 		game_room__room_name=room_name,
-		player_position=position).first().player
+		player_position=position).first()
+	if room:
+		return room.player
 
 class GameSession(object):
 	def __init__(self, game_logic, game_server, game_room, game_mode=None, pause_timeout=5):
@@ -954,7 +956,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 		tournament_room = await get_tournament_room(self.game_room)
 		if tournament_room:
 			# add channel to tournament group.
-			tournament_id = await get_tournament_room_tournament_id(tournament_room)
+			self.tournament_id = tournament_id = await get_tournament_room_tournament_id(tournament_room)
 			self._game_mode = game_mode = TournamentMode(
 				await get_tournament_room_tournament(tournament_room),
 				tournament_id,
@@ -978,11 +980,13 @@ class GameConsumer(AsyncWebsocketConsumer):
 				self.channel_name
 			)
 		else:
+			self.tournament_id = tournament_id = self.room_name
 			self._game_mode = game_mode = QuickGameMode(self.channel_layer)
-		await self.channel_layer.group_add(self.room_name, self.channel_name)
+		await self.channel_layer.group_add(
+			self.room_name, self.channel_name)
 		# send participants to clients.
 		await self.channel_layer.group_send(
-			self.room_name,
+			tournament_id,
 			{
 				'type': 'tournament_message',
 				'message': {
@@ -1002,6 +1006,17 @@ class GameConsumer(AsyncWebsocketConsumer):
 		# await delete_user_channel(self.user['user_id'], self.channel_name)
 		if not self.game_room:
 			return
+		await self.channel_layer.group_send(
+			self.tournament_id,
+			{
+				'type': 'tournament_message',
+				'message': {
+					'type': 'participants',
+					'values': await self._game_mode.get_participants(
+						self.user,
+						self.game_room)
+				}
+			})
 		await self._game_locality.disconnect(self._game_mode)
 
 	# receives data from websocket.
