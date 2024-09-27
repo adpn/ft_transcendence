@@ -21,7 +21,6 @@ services:
       context: services/users/
     environment:
       IP_ADDRESS : "${IP_ADDRESS}"
-      AUTH_URL: "${AUTH_URL}"
       POSTGRES_USER : "${POSTGRES_USER}"
       POSTGRES_PASSWORD : "${POSTGRES_PASSWORD}"
       CLIENT_ID : "${CLIENT_ID}"
@@ -49,10 +48,7 @@ services:
       - transcendence
     environment:
       IP_ADDRESS : "${IP_ADDRESS}"
-      POSTGRES_USER : "${POSTGRES_USER}"
-      POSTGRES_PASSWORD : "${POSTGRES_PASSWORD}"
       SESSION_SERVER : "${SESSION_SERVER}"
-      AUTH_URL: "${AUTH_URL}"
       DJANGO_SECRET_KEY: "${DJANGO_SECRET_KEY}"
     restart: always
 

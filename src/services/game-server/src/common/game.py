@@ -329,8 +329,10 @@ class QuickGameMode(object):
 	def __init__(self, channel_layer: BaseChannelLayer) -> None:
 		self.channel_layer = channel_layer
 		self.game_room = None
+		self.started = False
 
 	async def ready(self, session: GameSession, room_name: str, game_room: GameRoom, state_callback) -> None:
+		self.started = True
 		await self.channel_layer.group_send(
 		room_name, {
 			'type': 'game_status',
@@ -456,7 +458,6 @@ class TournamentMode(object):
 				await leave_game_room(player, game_room)
 				if await get_room_num_players(game_room) < 0:
 					await delete_game_room(game_room)
-			print("CANCELED TOURNAMENT PARTICIPATION", flush=True)
 			tournament.participants -= 1
 			if player:
 				await remove_participant(tournament, player)
@@ -464,10 +465,6 @@ class TournamentMode(object):
 				await delete_tournament(tournament)
 			else:
 				await update_tournament(tournament, ['participants'])
-		else:
-			participant = await get_tournament_participant(player, tournament)
-			if participant.round > 0:
-				await eliminate_player(player, tournament)
 
 
 	async def get_participants(self, user, game_room):

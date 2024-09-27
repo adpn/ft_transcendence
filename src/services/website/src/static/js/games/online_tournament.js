@@ -67,6 +67,8 @@ class OnlineTournamentGameState {
 				}
 				this.context.state = this.gameEndState;
 				this.context.state.execute();
+				tournament_title.innerHTML = "";
+				playersList.innerHTML = "";
 				return;
 			}
 			if (data.status == "win") {
