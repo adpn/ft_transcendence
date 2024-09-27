@@ -221,7 +221,7 @@ def update_tournament(tournament: Tournament, fields):
 @database_sync_to_async
 def player_at_position(room_name: str, position: int):
 	return PlayerRoom.objects.filter(
-		room_name=room_name, 
+		game_room__room_name=room_name,
 		player_position=position).first().player
 
 class GameSession(object):
