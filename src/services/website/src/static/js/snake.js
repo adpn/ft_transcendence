@@ -403,6 +403,7 @@ export var Snake = {
 	start(sockt) {
 		socket = sockt;
 		game_status = PLAYING;
+		current_ui = 0;
 		changeButton();
 		resizeCanvas();
 		canvas.focus();
