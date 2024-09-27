@@ -888,19 +888,19 @@ class GameConsumer(AsyncWebsocketConsumer):
 			await self.close()
 			return
 
-		if await get_user_channel(user['user_id']):
-			print("ALREADY CONNECTED", flush=True)
-			# If a connection still exists, refuse the new connection
-			await self.accept()
-			await self.send_json({
-				"type": "websocket.close",
-				"code": 4000,  # Custom close code
-				"reason": "Already connected"
-			})
-			await self.close()
-			return
+		# if await get_user_channel(user['user_id']):
+		# 	print("ALREADY CONNECTED", flush=True)
+		# 	# If a connection still exists, refuse the new connection
+		# 	await self.accept()
+		# 	await self.send_json({
+		# 		"type": "websocket.close",
+		# 		"code": 4000,  # Custom close code
+		# 		"reason": "Already connected"
+		# 	})
+		# 	await self.close()
+		# 	return
 
-		await store_user_channel(user['user_id'], self.channel_name)
+		# await store_user_channel(user['user_id'], self.channel_name)
 
 		# create game locality mode.
 		if params.get('local'):
@@ -999,7 +999,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 
 	# todo: notify the game loop to pause the game
 	async def disconnect(self, close_code):
-		await delete_user_channel(self.user['user_id'], self.channel_name)
+		# await delete_user_channel(self.user['user_id'], self.channel_name)
 		if not self.game_room:
 			return
 		await self._game_locality.disconnect(self._game_mode)
