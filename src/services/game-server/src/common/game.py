@@ -66,7 +66,7 @@ def get_tournament_room_name(tournament_room: TournamentGameRoom) -> str:
 @database_sync_to_async
 def get_tournament_player_room(player: Player, rooms):
 	return PlayerRoom.objects.filter(
-		player=player, 
+		player=player,
 		game_room__in=rooms).first()
 
 @database_sync_to_async
@@ -888,19 +888,19 @@ class GameConsumer(AsyncWebsocketConsumer):
 			await self.close()
 			return
 
-		if await get_user_channel(user['user_id']):
-			print("ALREADY CONNECTED", flush=True)
-			# If a connection still exists, refuse the new connection
-			await self.accept()
-			await self.send_json({
-				"type": "websocket.close",
-				"code": 4000,  # Custom close code
-				"reason": "Already connected"
-			})
-			await self.close()
-			return
+		# if await get_user_channel(user['user_id']):
+		# 	print("ALREADY CONNECTED", flush=True)
+		# 	# If a connection still exists, refuse the new connection
+		# 	await self.accept()
+		# 	await self.send_json({
+		# 		"type": "websocket.close",
+		# 		"code": 4000,  # Custom close code
+		# 		"reason": "Already connected"
+		# 	})
+		# 	await self.close()
+		# 	return
 
-		await store_user_channel(user['user_id'], self.channel_name)
+		# await store_user_channel(user['user_id'], self.channel_name)
 
 		# create game locality mode.
 		if params.get('local'):
@@ -999,11 +999,11 @@ class GameConsumer(AsyncWebsocketConsumer):
 
 	# todo: notify the game loop to pause the game
 	async def disconnect(self, close_code):
-		await delete_user_channel(self.user['user_id'], self.channel_name)
+		# await delete_user_channel(self.user['user_id'], self.channel_name)
 		if not self.game_room:
 			return
 		await self._game_locality.disconnect(self._game_mode)
-		self.close()
+		# await self.close()
 
 	# receives data from websocket.
 	async def receive(self, bytes_data):

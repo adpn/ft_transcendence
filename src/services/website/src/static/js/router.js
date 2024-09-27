@@ -74,11 +74,6 @@ const Games = async () => {
 			<div class="col-4 text-start d-flex align-items-center">
 				<span id="opponent1" class="text-dark"></span>
 			</div>
-			<div class="col-auto d-flex flex-column align-items-center">
-			<h3 id="tournament-title" class="text-dark"></h3>
-				<ul id="playersList" class="list-unstyled text-dark d-grid">
-				</ul>
-			</div>
 
 			<div class="col-4 text-end d-flex justify-content-end align-items-center">
 				<span id="opponent2" class="text-dark"></span>
@@ -100,6 +95,11 @@ const Games = async () => {
 						<div id="game-menu-footer" class="card-footer d-flex flex-column justify-content-center align-items-center"></div>
 					</div>
 				</div>
+			</div>
+			<div class="col-auto d-flex flex-column align-items-center">
+			<h3 id="tournament-title" class="text-dark"></h3>
+				<ul id="playersList" class="list-unstyled text-dark d-grid">
+				</ul>
 			</div>
 		</div>
 	</div>
@@ -398,7 +398,7 @@ function updateGameStats(gameType, stats) {
 			const game = stats.games[i];
 			const listItem = document.createElement("li");
 			listItem.className = `list-group-item game-stat ${game.is_winner ? 'bg-success text-white' : 'bg-danger text-white'}`;
-		
+
 			const resultText = game.is_winner ? 'Victory' : 'Defeat';
 			listItem.innerHTML = `
 				<strong>${resultText}</strong> |
@@ -407,9 +407,9 @@ function updateGameStats(gameType, stats) {
 				Duration: ${game.game_duration} |
 				Date: ${new Date(game.game_date).toLocaleString()}
 			`;
-		
+
 			gameHistoryList.appendChild(listItem);
-		}		
+		}
 	} else {
 		statsContainer.innerHTML = `
 		<div class="row d-flex justify-content-center">

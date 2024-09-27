@@ -115,6 +115,32 @@ class ParticipantFormState {
 	}
 }
 
+class InBetweenState {
+	constructor(context, gameState, room) {
+		this.context = context;
+		this.gameState = gameState;
+		this.room = room;
+		this.player1 = this.room.player1;
+		this.player2 = this.room.player2;
+	};
+	startCirylGane() {
+		this.gameState.startGame(this.room);
+	}
+
+	execute() {
+
+		this.context.gameMenu.style.display = 'flex';
+		this.context.gameMenuHeader.textContent = `NEXT PLAYERS`;
+		this.context.gameMenuBody.textContent = this.player1 + " " + this.player2;
+		this.context.gameMenuFooter.innerHTML = `
+		<div class="d-flex flex-row align-items-center mt-2">
+			<button type="button" id="nextGame" class="btn btn-outline-light mx-2 w-100">Start game</button>
+		</div>`;
+		const nextGame = document.getElementById("nextGame");
+		nextGame.addEventListener('click', () => this.startCirylGane());
+	}
+}
+
 class LocalTournamentGameState {
 	constructor(context, game, prevState) {
 		this.buttonGrid = new CustomGrid(context, 4);
@@ -126,6 +152,7 @@ class LocalTournamentGameState {
 			game, context, this, this.gameEndState);
 		this.currentRound = 0;
 		this.tournament = null;
+		this.socket = null;
 	}
 
 	async addTournamentPlayer(player_name) {
@@ -225,8 +252,14 @@ class LocalTournamentGameState {
 					opponent2.className = "text-success";
 				else
 					opponent2.className = "text-dark";
-				this.startGame(room);
-				// this.context.changeState(this.playingState);
+
+				// if (this.socket) {
+				// 	this.socket.close();
+				// 	this.socket = null;
+				// }
+				const inBetweenState = new InBetweenState(this.context, this, room);
+				inBetweenState.execute();
+				// this.startGame(room);	// FORMER FUNCTION KEEP IT HERE WE NEVER KNOW
 				return
 			}
 			else if (response.status == 404) {

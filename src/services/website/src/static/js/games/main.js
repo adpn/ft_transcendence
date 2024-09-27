@@ -148,7 +148,7 @@ function reset_games() {
 }
 
 document.addEventListener(
-	"logout", 
+	"logout",
 	reset_games)
 
 function load_games() {
@@ -170,28 +170,4 @@ function load_games() {
 	if (games_context.state == null)
 		games_context.state = new GameMenu(games_context);
 	games_context.state.execute();
-}
-
-// not used :)
-class ErrorState {
-	constructor(context, mainState, error) {
-		this.context = context;
-		this.mainState = mainState;
-		this.error = error;
-
-	};
-	returnMain() {
-		this.context.changeState(this.mainState);
-	}
-	execute() {
-		this.context.gameMenu.style.display = 'flex';
-		this.context.gameMenuHeader.textContent = `ERROR`;
-		this.context.gameMenuBody.textContent = this.error;
-		this.context.gameMenuFooter.innerHTML = `
-		<div class="d-flex flex-row align-items-center mt-2">
-			<button type="button" id="backButton" class="btn btn-outline-light mx-2 w-100">Return to main</button>
-		</div>`;
-		const backButton = document.getElementById("backButton");
-		backButton.addEventListener('click', () => this.returnMain());
-	}
 }
