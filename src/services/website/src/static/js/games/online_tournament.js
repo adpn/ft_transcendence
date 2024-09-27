@@ -24,6 +24,7 @@ class OnlineTournamentGameState {
 	execute() {
 		//todo launch loading screen and animations.
 		// Clear the game menu content
+		this.context.gameUI.style.display = 'flex';
 		this.context.gameMenu.style.display = 'none';
 		this.context.overlayBody.innerHTML = '';
 		this.context.loadingOverlay.style.display = 'flex';
@@ -47,8 +48,14 @@ class OnlineTournamentGameState {
 	}
 
 	update(data) {
+		const tournament_title = document.getElementById("tournament-title");
+		const playersList = document.getElementById("playersList");
 		if (data.type == "end") {
 			this.context.canvas.style.display = "none";
+			const opponent1 = document.getElementById("opponent1");
+			const opponent2 = document.getElementById("opponent2");
+			opponent1.innerHTML = "";
+			opponent2.innerHTML = "";
 			if (data.status == "lost") {
 				this.gameStatus = "ended";
 				this.gameEndState.setMessage("winner");		// todo: nothing :) all good here :) no worries :)
@@ -67,6 +74,8 @@ class OnlineTournamentGameState {
 					this.execute();
 					return;
 				}
+				tournament_title.innerHTML = "";
+				playersList.innerHTML = "";
 				this.gameStatus = "ended";
 				this.gameEndState.setMessage("winner");		// todo: nothing :) all good here :) no worries :)
 				if (this.socket)
@@ -76,7 +85,14 @@ class OnlineTournamentGameState {
 				return;
 			}
 		}
-		else if (data.type == "participant") {
+		else if (data.type == "participants") {
+			console.log(data);
+			tournament_title.innerHTML = "Tournament Players";
+			playersList.innerHTML = "";
+			data.values.forEach(player => {
+				playersList.innerHTML += `<li class="text-dark">${player.player_name}</li>`;
+			});
+			console.log("WHERE AM I SUPPOSED TO CATCH MY OPPONENT?? HERE? IT IS NOT THE CASE IN LOCAL TOURNAMENT !!!");
 			//new participant joined. -> update view... (fetch user data of the new participant)
 			return;
 		}

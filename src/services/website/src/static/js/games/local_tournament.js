@@ -216,6 +216,15 @@ class LocalTournamentGameState {
 			});
 			if (response.status == 200 || response.status == 201) {
 				const room = await response.json();
+				const opponent1 = document.getElementById("opponent1");
+				const opponent2 = document.getElementById("opponent2");
+
+				opponent1.innerHTML = room.player1;
+				opponent2.innerHTML = room.player2;
+				if (this.game.name === "snake")
+					opponent2.className = "text-success";
+				else
+					opponent2.className = "text-dark";
 				this.startGame(room);
 				// this.context.changeState(this.playingState);
 				return
@@ -232,7 +241,15 @@ class LocalTournamentGameState {
 	}
 
 	update(data) {
+		const tournament_title = document.getElementById("tournament-title");
+		const playersList = document.getElementById("playersList");
 		if (data.type == "end") {
+
+			const opponent1 = document.getElementById("opponent1");
+			const opponent2 = document.getElementById("opponent2");
+			opponent1.innerHTML = "";
+			opponent2.innerHTML = "";
+
 			this.context.canvas.style.display = "none";
 			if (data.status == "lost") {
 				this.gameStatus = "ended";
@@ -247,11 +264,23 @@ class LocalTournamentGameState {
 					this.nextRoom();
 					return;
 				}
+				tournament_title.innerHTML = "";
+				playersList.innerHTML = "";
 				this.gameStatus = "ended";
 				this.gameEndState.setMessage("winner");		// todo: add a winner in there lmao
 				this.context.changeState(this.gameEndState);
 				return;
 			}
+		}
+		else if (data.type == "participants") {
+			console.log(data);
+			tournament_title.innerHTML = "Tournament Players";
+			playersList.innerHTML = "";
+			data.values.forEach(player => {
+				playersList.innerHTML += `<li class="text-dark">${player.player_name}</li>`;
+			});
+			//new participant joined. -> update view... (fetch user data of the new participant)
+			return;
 		}
 		this.game.update(data);
 	}

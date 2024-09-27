@@ -72,12 +72,16 @@ const Games = async () => {
 		<!-- Opponents Header-->
 		<div class="row justify-content-between align-items-center mb-2">
 			<div class="col-4 text-start d-flex align-items-center">
-				<img id="opponent1-img" src="default-profile1.jpg" alt="Opponent 1" class="rounded-circle me-2" width="50" height="50">
-				<span id="opponent1" class="text-light">Player 1</span>
+				<span id="opponent1" class="text-dark"></span>
 			</div>
+			<div class="col-auto d-flex flex-column align-items-center">
+			<h3 id="tournament-title" class="text-dark"></h3>
+				<ul id="playersList" class="list-unstyled text-dark d-grid">
+				</ul>
+			</div>
+
 			<div class="col-4 text-end d-flex justify-content-end align-items-center">
-				<span id="opponent2" class="text-light me-2">Player 2</span>
-				<img id="opponent2-img" src="default-profile2.jpg" alt="Opponent 2" class="rounded-circle" width="50" height="50">
+				<span id="opponent2" class="text-dark"></span>
 			</div>
 		</div>
 		<div class="row text-center">
@@ -97,9 +101,6 @@ const Games = async () => {
 					</div>
 				</div>
 			</div>
-		</div>
-		<div id="game-button-container" class="text-center mt-3">
-			<button class="btn btn-success me-2" id="game-button" type="button">Find Game</button>
 		</div>
 	</div>
 	`;
@@ -393,11 +394,11 @@ function updateGameStats(gameType, stats) {
 		`;
 
 		gameHistoryList.innerHTML = '';
-		console.log(stats.games);
-		stats.games.forEach(game => {
+		for (let i = stats.games.length - 1; i >= 0; i--) {
+			const game = stats.games[i];
 			const listItem = document.createElement("li");
 			listItem.className = `list-group-item game-stat ${game.is_winner ? 'bg-success text-white' : 'bg-danger text-white'}`;
-
+		
 			const resultText = game.is_winner ? 'Victory' : 'Defeat';
 			listItem.innerHTML = `
 				<strong>${resultText}</strong> |
@@ -406,9 +407,9 @@ function updateGameStats(gameType, stats) {
 				Duration: ${game.game_duration} |
 				Date: ${new Date(game.game_date).toLocaleString()}
 			`;
-
+		
 			gameHistoryList.appendChild(listItem);
-		});
+		}		
 	} else {
 		statsContainer.innerHTML = `
 		<div class="row d-flex justify-content-center">
@@ -461,94 +462,45 @@ const UserProfile = async (username) => {
 
 		<div id="friendship" class="my-4"></div>
 
-		<h3 class="mt-5 text-secondary">Stats</h3>
-		<div id="user-stats" class="row justify-content-center mt-4"></div>
+		<div class="container bg-light py-4">
+			<div class="text-center">
+				<h2 class="mb-4">Stats</h2>
+				<div id="total-stats" class="mb-5 row d-flex justify-content-center">
+					<div class="col-md-6" id="pong-stats">
+						<p class="font-weight-bold text-primary">Loading pong stats...</p>
+					</div>
+					<div class="col-md-6" id="snake-stats">
+						<p class="font-weight-bold text-primary">Loading snake stats...</p>
+					</div>
+				</div>
+			</div>
+
+			<div id="game-history" class="container mt-5">
+				<h3 class="text-center mb-4">Game History</h3>
+				<div class="row">
+					<div class="col-md-6">
+						<ul id="pong-history-list" class="list-group list-group-flush mb-5">
+							<li class="list-group-item">Loading pong history...</li>
+						</ul>
+					</div>
+					<div class="col-md-6">
+						<ul id="snake-history-list" class="list-group list-group-flush">
+							<li class="list-group-item">Loading snake history...</li>
+						</ul>
+					</div>
+				</div>
+			</div>
+		</div>
 	</div>
 	`;
 
 	document.getElementById('app').innerHTML = app_content;
 
-	const userStats = document.getElementById('user-stats');
 	const friendship = document.getElementById('friendship');
 	friendship.innerHTML = get_friendship_content(data.friendship, data.id);
 
-	if (data.stats.pong && data.stats.pong.total_games > 0) {
-		const pongStats = data.stats.pong;
-		userStats.innerHTML += `
-		<div class="col-12 mb-3">
-			<h4 class="text-dark">Pong Stats</h4>
-		</div>
-		<div class="col-md-5 card p-4 mx-2 mb-4 shadow-sm">
-			<p class="h5"><strong>Total Games:</strong> ${pongStats.total_games}</p>
-			<p class="h5"><strong>Average Score:</strong> ${pongStats.average_score}</p>
-			<p class="h5"><strong>Total Playtime:</strong> ${pongStats.playtime}</p>
-		</div>
-
-		<div class="col-md-5 card p-4 mx-2 mb-4 shadow-sm">
-			<p class="h5"><strong>Win Percentage:</strong> <span class="text-success fw-bold">${pongStats.win_percentage}%</span></p>
-			<p class="h5"><strong>Precision:</strong> <span class="text-primary fw-bold">${pongStats.precision}%</span></p>
-		</div>
-
-		<div class="col-10 mt-3">
-			<p class="mb-2">Win Percentage</p>
-			<div class="progress">
-				<div class="progress-bar bg-success" role="progressbar" style="width: ${pongStats.win_percentage}%;" aria-valuenow="${pongStats.win_percentage}" aria-valuemin="0" aria-valuemax="100">${pongStats.win_percentage}%</div>
-			</div>
-		</div>
-
-		<div class="col-10 mt-3">
-			<p class="mb-2">Precision</p>
-			<div class="progress">
-				<div class="progress-bar bg-primary" role="progressbar" style="width: ${pongStats.precision}%;" aria-valuenow="${pongStats.precision}" aria-valuemin="0" aria-valuemax="100">${pongStats.precision}%</div>
-			</div>
-		</div>
-		`;
-	} else {
-		userStats.innerHTML += `
-		<div class="col-12 mb-3">
-			<h4 class="text-dark">Pong Stats</h4>
-		</div>
-		<div class="col-md-5 card p-4 mx-2 mb-4 shadow-sm">
-			<p class="h5">No games played yet.</p>
-		</div>
-		`;
-	}
-
-	if (data.stats.snake && data.stats.snake.total_games > 0) {
-		const snakeStats = data.stats.snake;
-		userStats.innerHTML += `
-		<div class="col-12 mb-3 mt-4">
-			<h4 class="text-dark">Snake Stats</h4>
-		</div>
-		<div class="col-md-5 card p-4 mx-2 mb-4 shadow-sm">
-			<p class="h5"><strong>Total Games:</strong> ${snakeStats.total_games}</p>
-			<p class="h5"><strong>Average Score:</strong> ${snakeStats.average_score}</p>
-			<p class="h5"><strong>Total Playtime:</strong> ${snakeStats.playtime}</p>
-		</div>
-
-		<div class="col-md-5 card p-4 mx-2 mb-4 shadow-sm">
-			<p class="h5"><strong>Win Percentage:</strong> <span class="text-success fw-bold">${snakeStats.win_percentage}%</span></p>
-			<p class="h5"><strong>High Score:</strong> <span class="text-primary fw-bold">${snakeStats.high_score}</span></p>
-		</div>
-
-		<div class="col-10 mt-3">
-			<p class="mb-2">Win Percentage</p>
-			<div class="progress">
-				<div class="progress-bar bg-success" role="progressbar" style="width: ${snakeStats.win_percentage}%;" aria-valuenow="${snakeStats.win_percentage}" aria-valuemin="0" aria-valuemax="100">${snakeStats.win_percentage}%</div>
-			</div>
-		</div>
-		`;
-	}
-	else {
-		userStats.innerHTML += `
-		<div class="col-12 mb-3 mt-4">
-			<h4 class="text-dark">Snake Stats</h4>
-		</div>
-		<div class="col-md-5 card p-4 mx-2 mb-4 shadow-sm">
-			<p class="h5">No games played yet.</p>
-		</div>
-		`;
-	}
+	updateGameStats('pong', data.stats.pong);
+	updateGameStats('snake', data.stats.snake);
 
 	return document.getElementById('app').innerHTML;
 };

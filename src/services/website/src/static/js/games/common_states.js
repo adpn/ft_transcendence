@@ -77,7 +77,11 @@ class PlayingState {
 	}
 
 	execute() {
+		this.game.clear();
 		this.context.gameUI.style.display = 'none';
+		this.context.canvas = null;
+		this.context.canvas = document.getElementById("gameCanvas" + this.game.canvas_context);
+		this.context.canvas.style.display = 'flex';
 		this.game.load(this.context.canvas);
 		this.game.start(this.socket);
 	}

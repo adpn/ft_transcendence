@@ -26,6 +26,7 @@ class OnlineQuickGameState {
 	execute() {
 		// Clear the game menu content
 		this.context.gameMenu.style.display = 'none';
+		this.context.gameUI.style.display = 'flex';
 		this.context.loadingOverlay.style.display = 'flex';
 		this.context.overlayBody.innerHTML = '';
 		this.context.overlayBody.appendChild(this.cancelBtn);
@@ -34,8 +35,13 @@ class OnlineQuickGameState {
 
 	update(data) {
 		// todo: move to result state
+		const opponent1 = document.getElementById("opponent1");
+		const opponent2 = document.getElementById("opponent2");
+
 		if (data.type == "end") {
 			this.gameStatus = "ended";
+			opponent1.innerHTML = "";
+			opponent2.innerHTML = "";
 			this.gameEndState.setMessage("winner");		// todo: mec, add winner
 			if (this.socket)
 				this.socket.close();
@@ -44,15 +50,32 @@ class OnlineQuickGameState {
 			this.context.state.execute();
 			return;
 		}
+		else if (data.type == "participants") {
+			console.log(data.values);
+
+			if (data.values.length == 2) {
+				opponent1.innerHTML = data.values.filter(player => player.player_position === 0)[0].player_name;
+				opponent2.innerHTML = data.values.filter(player => player.player_position === 1)[0].player_name;
+
+				if (this.game.name === "snake")
+					opponent2.className = "text-success";
+				else
+					opponent2.className = "text-dark";
+			}
+			//new participant joined. -> update view... (fetch user data of the new participant)
+			return;
+		}
 		this.game.update(data);
 	}
 
 	handleEvent(event) {
-		if (JSON.parse(event.data).status == "ready") {
-			// todo: if a player was found, display his profile and move to PlayingState.
-			// move to playing this.context.state.
-			// todo: wait for players to be ready. (click on button?)
-			// this.loadingModal.hide();
+		if (JSON.parse(event.data).type == "websocket.close")
+		{
+			//todo: maybe display an error message.
+			this.cancel();
+			return;
+		}
+		else if (JSON.parse(event.data).status == "ready") {
 			this.context.canvas.style.display = "";
 			this.context.loadingOverlay.style.display = 'none';
 			this.context.gameUI.style.display = 'none';

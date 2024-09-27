@@ -14,15 +14,32 @@ class LocalQuickGameState {
 
 	update(data) {
 		// todo: move to result state
+		const opponent1 = document.getElementById("opponent1");
+		const opponent2 = document.getElementById("opponent2");
+
 		if (data.type == "end") {
 			console.log(data);				// debug
 			this.gameStatus = "ended";
+			opponent1.innerHTML = "";
+			opponent2.innerHTML = "";
 			this.gameEndState.setMessage("winner");			// todo: add winner
 			if (this.socket)
 				this.socket.close();
 			this.context.canvas.style.display = "none";
 			this.context.state = this.gameEndState;
 			this.context.state.execute();
+			return;
+		}
+		else if (data.type == "participants") {
+			console.log(data);
+
+			opponent1.innerHTML = data.values.filter(player => player.player_position === 0)[0].player_name;
+			opponent2.innerHTML = data.values.filter(player => player.player_position === 1)[0].player_name;
+
+			if (this.game.name === "snake")
+				opponent2.className = "text-success";
+			else
+				opponent2.className = "text-dark";
 			return;
 		}
 		this.game.update(data);
@@ -109,7 +126,8 @@ class LocalQuickGameState {
 	}
 
 	execute() {
-		this.context.gameMenu.style.display = 'block';
+		this.context.gameUI.style.display = 'flex';
+		this.context.gameMenu.style.display = 'flex';
 		this.context.gameMenuHeader.textContent = `${this.game.name.toUpperCase()} LOCAL QUICK GAME`;
 		this.context.gameMenuBody.innerHTML = `
 		<form id="playerForm" class="d-flex flex-column justify-content-center">

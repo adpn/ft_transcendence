@@ -28,6 +28,7 @@ services:
       CLIENT_SECRET : "${CLIENT_SECRET}"
       REDIRECT_URI : "${REDIRECT_URI}"
       JWT_SECRET_KEY: "${JWT_SECRET_KEY}"
+      DJANGO_SECRET_KEY: "${DJANGO_SECRET_KEY}"
     networks:
       - transcendence
     depends_on:
@@ -52,6 +53,7 @@ services:
       POSTGRES_PASSWORD : "${POSTGRES_PASSWORD}"
       SESSION_SERVER : "${SESSION_SERVER}"
       AUTH_URL: "${AUTH_URL}"
+      DJANGO_SECRET_KEY: "${DJANGO_SECRET_KEY}"
     restart: always
 
   game-server:
@@ -70,6 +72,7 @@ services:
       IP_ADDRESS : "${IP_ADDRESS}"
       POSTGRES_USER : "${POSTGRES_USER}"
       POSTGRES_PASSWORD : "${POSTGRES_PASSWORD}"
+      DJANGO_SECRET_KEY: "${DJANGO_SECRET_KEY}"
     restart: always
 
   postgresql:
