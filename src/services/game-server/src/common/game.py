@@ -329,10 +329,9 @@ class QuickGameMode(object):
 	def __init__(self, channel_layer: BaseChannelLayer) -> None:
 		self.channel_layer = channel_layer
 		self.game_room = None
-		self.started = False
+		self.started = True
 
 	async def ready(self, session: GameSession, room_name: str, game_room: GameRoom, state_callback) -> None:
-		self.started = True
 		await self.channel_layer.group_send(
 		room_name, {
 			'type': 'game_status',
