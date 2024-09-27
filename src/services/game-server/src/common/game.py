@@ -36,7 +36,6 @@ def get_user_channel(user_id: str) -> UserChannel:
 
 @database_sync_to_async
 def store_user_channel(user_id: str, channel_name):
-	print("STORED CHANNEL", user_id, channel_name, flush=True)
 	UserChannel(
 		user_id=user_id, 
 		channel_name=channel_name).save()
@@ -53,6 +52,12 @@ def get_player_room(user_id: str, game_room: str, player_name="host") -> PlayerR
 		player__player_name=player_name,
 		player__user_id=user_id,
 		game_room__room_name=game_room).first()
+
+@database_sync_to_async
+def leave_game_room(player: Player, game_room: GameRoom):
+	PlayerRoom.objects.filter(player=player, game_room=game_room).first().delete()
+	game_room.num_players -= 1
+	game_room.save(update_fields=['num_players'])
 
 @database_sync_to_async
 def get_tournament_room_name(tournament_room: TournamentGameRoom) -> str:
@@ -144,6 +149,11 @@ def qualify_player(player: Player, tournament: Tournament) -> None:
 	_join_tournament(tournament.game, player, tournament, participant)
 
 @database_sync_to_async
+def get_tournament_participant(player: Player, tournament: Tournament) -> None:
+	return TournamentParticipant.objects.filter(
+		player=player, tournament=tournament).first()
+
+@database_sync_to_async
 def eliminate_player(player: Player, tournament: Tournament) -> TournamentParticipant:
 	participant = TournamentParticipant.objects.filter(player=player, tournament=tournament).first()
 	participant.status = "ELIMINATED"
@@ -170,6 +180,10 @@ def close_tournament(tournament: Tournament) -> Tournament:
 def tournament_is_closed(tournament: Tournament) -> bool:
 	tournament = Tournament.objects.filter(tournament_id=tournament.tournament_id).first()
 	return tournament.closed
+
+@database_sync_to_async
+def get_room_num_players(room: GameRoom) -> int:
+	return room.num_players
 
 @database_sync_to_async
 def get_tournament_room_tournament_id(tournament_room: TournamentGameRoom) -> str:
@@ -383,6 +397,7 @@ class TournamentMode(object):
 		if self.started:
 			return
 		closed = await tournament_is_closed(self._tournament)
+		print("NOT CLOSED", flush=True)
 		if not closed:
 			await self.channel_layer.group_send(
 				room_name,
@@ -438,8 +453,10 @@ class TournamentMode(object):
 		if not await tournament_is_closed(tournament):
 			game_room = await get_game_room(room_name)
 			if game_room:
-				if not await in_session(game_room):
+				await leave_game_room(player, game_room)
+				if await get_room_num_players(game_room) < 0:
 					await delete_game_room(game_room)
+			print("CANCELED TOURNAMENT PARTICIPATION", flush=True)
 			tournament.participants -= 1
 			if player:
 				await remove_participant(tournament, player)
@@ -447,6 +464,10 @@ class TournamentMode(object):
 				await delete_tournament(tournament)
 			else:
 				await update_tournament(tournament, ['participants'])
+		else:
+			participant = await get_tournament_participant(player, tournament)
+			if participant.round > 0:
+				await eliminate_player(player, tournament)
 
 	
 	async def get_participants(self, user, game_room):
@@ -605,13 +626,16 @@ class LocalMode(object):
 
 	async def flush_game_session(self, data):
 		# just send the winner to client in local mode.
-		for position in self._players_positions:
+		async for position in self._players_positions:
+			player = await get_player_room_player(self._player_rooms[position])
 			if data['player'] == position:
 				data = {
 					'type': 'end',
 					'context': data['type'],
 					'status': 'win',
-					'winner': position
+					'winner': position,
+					'player_name': player.player_name if player.is_guest else player.user_name,
+					'player_id': player.user_id
 					}
 				await self.consumer.send(text_data=json.dumps(data))
 				break
@@ -687,12 +711,13 @@ class OnlineMode(object):
 			session = server.get_game_session(self.game_room, game_mode)
 			# if the amount of players is met, notify all clients.
 			self.player_position = await get_player_position(player_room)
+			self.player = await get_player_room_player(player_room)
 			# if session.get_player(self.player_position):
 			# 	pass
 			session.current_players += 1
 			session.set_player(
 				self.player_position,
-				await get_player_room_player(player_room))
+				self.player)
 			# TODO: also check against num_players in the game room
 			# (if it is one, there is an issue)
 			session.on_session_end(self.flush_game_session)
@@ -746,13 +771,19 @@ class OnlineMode(object):
 				'type': 'end',
 				'context': data['type'],
 				'status': 'win',
-				'winner': self.player_position}
+				'winner': self.player_position,
+				'player_name': self.player.player_name if self.player.is_guest else self.player.user_name,
+				'player_id': self.player.user_id
+				}
 		else:
 			data = {
 				'type': 'end',
 				'context': data['type'],
 				'status': 'lost',
-				'winner': 1 - self.player_position}
+				'winner': 1 - self.player_position,
+				'player_name': self.player.player_name if self.player.is_guest else self.player.user_name,
+				'player_id': self.player.user_id
+				}
 		await self.consumer.send(text_data=json.dumps(data))
 		await self.channel_layer.group_discard(
 			self.room_name, self.consumer.channel_name)
@@ -846,6 +877,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 
 		self.user = user = auth.get_user_with_token(token, csrf)
 		if not user:
+			print("NOT USER!!!", flush=True)
 			await self.accept()
 			await self.send_json({
 				"type": "websocket.close",
@@ -874,6 +906,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 			player1 = params.get('player1', [''])[0]
 			player2 = params.get('player2', [''])[0]
 			if player1 == player2:
+				print("NOT LOCAL!!!", flush=True)
 				await self.accept()
 				await self.send_json({
 					"type": "websocket.close",
@@ -934,7 +967,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 				{
 					'type': 'tournament_message',
 					'message': {
-						'subject': 'participant'
+						'type': 'participant'
 					}
 				}
 			)
@@ -950,7 +983,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 		await self.channel_layer.group_send(
 			self.room_name,
 			{
-				'type': 'game_state',
+				'type': 'tournament_message',
 				'message': {
 					'type': 'participants',
 					'values': await self._game_mode.get_participants(
@@ -958,24 +991,6 @@ class GameConsumer(AsyncWebsocketConsumer):
 						self.game_room)
 				}
 			})
-		# TODO: need to query all the participants of a room or tournament and send them to clients.
-		# TODO: (fix for same player reconnection )store the channel name in the database. along with the player_id.
-		# if there is match, close the previous channel. decrement current players.
-		# previous_channel_name = await self.get_channel(self.client_id)
-		# if previous_channel_name:
-		#     # If a previous connection exists, send a disconnect message
-		#     await self.channel_layer.send(
-		#         previous_channel_name,
-		#         {
-		#             "type": "disconnect.old_connection",
-		#         }
-		#     )
-
-		# # Store this connection's channel_name for the client
-		# await self.set_channel(self.client_id, self.channel_name)
-
-		# # Accept the new connection
-		# await self.accept()
 
 		await game_locality.start_session(
 			game_mode,
@@ -1001,5 +1016,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 		await self.send(text_data=json.dumps(event['message']))
 
 	async def tournament_message(self, event):
+		if (event['message']['type'] == 'participants'):
+			await self.game_status(event)
 		await self._game_locality.tournament_message(
 			event, self._game_mode)
