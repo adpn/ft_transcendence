@@ -279,7 +279,7 @@ class GameSession(object):
 			except django.db.utils.IntegrityError:
 				pass
 		await delete_game_room(self._game_room)
-		#self._game_server.remove_session(self._session_id)
+		self._game_server.remove_session(self._session_id)
 
 	async def game_loop(self, callback):
 		try:
@@ -793,7 +793,7 @@ class OnlineMode(object):
 					self.room_name, self.consumer.channel_name)
 				await self.consumer.close()
 		except RuntimeError:
-			# ugly fix
+			# ugly fixt
 			pass
 
 	async def connection_lost(self, session: GameSession, game_mode, data: dict, game_result: GameResult):
