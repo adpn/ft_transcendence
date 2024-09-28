@@ -13,10 +13,9 @@ from django import setup
 from django.core.asgi import get_asgi_application
 from django.urls import path
 
-from channels.auth import AuthMiddlewareStack
 from channels.routing import ProtocolTypeRouter, URLRouter
 
-from common.game import GameConsumer, GameServer
+from common.game_server import GameConsumer, GameServer
 from pong.consumers import PongLogic
 from snake.consumers import SnakeLogic
 
