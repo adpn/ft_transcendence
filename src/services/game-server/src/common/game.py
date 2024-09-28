@@ -278,7 +278,8 @@ class GameSession(object):
 				await store_game_result(self._game_result)
 			except django.db.utils.IntegrityError:
 				pass
-		await delete_game_room(self._game_room)
+		game_room = await get_game_room(self._session_id)
+		await delete_game_room(game_room)
 		self._game_server.remove_session(self._session_id)
 
 	async def game_loop(self, callback):
