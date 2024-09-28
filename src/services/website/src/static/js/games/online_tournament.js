@@ -93,7 +93,7 @@ class OnlineTournamentGameState {
 				return;
 			}
 		}
-		else if (data.type == "participants") {
+		else if (data.type == "tournament.players") {
 			console.log(data);
 			tournament_title.innerHTML = "Tournament Players";
 			playersList.innerHTML = "";
@@ -102,6 +102,10 @@ class OnlineTournamentGameState {
 			});
 			console.log("WHERE AM I SUPPOSED TO CATCH MY OPPONENT?? HERE? IT IS NOT THE CASE IN LOCAL TOURNAMENT !!!");
 			//new participant joined. -> update view... (fetch user data of the new participant)
+			return;
+		}
+		else if (data.type == "room.players") {
+			console.log("ROOM PLAYERS", data.values);
 			return;
 		}
 		this.game.update(data);

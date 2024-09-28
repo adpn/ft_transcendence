@@ -387,6 +387,9 @@ class QuickGameMode(object):
 				'game_mode': 'quick-game'})
 		return result
 
+	async def get_room_players(self, user, game_room):
+		await self.get_participants(user, game_room)
+
 class TournamentMode(object):
 	def __init__(self,
 		tournament: Tournament,
@@ -480,6 +483,7 @@ class TournamentMode(object):
 
 
 	async def get_participants(self, user, game_room):
+		# returns all active players in the tournament
 		participants = TournamentParticipant.objects.filter(
 			tournament=self._tournament).order_by('tournament_position')
 		result = []
@@ -498,6 +502,23 @@ class TournamentMode(object):
 				'player_position': player_room.player_position,
 				'player_status': participant.status.lower(),
 				'game_mode': 'tournament'})
+		return result
+	
+	async def get_room_players(self, user, game_room):
+		# returns players in a given game room.
+		rooms = PlayerRoom.objects.filter(game_room=game_room)
+		result = []
+		async for room in rooms:
+			player = await get_player_room_player(room)
+			result.append(
+				{
+					'user_id': player.user_id,
+					'player_name': player.player_name if player.is_guest else player.user_name,
+					'player_type': 'guest' if player.is_guest else 'host',
+					'player_position': room.player_position,
+					'game_mode': 'tournament'
+				}
+			)
 		return result
 
 class GameServer(object):
@@ -768,7 +789,6 @@ class OnlineMode(object):
 			print("FLUSHING", self.player.user_name, flush=True)
 			async with self._game_server as server:
 				if self._disconnected:
-					print("SUPPOSED TO BE DISCONNECTED", self.player.user_name, flush=True)
 					return
 				if data['player'] == self.player_position:
 					data = {
@@ -788,12 +808,14 @@ class OnlineMode(object):
 						'winner': 1 - self.player_position,
 						'player_name': player.player_name if player.is_guest else player.user_name,
 						'player_id': player.user_id}
+				# sends only to the concerned consumer.
 				await self.consumer.send(text_data=json.dumps(data))
+				await self.consumer.broadcast_participants()
 				await self.channel_layer.group_discard(
 					self.room_name, self.consumer.channel_name)
 				await self.consumer.close()
 		except RuntimeError:
-			# ugly fixt
+			# ugly fix
 			pass
 
 	async def connection_lost(self, session: GameSession, game_mode, data: dict, game_result: GameResult):
@@ -999,38 +1021,38 @@ class GameConsumer(AsyncWebsocketConsumer):
 		await game_locality.start_session(
 			game_mode,
 			self.state_callback)
-		print("CONNECTED", user['username'], flush=True)
 		await self.accept()
 		# send participants to clients.
-		await self.channel_layer.group_send(
-			tournament_id,
-			{
-				'type': 'tournament_message',
-				'message': {
-					'type': 'participants',
-					'values': await self._game_mode.get_participants(
-						user,
-						self.game_room)
-				}
-			})
+		await self.broadcast_room_players()
+		await self.broadcast_participants()
 
 	# todo: notify the game loop to pause the game
 	async def disconnect(self, close_code):
 		# await delete_user_channel(self.user['user_id'], self.channel_name)
 		if not self.game_room:
 			return
+		await self._game_locality.disconnect(self._game_mode)
+
+	async def broadcast_participants(self):
 		await self.channel_layer.group_send(
-			self.tournament_id,
-			{
+			self.tournament_id, {
 				'type': 'tournament_message',
 				'message': {
-					'type': 'participants',
+					'type': 'tournament.players',
 					'values': await self._game_mode.get_participants(
 						self.user,
+						self.game_room)}})
+	
+	async def broadcast_room_players(self):
+		await self.channel_layer.group_send(
+			self.room_name, {
+				'type': 'game_state',
+				'message': {
+					'type': 'room.players',
+					'values': await self._game_mode.get_room_players(
+						self.user,
 						self.game_room)
-				}
-			})
-		await self._game_locality.disconnect(self._game_mode)
+						}})
 
 	# receives data from websocket.
 	async def receive(self, bytes_data):
@@ -1043,7 +1065,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 		await self.send(text_data=json.dumps(event['message']))
 
 	async def tournament_message(self, event):
-		if (event['message']['type'] == 'participants'):
+		if event['message']['type'] == 'tournament.players':
 			await self.game_status(event)
 			return
 		await self._game_locality.tournament_message(

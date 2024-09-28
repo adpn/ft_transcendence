@@ -306,7 +306,7 @@ class LocalTournamentGameState {
 				return;
 			}
 		}
-		else if (data.type == "participants") {
+		else if (data.type == "tournament.players") {
 			console.log(data);
 			tournament_title.innerHTML = "Tournament Players";
 			playersList.innerHTML = "";
