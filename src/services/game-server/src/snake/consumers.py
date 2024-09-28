@@ -63,6 +63,10 @@ class SnakeLogic(object):
 		# init
 		self.initSnakes()
 
+	@property
+	def score(self):
+		return [len(self.snakes[0]), len(self.snakes[1])]
+
 	def initSnakes(self):
 		self.snakes = [[[int(GRID_WIDTH / 4), int(GRID_HEIGHT / 2)]], [[int(GRID_WIDTH * 3 / 4), int(GRID_HEIGHT / 2)]]]
 		self.init_addToGrid(self.snakes[0][0], SNAKE)
@@ -89,8 +93,6 @@ class SnakeLogic(object):
 
 	def init_addToGrid(self, tile, value):
 		self.grid[tile[0]][tile[1]] = value
-
-
 
 	# data[1] = direction, data[2] = pressed or released (true or false)
 	async def update(self, data, player):
