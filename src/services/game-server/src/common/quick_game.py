@@ -17,10 +17,14 @@ from common.db_utils import (
 )
 
 class QuickGameMode(object):
-	def __init__(self, channel_layer: BaseChannelLayer) -> None:
+	def __init__(
+			self, 
+			channel_layer: BaseChannelLayer,
+			game_locality) -> None:
 		self.channel_layer = channel_layer
 		self.game_room = None
 		self.started = True
+		self.game_locality = game_locality
 
 	async def ready(self, 
 				 session: GameSession, 
@@ -44,6 +48,8 @@ class QuickGameMode(object):
 		session.resume()
 
 	async def handle_end_game(self, data, game_result):
+		if data['type'] == 'win':
+			await self.game_locality.cleanup_data()
 		return data
 
 	async def handle_disconnection(self, room_name, player: Player):

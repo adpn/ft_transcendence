@@ -133,7 +133,10 @@ class LocalMode(object):
 				break
 
 	async def connection_lost(self, game_mode, session: GameSession):
-		pass
+		await self.cleanup_data()
+	
+	async def cleanup_data(self):
+		await delete_guest_players(self._host_user_id)
 
 	async def disconnect(self, game_mode):
 		self._loaded = False
@@ -148,5 +151,4 @@ class LocalMode(object):
 					self.flush_game_session)
 				server.remove_session(session._session_id)
 				await delete_game_room(game_room)
-			await delete_guest_players(self._host_user_id)
 			await self.channel_layer.group_discard(self.room_name, self.consumer.channel_name)

@@ -58,6 +58,10 @@ class LocalQuickGameState {
 	}
 
 	async startGame(player1, player2) {
+		if (this.socket) {
+			this.socket.close();
+			this.socket = null;
+		}
 		try {
 			const response1 = await fetch("/games/create_game/", {
 				method: "POST",
@@ -94,7 +98,6 @@ class LocalQuickGameState {
 			if (!response2.ok) {
 				throw new Error(`Error ${response2.status}: Failed to create game`);
 			}
-
 			const data = await response2.json();
 			// make a single connection for both players.
 			this.socket = new WebSocket(`wss://${data.ip_address}/ws/game/${this.game.name}/${data.game_room_id}/?csrf_token=${getCookie("csrftoken")}&token=${localStorage.getItem("auth_token")}&local=true&player1=${player1}&player2=${player2}`);

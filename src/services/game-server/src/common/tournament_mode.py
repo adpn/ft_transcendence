@@ -41,7 +41,8 @@ class TournamentMode(object):
 			tournament_id,
 			game_room,
 			channel_name,
-			channel_layer: BaseChannelLayer) -> None:
+			channel_layer: BaseChannelLayer,
+			game_locality) -> None:
 		self._tournament = tournament
 		self.channel_layer = channel_layer
 		self._channel_name = channel_name
@@ -50,6 +51,7 @@ class TournamentMode(object):
 		self._game_room = game_room
 		self.room_name = None
 		self.started = False
+		self.game_locality = game_locality
 
 	async def ready(self,
 		session: game_session.GameSession,
@@ -94,6 +96,7 @@ class TournamentMode(object):
 		remaining_players = await get_remaining_participants(tournament)
 		if remaining_players == 1:
 			await delete_tournament(tournament)
+			await self.game_locality.cleanup_data()
 			data["type"] = "win"
 			return data
 		await close_game_room(self._game_room)
@@ -102,9 +105,6 @@ class TournamentMode(object):
 		return data
 
 	async def handle_disconnection(self, room_name, player: Player):
-		# TODO: if the tournament is not closed, delete the player and decrement the
-		# number of participants.
-		print("DISCONNECTED", flush=True)
 		await self.channel_layer.group_discard(
 			self._tournament_id,
 			self._channel_name)
@@ -126,6 +126,8 @@ class TournamentMode(object):
 			else:
 				await update_tournament(tournament, ['participants'])
 
+	async def cleanup_data(self):
+		pass
 
 	async def get_participants(self, user, game_room):
 		# returns all active players in the tournament

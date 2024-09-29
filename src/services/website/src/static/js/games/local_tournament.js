@@ -228,6 +228,10 @@ class LocalTournamentGameState {
 	}
 
 	async nextRoom() {
+		if (this.socket) {
+			this.socket.close();
+			this.socket = null;
+		}
 		// plays the next room
 		try {
 			const response = await fetch("/games/next_tournament_room/", {

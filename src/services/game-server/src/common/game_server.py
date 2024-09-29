@@ -186,7 +186,8 @@ class GameConsumer(AsyncWebsocketConsumer):
 				tournament_id,
 				self.game_room,
 				self.channel_name,
-				self.channel_layer
+				self.channel_layer,
+				game_locality
 			)
 			# notify all consumers that there is a new participant.
 			await self.channel_layer.group_send(
@@ -206,7 +207,8 @@ class GameConsumer(AsyncWebsocketConsumer):
 		else:
 			self.tournament_id = tournament_id = self.room_name
 			self._game_mode = game_mode = QuickGameMode(
-				self.channel_layer)
+				self.channel_layer, 
+				game_locality)
 		await self.channel_layer.group_add(
 			self.room_name, self.channel_name)
 

@@ -90,6 +90,10 @@ class OnlineQuickGameState {
 	};
 
 	connectGameRoom() {
+		if (this.socket) {
+			this.socket.close();
+			this.socket = null;
+		}
 		// create a game and connect to socket.
 		fetch("/games/create_game/", {
 			method: "POST",

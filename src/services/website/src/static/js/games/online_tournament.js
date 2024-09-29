@@ -112,6 +112,10 @@ class OnlineTournamentGameState {
 	}
 
 	joinTournament() {
+		if (this.socket) {
+			this.socket.close();
+			this.socket = null;
+		}
 		// create a game and connect to socket.
 		fetch("/games/join_tournament/", {
 			method: "POST",

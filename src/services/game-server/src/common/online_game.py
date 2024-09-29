@@ -173,6 +173,9 @@ class OnlineMode(object):
 			self._lost_connection = True
 			return
 
+	async def cleanup_data(self):
+		pass
+
 	async def disconnect(self, game_mode):
 		if not self._game_session:
 			return
