@@ -35,6 +35,7 @@ class OnlineMode(object):
 		self._disconnected = False
 		self.player_position = 0
 		self._game_session = None
+		self._players = [None, None]
 
 	async def validate_player(self):
 		if not self._player_room:
@@ -70,15 +71,28 @@ class OnlineMode(object):
 			# if the amount of players is met, notify all clients.
 			self.player_position = await get_player_position(player_room)
 			self.player = await get_player_room_player(player_room)
-			# if session.get_player(self.player_position):
-			# 	pass
-			session.current_players += 1
+			session.add_consumer(self.player_position, self)
+			self._game_session = session
+			if session.get_player(self.player_position):
+				if session.current_players == expected_players:
+					await game_mode.ready(
+						session, self.room_name,
+						self.game_room, state_callback)
+				elif session.current_players < expected_players:
+					await self.channel_layer.group_send(
+					self.room_name,
+					{
+						'type': 'game_status',
+						'message': {
+							'status': 'waiting'
+							}
+					})
+				return
+			session.add_consumer(self.player_position, self)
+			self._players[self.player_position] = await get_player_room_player(player_room)
 			session.set_player(
 				self.player_position,
 				await get_player_room_player(player_room))
-			session.on_session_end(self.flush_game_session)
-			session.on_connection_lost(self.connection_lost)
-			self._game_session = session
 			if session.current_players == expected_players:
 				await game_mode.ready(
 					session, self.room_name,
@@ -121,7 +135,6 @@ class OnlineMode(object):
 
 	async def flush_game_session(self, data):
 		try:
-			print("FLUSHING", self.player.user_name, flush=True)
 			async with self._game_server as server:
 				if self._disconnected:
 					return
@@ -135,7 +148,7 @@ class OnlineMode(object):
 						'player_id': self.player.user_id
 						}
 				else:
-					player = await player_at_position(self.room_name, 1 - self.player_position)
+					player = self._game_session.get_player(1 - self.player_position)
 					data = {
 						'type': 'end',
 						'context': data['type'],
@@ -148,9 +161,9 @@ class OnlineMode(object):
 				await self.consumer.broadcast_participants()
 				await self.channel_layer.group_discard(
 					self.room_name, self.consumer.channel_name)
-				await self.consumer.close()
-		except RuntimeError:
+		except RuntimeError as e:
 			# ugly fix
+			print(e, flush=True)
 			pass
 
 	async def connection_lost(
@@ -181,24 +194,14 @@ class OnlineMode(object):
 			return
 		async with self._game_server as server:
 			session = self._game_session
-			# todo: if both players disconnected, end the game
-			if session.current_players > 0:
-				session.current_players -= 1
-			# protects against sending messages when diconnected.
-			print("DISCONNECTED", session.get_player(self.player_position).user_name, flush=True)
-			session.remove_callback(
-				'session-end',
-				self.flush_game_session)
-			session.remove_callback(
-				'connection-lost',
-				self.connection_lost)
-			session.pause()
+			if session.current_players == 0:
+				session.pause()
+			session.remove_consumer(self.player_position, self)
 			# todo: send a message to clients when a player disconnects.
-			await self.channel_layer.group_discard(self.room_name, self.consumer.channel_name)
 			if game_mode:
 				await game_mode.handle_disconnection(
 					self.room_name,
 					session.get_player(self.player_position))
+			await self.channel_layer.group_discard(self.room_name, self.consumer.channel_name)
 			self._disconnected = True
-			print("CONFIRM DISCONNECTED", session.get_player(self.player_position).user_name, self._disconnected, flush=True)
 			# delete game room if it is not in session.

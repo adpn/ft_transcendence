@@ -15,7 +15,10 @@ from common import auth_client as auth
 from common.db_utils import (
 	get_tournament_room,
 	get_tournament_room_tournament_id,
-	get_tournament_room_tournament
+	get_tournament_room_tournament,
+	get_user_channel,
+	store_user_channel,
+	delete_user_channel
 )
 
 from common.game_session import GameSession
@@ -176,13 +179,33 @@ class GameConsumer(AsyncWebsocketConsumer):
 			return
 
 		self.game_room = await game_locality.get_game_room()
+		if not self.game_room:
+			await self.accept()
+			await self.send_json({
+				"type": "websocket.close",
+				"code": 4000,  # Custom close code
+				"reason": "Game Room does not exist"
+			})
+			await self.close()
+			return
 		# check if the game room is in a tournament room.
 		tournament_room = await get_tournament_room(self.game_room)
 		if tournament_room:
 			# add channel to tournament group.
-			self.tournament_id = tournament_id = await get_tournament_room_tournament_id(tournament_room)
+			self.tournament_id = tournament_id = await get_tournament_room_tournament_id(
+				tournament_room)
+			tournament = await get_tournament_room_tournament(tournament_room)
+			if not tournament:
+				await self.accept()
+				await self.send_json({
+					"type": "websocket.close",
+					"code": 4000,  # Custom close code
+					"reason": "Tournament does not exist"
+				})
+				await self.close()
+				return
 			self._game_mode = game_mode = TournamentMode(
-				await get_tournament_room_tournament(tournament_room),
+				tournament,
 				tournament_id,
 				self.game_room,
 				self.channel_name,

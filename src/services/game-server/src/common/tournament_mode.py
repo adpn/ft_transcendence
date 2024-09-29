@@ -105,9 +105,6 @@ class TournamentMode(object):
 		return data
 
 	async def handle_disconnection(self, room_name, player: Player):
-		await self.channel_layer.group_discard(
-			self._tournament_id,
-			self._channel_name)
 		# delete game room if not is session (means player canceled)
 		tournament = await get_tournament(self._tournament_id)
 		if not tournament:
@@ -125,9 +122,14 @@ class TournamentMode(object):
 				await delete_tournament(tournament)
 			else:
 				await update_tournament(tournament, ['participants'])
+		await self.channel_layer.group_discard(
+			self._tournament_id,
+			self._channel_name)
 
-	async def cleanup_data(self):
-		pass
+	async def cleanup_data(self, room_name , players):
+		tournament = await get_tournament(self._tournament_id)
+		await delete_tournament(tournament)
+		await self.game_locality.cleanup_data()
 
 	async def get_participants(self, user, game_room):
 		# returns all active players in the tournament

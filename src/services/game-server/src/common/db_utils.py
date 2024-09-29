@@ -217,4 +217,4 @@ def player_at_position(room_name: str, position: int):
 		player_position=position).first()
 	if room:
 		return room.player
-	return -1
+	return

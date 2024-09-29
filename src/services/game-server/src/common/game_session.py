@@ -33,6 +33,14 @@ class GameSession(object):
 			"player": -1,
 			"loser": -1,
 			"score": [-1, -1]}
+		self._paused = False
+		self._consumers = []
+		self.consumers_per_player = [0, 0]
+		self.error = False
+
+	@property
+	def num_consumers(self):
+		return len(self._consumers)
 
 	def set_player(self, position, player):
 		self._players[position] = player
@@ -47,29 +55,29 @@ class GameSession(object):
 		self._game_result.game = await get_game_room_game(self._game_room)
 		await callback(await self._game_logic.startEvent())
 		self._start_time = t0 = time.time()
-		while self.is_running:
+		while self.is_running and not self.error:
 			await asyncio.gather(
 				self.game_loop(callback),
 				asyncio.sleep(0.03)) # about 30 loops/second
 		self._game_result.game_duration = time.time() - t0
-		if not self._disconnected:
-			try:
-				await store_game_result(self._game_result)
-			except django.db.utils.IntegrityError:
-				pass
+		if not self._disconnected and not self.error:
+			await store_game_result(self._game_result)
 		game_room = await get_game_room(self._session_id)
 		if game_room:
 			await delete_game_room(game_room)
+		if self.error:
+			print("ERROR!", flush=True)
+			await self._game_mode.cleanup_data(self._session_id, self._players)
 		self._game_server.remove_session(self._session_id)
 
 	async def game_loop(self, callback):
 		try:
 			await asyncio.wait_for(self._pause_event.wait(), self._timeout)
 		except asyncio.TimeoutError:
-			for end in self._connection_lost_callbacks:
+			for consumer in self._consumers:
 				self._current_data['score'] = self._game_logic.score
 				self._game_result.game_duration = time.time() - self._start_time
-				await end(
+				await consumer.connection_lost(
 					self,
 					self._game_mode,
 					self._current_data,
@@ -82,17 +90,24 @@ class GameSession(object):
 		await callback(data)
 		async for data in self._game_logic.sendEvent():
 			if data["type"] == "win":
-				self._game_server.remove_session(self._session_id)
 				await set_in_session(self._game_room, False)
 				self._game_result.winner = self._players[data["player"]]
 				self._game_result.loser = self._players[data["loser"]]
 				self._game_result.winner_score = data["score"][data["player"]]
 				self._game_result.loser_score = data["score"][data["loser"]]
-				#self._game_result.game = await get_game_room_game(self._game_room)
+				if not self._players[data["loser"]] or not self._players[data["player"]]:
+					self.error = True
+					for consumer in self._consumers:
+						await consumer.flush_game_session(data)
+					return
 				if self._game_mode:
-					data = await self._game_mode.handle_end_game(data, self._game_result)
-				for end in self._end_callbacks:
-					await end(data)
+					try:
+						data = await self._game_mode.handle_end_game(data, self._game_result)
+					except Exception:
+						self.error = True
+						return
+				for consumer in self._consumers:
+					await consumer.flush_game_session(data)
 				self.is_running = False
 				return
 			await callback(data)
@@ -100,6 +115,22 @@ class GameSession(object):
 
 	def on_session_end(self, callback):
 		self._end_callbacks.append(callback)
+	
+	def add_consumer(self, position, consumer):
+		if self.consumers_per_player[position] == 0:
+			self.current_players += 1
+		self.consumers_per_player[position] += 1
+		self._consumers.append(consumer)
+	
+	def remove_consumer(self, position, consumer):
+		if self.consumers_per_player[position] > 0:
+			self.consumers_per_player[position] -= 1
+		if self.consumers_per_player[position] == 0:
+			self.current_players -= 1
+		try:
+			self._consumers.remove(consumer)
+		except ValueError:
+			return
 
 	def remove_callback(self, event, callback):
 		try:
@@ -115,6 +146,10 @@ class GameSession(object):
 
 	def pause(self):
 		self._pause_event.clear()
+		self._paused = True
 
 	def resume(self):
+		if not self._paused:
+			return
 		self._pause_event.set()
+		self._paused = False

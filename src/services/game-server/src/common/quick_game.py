@@ -51,6 +51,13 @@ class QuickGameMode(object):
 		if data['type'] == 'win':
 			await self.game_locality.cleanup_data()
 		return data
+	
+	async def cleanup_data(self, room_name, players):
+		game_room = await get_game_room(room_name)
+		if not game_room:
+			return
+		await delete_game_room(game_room)
+		await self.game_locality.cleanup_data()
 
 	async def handle_disconnection(self, room_name, player: Player):
 		game_room = await get_game_room(room_name)

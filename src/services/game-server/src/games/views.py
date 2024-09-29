@@ -39,7 +39,6 @@ def check_request(func):
 			Game.objects.get_or_create(game_name='snake', min_players=2)
 			INITIALIZED = True
 		user_data = auth.get_user(request)
-		print("USER", user_data, flush=True)
 		if not user_data:
 			return JsonResponse({
 				'status': 0,
@@ -98,10 +97,6 @@ def get_player_room(user_id, player_name="host"):
 
 @check_request
 def create_game(request: HttpRequest, user_data: dict, game: Game, game_request, local) -> JsonResponse:
-	'''
-	TODO:
-	check if the game is local, if it is, create guest Player
-	'''
 
 	if not local:
 		# reconnection
@@ -117,18 +112,10 @@ def create_game(request: HttpRequest, user_data: dict, game: Game, game_request,
 				}, status=200)
 
 	if local:
-		'''
-		NOTE: there should always be a guest name in local mode even for the host.
-			  Guest players data is not saved.
-		'''
-		'''
-		TODO: get or create
-		'''
 		player, created = Player.objects.get_or_create(
 			player_name=game_request['guest_name'],
 			user_id=int(user_data['user_id']),
 			is_guest=True)
-		print("NEW GUEST", game_request['guest_name'], flush=True)
 	else:
 		player = get_host_player(user_data)
 

@@ -96,8 +96,9 @@ class LocalMode(object):
 					position,
 					await get_player_room_player(player_room))
 				self._players_positions[i] = position
-			session.on_session_end(self.flush_game_session)
-			session.on_connection_lost(self.connection_lost)
+				session.add_consumer(i, self)
+			# session.on_session_end(self.flush_game_session)
+			# session.on_connection_lost(self.connection_lost)
 			self._game_session = session
 			await game_mode.ready(
 				session, self.room_name,
@@ -136,7 +137,8 @@ class LocalMode(object):
 		await self.cleanup_data()
 	
 	async def cleanup_data(self):
-		await delete_guest_players(self._host_user_id)
+		# await delete_guest_players(self._host_user_id)
+		pass
 
 	async def disconnect(self, game_mode):
 		self._loaded = False
@@ -146,9 +148,7 @@ class LocalMode(object):
 			if game_room:
 				session = server.get_game_session(game_room, game_mode)
 				# todo: if both players disconnected, end the game
-				session.remove_callback(
-					'session-end',
-					self.flush_game_session)
+				session.remove_consumer(0, self)
 				server.remove_session(session._session_id)
 				await delete_game_room(game_room)
 			await self.channel_layer.group_discard(self.room_name, self.consumer.channel_name)
