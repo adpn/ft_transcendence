@@ -50,8 +50,8 @@ class OnlineTournamentGameState {
 	}
 
 	update(data) {
-		const tournament_title = document.getElementById("tournament-title");
-		const playersList = document.getElementById("playersList");
+		// const tournament_title = document.getElementById("tournament-title");
+		// const playersList = document.getElementById("playersList");
 		if (data.type == "end") {
 			this.context.canvas.style.display = "none";
 			const opponent1 = document.getElementById("opponent1");
@@ -67,8 +67,8 @@ class OnlineTournamentGameState {
 				}
 				this.context.state = this.gameEndState;
 				this.context.state.execute();
-				tournament_title.innerHTML = "";
-				playersList.innerHTML = "";
+				// tournament_title.innerHTML = "";
+				// playersList.innerHTML = "";
 				return;
 			}
 			if (data.status == "win") {
@@ -80,8 +80,8 @@ class OnlineTournamentGameState {
 					this.execute();
 					return;
 				}
-				tournament_title.innerHTML = "";
-				playersList.innerHTML = "";
+				// tournament_title.innerHTML = "";
+				// playersList.innerHTML = "";
 				this.gameStatus = "ended";
 				this.gameEndState.setMessage(data.player_name);
 				if (this.socket) {
@@ -95,12 +95,12 @@ class OnlineTournamentGameState {
 		}
 		else if (data.type == "tournament.players") {
 			console.log(data);
-			tournament_title.innerHTML = "Tournament Players";
-			playersList.innerHTML = "";
-			data.values.forEach(player => {
-				playersList.innerHTML += `<li class="text-dark">${player.player_name}</li>`;
-			});
-			console.log("WHERE AM I SUPPOSED TO CATCH MY OPPONENT?? HERE? IT IS NOT THE CASE IN LOCAL TOURNAMENT !!!");
+			// tournament_title.innerHTML = "Tournament Players";
+			// playersList.innerHTML = "";
+			// data.values.forEach(player => {
+			// 	playersList.innerHTML += `<li class="text-dark">${player.player_name}</li>`;
+			// });
+			// console.log("WHERE AM I SUPPOSED TO CATCH MY OPPONENT?? HERE? IT IS NOT THE CASE IN LOCAL TOURNAMENT !!!");
 			//new participant joined. -> update view... (fetch user data of the new participant)
 			return;
 		}

@@ -1,6 +1,7 @@
 import time
 import asyncio
 import django
+import django.db
 
 from games.models import GameResult, Player
 from common.db_utils import (
@@ -61,13 +62,17 @@ class GameSession(object):
 				asyncio.sleep(0.03)) # about 30 loops/second
 		self._game_result.game_duration = time.time() - t0
 		if not self._disconnected and not self.error:
-			await store_game_result(self._game_result)
+			try:
+				await store_game_result(self._game_result)
+			except django.db.utils.IntegrityError:
+				pass
 		game_room = await get_game_room(self._session_id)
 		if game_room:
 			await delete_game_room(game_room)
 		if self.error:
-			print("ERROR!", flush=True)
-			await self._game_mode.cleanup_data(self._session_id, self._players)
+			print("FROM ERROR 1?", flush=True)
+			await self._game_mode.cleanup_data(
+				self._consumers, self._session_id, self._players)
 		self._game_server.remove_session(self._session_id)
 
 	async def game_loop(self, callback):
@@ -102,9 +107,11 @@ class GameSession(object):
 					return
 				if self._game_mode:
 					try:
-						data = await self._game_mode.handle_end_game(data, self._game_result)
-					except Exception:
+						data = await self._game_mode.handle_end_game(
+							data, self._consumers, self._game_result)
+					except Exception as e:
 						self.error = True
+						print("FROM ERROR 2 ?", e, flush=True)
 						return
 				for consumer in self._consumers:
 					await consumer.flush_game_session(data)

@@ -140,7 +140,7 @@ class WaitScreen {
 
 class LocalTournamentGameState {
 	constructor(context, game, prevState) {
-		this.buttonGrid = new CustomGrid(context, 4);
+		this.buttonGrid = new CustomGrid(4, "buttonsGrid");
 		this.context = context;
 		this.game = game;
 		this.gameEndState = new GameEndedState(
@@ -212,7 +212,6 @@ class LocalTournamentGameState {
 	}
 
 	startGame(data) {
-		console.log("STARTING GAME", data);
 		this.socket = new WebSocket(`wss://${data.ip_address}/ws/game/${this.game.name}/${data.game_room_id}/?csrf_token=${getCookie("csrftoken")}&token=${localStorage.getItem("auth_token")}&local=true&player1=${data.player1}&player2=${data.player2}`);
 		if (this.socket.readyState > this.socket.OPEN) {
 			// todo: display error message in the loading window.
@@ -258,18 +257,13 @@ class LocalTournamentGameState {
 					opponent2.className = "text-success";
 				else
 					opponent2.className = "text-dark";
-
-				// if (this.socket) {
-				// 	this.socket.close();
-				// 	this.socket = null;
-				// }
 				const waitScreen = new WaitScreen(this.context, this, room);
 				waitScreen.execute();
 				// this.startGame(room);	// FORMER FUNCTION KEEP IT HERE WE NEVER KNOW
 				return
 			}
 			else if (response.status == 404) {
-				// stop when the're no more rooms.
+				// stop when there no more rooms.
 				return;
 			}
 			console.log("ERROR", await response.json());
@@ -299,11 +293,13 @@ class LocalTournamentGameState {
 			if (data.status == "win") {
 				if (data.context == "round") {
 					// move to next room or to next round.
+					// TODO: update players-container (eliminate players etc.)
 					this.nextRoom();
 					return;
 				}
-				tournament_title.innerHTML = "";
-				playersList.innerHTML = "";
+				// tournament_title.innerHTML = "";
+				// playersList.innerHTML = "";
+				this.context.players.render();
 				this.gameStatus = "ended";
 				this.gameEndState.setMessage(data.player_name);
 				this.context.changeState(this.gameEndState);
@@ -312,11 +308,12 @@ class LocalTournamentGameState {
 		}
 		else if (data.type == "tournament.players") {
 			console.log(data);
-			tournament_title.innerHTML = "Tournament Players";
-			playersList.innerHTML = "";
-			data.values.forEach(player => {
-				playersList.innerHTML += `<li class="text-dark">${player.player_name}</li>`;
-			});
+			// tournament_title.innerHTML = "Tournament Players";
+			// playersList.innerHTML = "";
+			// data.values.forEach(player => {
+			// 	playersList.innerHTML += `<li class="text-dark">${player.player_name}</li>`;
+			// });
+			data.values.forEach(player => this.context.players.addPlayer(player));
 			//new participant joined. -> update view... (fetch user data of the new participant)
 			return;
 		}
@@ -342,7 +339,7 @@ class LocalTournamentGameState {
 	execute() {
 		this.context.gameMenu.style.display = 'flex';
 		this.context.gameMenuHeader.textContent = `${this.game.name.toUpperCase()} LOCAL TOURNAMENT`;
-		this.buttonGrid.render();
+		this.buttonGrid.render(this.context.gameMenuBody);
 		this.buttonGrid.addHTMLElement(this.generateButton("4 Players"));
 		this.buttonGrid.addHTMLElement(this.generateButton("8 Players"));
 		this.buttonGrid.addHTMLElement(this.generateButton("16 Players"));

@@ -36,6 +36,7 @@ class OnlineMode(object):
 		self.player_position = 0
 		self._game_session = None
 		self._players = [None, None]
+		self.game_mode = None
 
 	async def validate_player(self):
 		if not self._player_room:
@@ -186,22 +187,24 @@ class OnlineMode(object):
 			self._lost_connection = True
 			return
 
-	async def cleanup_data(self):
+	async def cleanup_data(self, tournament=None):
 		pass
 
-	async def disconnect(self, game_mode):
+	async def disconnect(self, channel_name, channel_layer, game_mode):
 		if not self._game_session:
 			return
 		async with self._game_server as server:
 			session = self._game_session
 			if session.current_players == 0:
 				session.pause()
-			session.remove_consumer(self.player_position, self)
 			# todo: send a message to clients when a player disconnects.
 			if game_mode:
 				await game_mode.handle_disconnection(
+					channel_name,
+					channel_layer,
 					self.room_name,
 					session.get_player(self.player_position))
+			session.remove_consumer(self.player_position, self)
 			await self.channel_layer.group_discard(self.room_name, self.consumer.channel_name)
 			self._disconnected = True
 			# delete game room if it is not in session.

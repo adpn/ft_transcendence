@@ -211,7 +211,7 @@ footer {
     border: 1px solid red;
 }
 
-#game-menu-header {
+.card-header {
 	display: flex;
 	height: 15%;
 	border-bottom: 1px solid rgba(255, 255, 255, 0.2);
@@ -270,16 +270,10 @@ footer {
 }
 
 .card {
-	/* border: 1px solid #f8f9fa; */
-	/* Light border */
 	display: flex;
 	border: none;
 	box-shadow: none;
 	height: auto;
-	/* border-radius: 8px; */
-	/* padding: 20px; */
-	/* width: 80%;
-	height: 80%; */
   }
 
   .loading-overlay {
@@ -308,13 +302,10 @@ footer {
 	  }
   }
 
-  form {
+form {
   	outline: 1px solid #f8f9fa;
-  	/* Blue solid outline */
   	padding: 10px;
-  	/* Optional: Add some padding inside the form */
   	border-radius: 5px;
-  	/* Optional: Rounded corners */
   }
 
 #opponent1, #opponent2 {
@@ -331,4 +322,24 @@ footer {
     padding: 0;
     margin: 0;
     text-align: center;
+}
+
+.players-container {
+	max-height: 350px;
+	overflow-y: auto;
+	padding-top: 10px;
+	padding-bottom: 5px;
+}
+
+.player-card {
+	height: 100px;
+	outline: 1px solid #f8f9fa;
+	border-radius: 5px;
+}
+
+.player-card .card-body {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 100%;
 }

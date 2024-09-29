@@ -11,13 +11,10 @@ class GameLocality {
 
 	execute() {
 		this.context.gameMenu.style.display = 'flex';
-		this.localityModes.render();
+		this.localityModes.render(this.context.gameMenuBody);
 		this.context.gameMenuHeader.textContent = `${this.game.name.toUpperCase()} MULTIPLAYER MODE`;
 		this.localityModes.addHTMLElement(`<button type="button" id="localButton" class="btn btn-outline-light w-100 h-100">Local Game</button>`);
 		this.localityModes.addHTMLElement(`<button type="button" id="onlineButton" class="btn btn-outline-light w-100 h-100">Online Game</button>`);
-		// this.context.gameMenuBody.innerHTML = '';
-		// this.context.gameMenuBody.appendChild(this.localButton);
-		// this.context.gameMenuBody.appendChild(this.onlineButton);
 		this.context.gameMenuFooter.innerHTML = `
 		<div class="d-flex flex-row align-items-center mt-2">
 			<button type="button" id="backButton" class="btn btn-outline-light mx-2 w-100">Back</button>

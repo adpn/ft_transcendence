@@ -6,17 +6,8 @@ document.addEventListener("DOMContentLoaded", function () {
 	window.addEventListener("game", load_games)
 });
 
-var gameMenu;
-var canvas;
-var loadingOverlay;
-var gameUI;
-let state = null;
-var overlayBody;
-var gameMenuBody;
-var gameMenuHeader;
-var gameMenuFooter;
-
 var games_context = {
+	playersContainer: null,
 	canvas_context: null,
 	canvas: null,
 	loadingOverlay: null,
@@ -65,7 +56,7 @@ class GameModes {
 		this.context.canvas = document.getElementById("gameCanvas" + this.game.canvas_context);
 		this.context.gameUI.style.display = 'flex';
 		this.context.gameMenu.style.display = 'flex';
-		this.modesGrid.render();
+		this.modesGrid.render(this.context.gameMenuBody);
 		this.context.gameMenuHeader.textContent = `${this.game.name.toUpperCase()} GAME MODE`;
 		this.modesGrid.addHTMLElement(`<button type="button" id="quickGameButton" class="btn btn-outline-light w-100 h-100">Quick Game</button>`);
 		this.modesGrid.addHTMLElement(`<button type="button" id="tournamentButton" class="btn btn-outline-light w-100 h-100">Tournament</button>`);
@@ -128,7 +119,7 @@ class GameMenu {
 	execute() {
 		// if not logged in exeCUTE ErorrState instead
 		this.context.gameMenu.style.display = 'flex';
-		this.gamesGrid.render();
+		this.gamesGrid.render(this.context.gameMenuBody);
 		this.context.gameMenuHeader.textContent = 'CHOOSE GAME';
 		this.gamesGrid.addHTMLElement(`<button type="button" id="pongButton" class= "btn btn-outline-light w-100 h-100">Pong</button>`);
 		this.gamesGrid.addHTMLElement(`<button type="button" id="pong3dButton" class= "btn btn-outline-light w-100 h-100">Pong 3D</button>`);
@@ -158,6 +149,9 @@ function load_games() {
 	games_context.gameMenu = document.getElementById('game-menu');
 	if (!games_context.gameMenu)
 		return;
+	games_context.players = new PlayersGrid(
+		this, document.getElementById('playersContainer'), 2);
+	games_context.players.render();
 	games_context.gameMenu.style.display = 'none';
 	games_context.gameMenuHeader = document.getElementById("game-menu-header");
 	games_context.gameMenuBody = document.getElementById("game-menu-body");

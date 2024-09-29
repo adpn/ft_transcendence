@@ -234,21 +234,23 @@ class GameConsumer(AsyncWebsocketConsumer):
 				game_locality)
 		await self.channel_layer.group_add(
 			self.room_name, self.channel_name)
-
-		await game_locality.start_session(
-			game_mode,
-			self.state_callback)
+		game_locality.game_mode = game_mode
 		await self.accept()
 		# send participants to clients.
 		await self.broadcast_room_players()
 		await self.broadcast_participants()
+		await game_locality.start_session(
+			game_mode,
+			self.state_callback)
 
 	# todo: notify the game loop to pause the game
 	async def disconnect(self, close_code):
 		# await delete_user_channel(self.user['user_id'], self.channel_name)
 		if not self.game_room:
 			return
-		await self._game_locality.disconnect(self._game_mode)
+		await self._game_locality.disconnect(
+			self.channel_name, 
+			self.channel_layer, self._game_mode)
 
 	async def broadcast_participants(self):
 		await self.channel_layer.group_send(

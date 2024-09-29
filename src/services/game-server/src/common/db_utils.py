@@ -161,7 +161,8 @@ def set_tournament_winner(player: Player, tournament: Tournament) -> TournamentP
 
 @database_sync_to_async
 def delete_tournament(tournament: Tournament) -> None:
-	tournament.delete()
+	if tournament:
+		tournament.delete()
 
 @database_sync_to_async
 def close_tournament(tournament: Tournament) -> Tournament:
@@ -190,8 +191,23 @@ def get_tournament(tournament_id: str) -> GameRoom:
 	return Tournament.objects.filter(tournament_id=tournament_id).first()
 
 @database_sync_to_async
-def delete_guest_players(user_id: int) -> int:
-	Player.objects.filter(is_guest=True, user_id=user_id).delete()
+def delete_guest_player(player: Player) -> int:
+	Player.objects.filter(
+		is_guest=True, 
+		player_name=player.player_name, 
+		user_id=player.user_id).delete()
+
+@database_sync_to_async
+def delete_guest_players_in_room(user_id: int, room_name:str, closed=True) -> int:
+	rooms = PlayerRoom.objects.filter(game_room__room_name=room_name, game_room__closed=closed).values_list('player_id', flat=True)
+	Player.objects.filter(is_guest=True, user_id=user_id, id__in=rooms).delete()
+
+@database_sync_to_async
+def delete_guest_players_in_tournament(user_id: int, tournament: Tournament) -> int:
+	tournament_rooms = TournamentGameRoom.objects.filter(tournament=tournament).values_list('game_room', flat=True)
+	rooms = PlayerRoom.objects.filter(game_room__in=tournament_rooms).values_list('player_id', flat=True)
+	deleted, _ = Player.objects.filter(is_guest=True, user_id=user_id, id__in=rooms).delete()
+	print("DELETED GUESTS", deleted, flush=True)
 
 @database_sync_to_async
 def close_game_room(game_room: GameRoom) -> None:

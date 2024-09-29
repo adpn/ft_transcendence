@@ -22,9 +22,9 @@ class QuickGameMode(object):
 			channel_layer: BaseChannelLayer,
 			game_locality) -> None:
 		self.channel_layer = channel_layer
-		self.game_room = None
 		self.started = True
 		self.game_locality = game_locality
+		self.tournament = None
 
 	async def ready(self, 
 				 session: GameSession, 
@@ -38,7 +38,6 @@ class QuickGameMode(object):
 				'status': 'ready'
 				}
 		})
-		self.game_room = game_room
 		if not await in_session(game_room):
 			asyncio.create_task(session.start(state_callback))
 			session.resume()
@@ -47,19 +46,21 @@ class QuickGameMode(object):
 		# resume game in case it paused.
 		session.resume()
 
-	async def handle_end_game(self, data, game_result):
+	async def handle_end_game(self, data, consumers, game_result):
 		if data['type'] == 'win':
-			await self.game_locality.cleanup_data()
+			for consumer in consumers:
+				await consumer.cleanup_data()
 		return data
 	
-	async def cleanup_data(self, room_name, players):
+	async def cleanup_data(self, consumers, room_name, players):
+		for consumer in consumers:
+			await consumer.cleanup_data()
 		game_room = await get_game_room(room_name)
 		if not game_room:
 			return
 		await delete_game_room(game_room)
-		await self.game_locality.cleanup_data()
 
-	async def handle_disconnection(self, room_name, player: Player):
+	async def handle_disconnection(self, channel_name, channel_layer, room_name, player: Player):
 		game_room = await get_game_room(room_name)
 		if not game_room:
 			return

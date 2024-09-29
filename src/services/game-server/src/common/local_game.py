@@ -13,7 +13,8 @@ from common.db_utils import (
 	get_player_room_player,
 	get_game_room,
 	delete_game_room,
-	delete_guest_players
+	delete_guest_players_in_room,
+	delete_guest_players_in_tournament
 )
 
 from common.game_session import GameSession
@@ -43,6 +44,7 @@ class LocalMode(object):
 		self._game_session = None
 		self._disconnected = False
 		self._player_rooms = [None, None]
+		self.game_mode = None
 
 	async def _load_players(self):
 		self._player_rooms[0] = player1_room = await get_player_room(
@@ -97,8 +99,6 @@ class LocalMode(object):
 					await get_player_room_player(player_room))
 				self._players_positions[i] = position
 				session.add_consumer(i, self)
-			# session.on_session_end(self.flush_game_session)
-			# session.on_connection_lost(self.connection_lost)
 			self._game_session = session
 			await game_mode.ready(
 				session, self.room_name,
@@ -134,13 +134,16 @@ class LocalMode(object):
 				break
 
 	async def connection_lost(self, game_mode, session: GameSession):
-		await self.cleanup_data()
+		await self.cleanup_data(tournament=game_mode.tournament)
 	
-	async def cleanup_data(self):
-		# await delete_guest_players(self._host_user_id)
-		pass
+	async def cleanup_data(self, room_closed=False, tournament=None):
+		if tournament:
+			print("DELETE TOURNAMENT", flush=True)
+			await delete_guest_players_in_tournament(self._host_user_id, tournament)
+			return
+		await delete_guest_players_in_room(self._host_user_id, self.room_name, room_closed)
 
-	async def disconnect(self, game_mode):
+	async def disconnect(self, channel_name, channel_layer, game_mode):
 		self._loaded = False
 		self._disconnected = True
 		async with self._game_server as server:
@@ -151,4 +154,4 @@ class LocalMode(object):
 				session.remove_consumer(0, self)
 				server.remove_session(session._session_id)
 				await delete_game_room(game_room)
-			await self.channel_layer.group_discard(self.room_name, self.consumer.channel_name)
+			await channel_layer.group_discard(self.room_name, self.consumer.channel_name)

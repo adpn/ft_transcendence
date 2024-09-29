@@ -29,7 +29,8 @@ from common.db_utils import (
 	update_tournament,
 	get_participant_player,
 	get_tournament_player_room,
-	get_player_room_player
+	get_player_room_player,
+	delete_guest_player
 )
 
 from common import game_session
@@ -43,7 +44,7 @@ class TournamentMode(object):
 			channel_name,
 			channel_layer: BaseChannelLayer,
 			game_locality) -> None:
-		self._tournament = tournament
+		self.tournament = tournament
 		self.channel_layer = channel_layer
 		self._channel_name = channel_name
 		self._ready = False
@@ -60,7 +61,7 @@ class TournamentMode(object):
 		state_callback) -> None:
 		if self.started:
 			return
-		closed = await tournament_is_closed(self._tournament)
+		closed = await tournament_is_closed(self.tournament)
 		if not closed:
 			await self.channel_layer.group_send(
 				room_name,
@@ -90,21 +91,25 @@ class TournamentMode(object):
 		# resume game in case it paused.
 		session.resume()
 
-	async def handle_end_game(self, data: dict, game_result: GameResult):
+	async def handle_end_game(self, data: dict, consumers, game_result: GameResult):
 		tournament = await get_tournament(self._tournament_id)
 		await eliminate_player(game_result.loser, tournament)
 		remaining_players = await get_remaining_participants(tournament)
 		if remaining_players == 1:
+			print("FROM HEHE???", flush=True)
+			for consumer in consumers:
+				await consumer.cleanup_data(tournament=tournament)
 			await delete_tournament(tournament)
-			await self.game_locality.cleanup_data()
 			data["type"] = "win"
 			return data
 		await close_game_room(self._game_room)
 		await qualify_player(game_result.winner, tournament)
+		# delete players in closed game_rooms
+		await delete_guest_player(game_result.loser)
 		data["type"] = "round"
 		return data
 
-	async def handle_disconnection(self, room_name, player: Player):
+	async def handle_disconnection(self, channel_name, channel_layer, room_name, player: Player):
 		# delete game room if not is session (means player canceled)
 		tournament = await get_tournament(self._tournament_id)
 		if not tournament:
@@ -122,22 +127,23 @@ class TournamentMode(object):
 				await delete_tournament(tournament)
 			else:
 				await update_tournament(tournament, ['participants'])
-		await self.channel_layer.group_discard(
+		await channel_layer.group_discard(
 			self._tournament_id,
-			self._channel_name)
+			channel_name)
 
-	async def cleanup_data(self, room_name , players):
+	async def cleanup_data(self, consumers, room_name , players):
+		for consumer in consumers:
+			await consumer.cleanup_data(tournament=self.tournament)
 		tournament = await get_tournament(self._tournament_id)
 		await delete_tournament(tournament)
-		await self.game_locality.cleanup_data()
 
 	async def get_participants(self, user, game_room):
 		# returns all active players in the tournament
 		participants = TournamentParticipant.objects.filter(
-			tournament=self._tournament).order_by('tournament_position')
+			tournament=self.tournament).order_by('tournament_position')
 		result = []
 		rooms = TournamentGameRoom.objects.filter(
-			tournament=self._tournament).values_list('game_room', flat=True)
+			tournament=self.tournament).values_list('game_room', flat=True)
 		async for participant in participants:
 			player = await get_participant_player(participant)
 			# look for the player room. TODO: need a better query for this.

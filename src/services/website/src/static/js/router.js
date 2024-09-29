@@ -69,7 +69,6 @@ const Games = async () => {
 
 	return `
 	<div class="row">
-		<!-- Opponents Header-->
 		<div class="row justify-content-between align-items-center mb-2">
 			<div class="col-4 text-start d-flex align-items-center">
 				<span id="opponent1" class="text-dark"></span>
@@ -80,14 +79,14 @@ const Games = async () => {
 			</div>
 		</div>
 		<div class="row text-center">
-			<div class="canvas-container position-relative" >
+			<div class="canvas-container position-relative">
 				<canvas id="gameCanvas2D" class="w-100 border"></canvas>
 				<canvas id="gameCanvas3D" class="w-100 border"></canvas>
 				<div id="game-ui" class="position-absolute top-0 start-0 w-100 h-100 flex-column align-items-center justify-content-center bg-dark">
 					<div id="loading-overlay" class="loading-overlay position-absolute top-0 start-0 w-100 h-100 flex-column align-items-center justify-content-center bg-dark" aria-hidden="true">
 						<div class="spinner"></div>
 						<p class="text-light mt-3">Waiting for opponent...</p>
-						<div id="overlay-body" class=text-center></div>
+						<div id="overlay-body" class="text-center"></div>
 					</div>
 					<div id="game-menu" class="card position-absolute top-50 start-50 translate-middle bg-dark text-light" aria-hidden="true">
 						<div id="game-menu-header" class="card-header d-flex flex-column justify-content-center align-items-center"></div>
@@ -96,11 +95,14 @@ const Games = async () => {
 					</div>
 				</div>
 			</div>
-			<div class="col-auto d-flex flex-column align-items-center">
-			<h3 id="tournament-title" class="text-dark"></h3>
-				<ul id="playersList" class="list-unstyled text-dark d-grid">
-				</ul>
+		</div>
+		<div class="row mt-1 text-center">
+		<div class="card players-container bg-dark text-center justify-content-center w-100 flex" id="playersContainer">
+			<div id="players-container-header" class="card-header d-flex justify-content-center align-items-center">
+				<h5 class="text-light mb-2 text-center">Participants</h5>
 			</div>
+			<div class="players-container bg-dark text-center justify-content-center w-100 d-flex" id="playersContainerBody"></div>
+		</div>
 		</div>
 	</div>
 	`;
