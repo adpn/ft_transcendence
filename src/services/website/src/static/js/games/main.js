@@ -140,7 +140,7 @@ function reset_games() {
 
 document.addEventListener(
 	"logout",
-	reset_games)
+	reset_games);
 
 function load_games() {
 	games_context.gameUI = document.getElementById('game-ui');

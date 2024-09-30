@@ -50,8 +50,6 @@ class OnlineTournamentGameState {
 	}
 
 	update(data) {
-		// const tournament_title = document.getElementById("tournament-title");
-		// const playersList = document.getElementById("playersList");
 		if (data.type == "end") {
 			this.context.canvas.style.display = "none";
 			const opponent1 = document.getElementById("opponent1");
@@ -65,48 +63,45 @@ class OnlineTournamentGameState {
 					this.socket.close();
 					this.socket = null;
 				}
+				this.context.players.clear();
 				this.context.state = this.gameEndState;
 				this.context.state.execute();
-				// tournament_title.innerHTML = "";
-				// playersList.innerHTML = "";
 				return;
 			}
 			if (data.status == "win") {
 				if (data.context == "round") {
-					// move to next round
-					// TODO: maybe put a confirmation to move to the next round.
 					this.context.gameUI.style.display = 'flex'
 					this.context.state = this;
 					this.execute();
 					return;
 				}
-				// tournament_title.innerHTML = "";
-				// playersList.innerHTML = "";
 				this.gameStatus = "ended";
 				this.gameEndState.setMessage(data.player_name);
 				if (this.socket) {
 					this.socket.close();
 					this.socket = null;
 				}
+				this.context.players.clear();
 				this.context.state = this.gameEndState;
 				this.context.state.execute();
 				return;
 			}
 		}
 		else if (data.type == "tournament.players") {
-			console.log(data);
-			// tournament_title.innerHTML = "Tournament Players";
-			// playersList.innerHTML = "";
-			// data.values.forEach(player => {
-			// 	playersList.innerHTML += `<li class="text-dark">${player.player_name}</li>`;
-			// });
-			// console.log("WHERE AM I SUPPOSED TO CATCH MY OPPONENT?? HERE? IT IS NOT THE CASE IN LOCAL TOURNAMENT !!!");
-			//new participant joined. -> update view... (fetch user data of the new participant)
+			console.log("TOURNAMENT PLAYERS", data.values);
 			this.context.players.addPlayers(data.values);
 			return;
 		}
 		else if (data.type == "room.players") {
 			console.log("ROOM PLAYERS", data.values);
+			if (data.values.length == 2) {
+				opponent1.innerHTML = data.values[0].player_name;
+				opponent2.innerHTML = data.values[1].player_name;
+				if (this.game.name === "snake")
+					opponent2.className = "text-success";
+				else
+					opponent2.className = "text-dark";
+			}
 			return;
 		}
 		this.game.update(data);

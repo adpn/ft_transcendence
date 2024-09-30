@@ -251,13 +251,14 @@ class LocalTournamentGameState {
 				const room = await response.json();
 				const opponent1 = document.getElementById("opponent1");
 				const opponent2 = document.getElementById("opponent2");
-
-				opponent1.innerHTML = room.player1;
-				opponent2.innerHTML = room.player2;
-				if (this.game.name === "snake")
-					opponent2.className = "text-success";
-				else
-					opponent2.className = "text-dark";
+				if (!opponent1 || !opponent2) {
+					opponent1.innerHTML = room.player1;
+					opponent2.innerHTML = room.player2;
+					if (this.game.name === "snake")
+						opponent2.className = "text-success";
+					else
+						opponent2.className = "text-dark";
+				}
 				const waitScreen = new WaitScreen(this.context, this, room);
 				waitScreen.execute();
 				// this.startGame(room);	// FORMER FUNCTION KEEP IT HERE WE NEVER KNOW
@@ -275,33 +276,31 @@ class LocalTournamentGameState {
 	}
 
 	update(data) {
-		const tournament_title = document.getElementById("tournament-title");
-		const playersList = document.getElementById("playersList");
 		if (data.type == "end") {
 
 			const opponent1 = document.getElementById("opponent1");
 			const opponent2 = document.getElementById("opponent2");
-			opponent1.innerHTML = "";
-			opponent2.innerHTML = "";
+			if (!opponent1 || !opponent2) {
+				opponent1.innerHTML = "";
+				opponent2.innerHTML = "";
+			}
 
 			this.context.canvas.style.display = "none";
 			if (data.status == "lost") {
 				this.gameStatus = "ended";
 				this.gameEndState.setMessage(data.player_name);
 				this.context.changeState(this.gameEndState);
+				this.context.players.clear();
 				return;
 			}
 			if (data.status == "win") {
 				if (data.context == "round") {
-					// move to next room or to next round.
-					// TODO: update players-container (eliminate players etc.)
 					this.nextRoom();
 					return;
 				}
-				// tournament_title.innerHTML = "";
-				// playersList.innerHTML = "";
 				this.context.players.render();
 				this.gameStatus = "ended";
+				this.context.players.clear();
 				this.gameEndState.setMessage(data.player_name);
 				this.context.changeState(this.gameEndState);
 				return;
@@ -309,13 +308,7 @@ class LocalTournamentGameState {
 		}
 		else if (data.type == "tournament.players") {
 			console.log(data);
-			// tournament_title.innerHTML = "Tournament Players";
-			// playersList.innerHTML = "";
-			// data.values.forEach(player => {
-			// 	playersList.innerHTML += `<li class="text-dark">${player.player_name}</li>`;
-			// });
 			this.context.players.addPlayers(data.values);
-			//new participant joined. -> update view... (fetch user data of the new participant)
 			return;
 		}
 		this.game.update(data);
