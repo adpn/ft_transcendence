@@ -1,7 +1,4 @@
-from django.shortcuts import redirect
 from common import jwt
-
-# Create your views here.
 
 from django.shortcuts import render
 from django.contrib.auth import get_user_model, login, logout
@@ -98,8 +95,8 @@ def custom_login(request : HttpRequest, username, password):
 	user = User.objects.filter(username=username).first()
 	if user is None:
 		return JsonResponse({
-			'status': 0, 
-			'message': 
+			'status': 0,
+			'message':
 			'User does not exist'}, status=401)
 	if user.username42 is not None:
 		return JsonResponse({'status': 0, 'message': 'You should login through 42auth'}, status=401)
@@ -107,7 +104,7 @@ def custom_login(request : HttpRequest, username, password):
 		login(request, user)
 		return profile_mini(request, False)
 	return JsonResponse({
-		'status': 0, 
+		'status': 0,
 		'message': 'Login failed'}, status=401)
 
 def login_view(request : HttpRequest) -> JsonResponse:
@@ -136,7 +133,7 @@ def logout_view(request : HttpRequest) -> JsonResponse:
 	channel_layer = get_channel_layer()
 	async_to_sync(channel_layer.group_send)(
 		f"user_{request.user.id}",  # Channel group name
-		{	
+		{
 			'type': 'user.logout',  # Custom event type
 			'message': 'User logged out',
 		}
@@ -150,16 +147,16 @@ def profile_mini(request : HttpRequest, jwt_existing: bool) -> JsonResponse:
 		connection.request("GET", f"/get_picture/{request.user.id}/")
 		response = connection.getresponse()
 		raw_data = response.read().decode()
-		
+
 		if response.status != 200:
 			return JsonResponse({'status': 0, 'message': 'Failed to retrieve profile picture'}, status=response.status)
 		if not raw_data:
 			return JsonResponse({'status': 0, 'message': 'Empty response from users service'}, status=500)
-		
+
 		profile_picture = json.loads(raw_data).get('profile_picture')
 		if not profile_picture:
 			return JsonResponse({'status': 0, 'message': 'Profile picture not found'}, status=404)
-		
+
 	except json.JSONDecodeError:
 		return JsonResponse({'status': 0, 'message': 'Invalid JSON response from users service'}, status=500)
 	except Exception as e:
@@ -177,7 +174,7 @@ def profile_mini(request : HttpRequest, jwt_existing: bool) -> JsonResponse:
 			user_token.save()
 	else:
 		token = get_jwt(request)
-	
+
 	return JsonResponse({
 		'status': 1,
 		'message': 'logged-in',
@@ -246,7 +243,7 @@ def is_authenticated_view(request : HttpRequest) -> JsonResponse:
 		return JsonResponse({'status': 0, 'message': 'User not connected'}, status=200)
 
 def check_token(request : HttpRequest) -> JsonResponse:
-	# todo: if the user has logged-out this should 
+	# todo: if the user has logged-out this should
 	if check_jwt(request):
 		return HttpResponse(status=200)
 	return HttpResponse(status=401)
@@ -264,7 +261,7 @@ def authenticate_42API(request) -> tuple:
 	path = request.get_full_path()
 	if "error" in path:
 		return None, 'Failed to authenticate'
-	
+
 	code = path[14:]
 	client_id = os.environ.get('CLIENT_ID')
 	client_secret = os.environ.get('CLIENT_SECRET')
@@ -322,7 +319,7 @@ def auth42_view(request : HttpRequest) -> HttpResponse:
 	auth_response, error_message = authenticate_42API(request)
 	if error_message:
 		return auth42_response(request, 0, error_message)
-	
+
 	headers = {
 		"Authorization": "Bearer " + auth_response["access_token"]
 	}
@@ -380,7 +377,7 @@ def change_username_view(request : HttpRequest) -> JsonResponse:
 		user.username = data["username"]
 		user.save()
 	except DataError:
-		return JsonResponse({'status': 0, 'message': "Username too long"}, status=400)		
+		return JsonResponse({'status': 0, 'message': "Username too long"}, status=400)
 	return JsonResponse({'status': 1, 'message': 'Username changed', 'username': data['username']}, status=200)
 
 def change_password_view(request : HttpRequest) -> JsonResponse:

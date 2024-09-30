@@ -1,5 +1,4 @@
-from django.contrib.sessions.backends.base import SessionBase, CreateError
-from os import environ
+from django.contrib.sessions.backends.base import SessionBase
 import uuid
 
 SESSION_STORE = {}

@@ -2,7 +2,6 @@ from django.shortcuts import render
 from django.http import HttpRequest
 import os
 
-
 def index(request : HttpRequest):
 	elements = {'ip_address': os.getenv("IP_ADDRESS")}
 	if request.headers.get("status"):

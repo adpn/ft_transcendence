@@ -1,8 +1,3 @@
-/*
-	TODO: in local mode, need an interface to set guest players names.
-	in local mode, we make two create_game fetches (one per player)
-	then connect to a single room.
-*/
 class LocalQuickGameState {
 	constructor(context, game, prevState) {
 		this.gameEndState = new GameEndedState(game, context, prevState, this);
@@ -13,7 +8,6 @@ class LocalQuickGameState {
 	}
 
 	update(data) {
-		// todo: move to result state
 		const opponent1 = document.getElementById("opponent1");
 		const opponent2 = document.getElementById("opponent2");
 
@@ -31,7 +25,7 @@ class LocalQuickGameState {
 			this.context.state.execute();
 			return;
 		}
-		else if (data.type == "participants") {
+		else if (data.type == "room.players") {
 			console.log(data);
 
 			opponent1.innerHTML = data.values.filter(player => player.player_position === 0)[0].player_name;

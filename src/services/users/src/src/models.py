@@ -15,4 +15,3 @@ class User(AbstractUser):
                 name='unique_username_with_is_42'
             )
         ]
-    # profile_picture = models.FileField(upload_to=None, height_field=512, width_field=512, max_length=512)

@@ -16,5 +16,4 @@ done
 
 python3 /home/service/manage.py makemigrations
 python3 /home/service/manage.py migrate
-# todo: this is temporary need to use uvicorn or gunicorn in the backend.
 cd /home/service && uvicorn src.asgi:application --host 0.0.0.0 --port 8000 --reload

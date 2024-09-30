@@ -185,26 +185,20 @@ footer {
 	text-align: center;
 	padding: 10px;
 	background-color: rgba(0, 0, 0, 0.7);
-	/* Semi-transparent background */
 	z-index: 10;
 	border-radius: 10px;
 }
 
 #game-menu button {
 	display: flex;
-	/* width: 200px;
-	margin-top: 10px; */
 	text-align: center;
-	/* flex-grow: 1; */
 	margin-bottom: 2;
 }
 
 #game-menu {
 	display: flex;
 	width: 60%;
-	/* Adjust to your needs */
 	height: auto;
-	/* Adjust to your needs */
 }
 
 .duplicate {
@@ -246,19 +240,15 @@ footer {
 
 .custom-input:focus {
 	background-color: #343a40;
-	/* Dark background on focus */
 	border-color: #f8f9fa;
 	border-radius: 8px;
-	/* White outline remains */
 	outline: none;
 	box-shadow: 0 0 0.2rem rgba(255, 255, 255, 0.5);
 }
 
 .white-placeholder::placeholder {
 	color: #f8f9fa;
-	/* Set placeholder text color to white */
 	opacity: 0.5;
-	/* Ensure it's fully visible (default is 0.5) */
 }
 
 .card-body {
@@ -278,8 +268,6 @@ footer {
 
   .loading-overlay {
 	  display: none;
-	  /* Hidden by default */
-	  /* Semi-transparent background */
 	  z-index: 10;
   }
 
@@ -325,14 +313,15 @@ form {
 }
 
 .players-container {
-	max-height: 350px;
+	max-height: 200px;
 	overflow-y: auto;
-	padding-top: 10px;
+	padding-top: 5px;
 	padding-bottom: 5px;
 }
 
 .player-card {
-	height: 100px;
+	height: 80%;
+	width: auto;
 	outline: 1px solid #f8f9fa;
 	border-radius: 5px;
 }

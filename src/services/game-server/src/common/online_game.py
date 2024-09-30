@@ -9,7 +9,6 @@ from common.db_utils import (
 	get_min_players,
 	get_player_position,
 	get_player_room_player,
-	player_at_position,
 	store_game_result
 )
 
@@ -167,7 +166,7 @@ class OnlineMode(object):
 			pass
 
 	async def connection_lost(
-			self, session: GameSession, 
+			self, session: GameSession,
 			game_mode, data: dict, game_result: GameResult):
 		if not self._disconnected:
 			# if did not disconnect then it is the winner.

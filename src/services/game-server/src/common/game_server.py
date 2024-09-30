@@ -15,10 +15,7 @@ from common import auth_client as auth
 from common.db_utils import (
 	get_tournament_room,
 	get_tournament_room_tournament_id,
-	get_tournament_room_tournament,
-	get_user_channel,
-	store_user_channel,
-	delete_user_channel
+	get_tournament_room_tournament
 )
 
 from common.game_session import GameSession
@@ -116,20 +113,6 @@ class GameConsumer(AsyncWebsocketConsumer):
 			})
 			await self.close()
 			return
-
-		# if await get_user_channel(user['user_id']):
-		# 	print("ALREADY CONNECTED", flush=True)
-		# 	# If a connection still exists, refuse the new connection
-		# 	await self.accept()
-		# 	await self.send_json({
-		# 		"type": "websocket.close",
-		# 		"code": 4000,  # Custom close code
-		# 		"reason": "Already connected"
-		# 	})
-		# 	await self.close()
-		# 	return
-
-		# await store_user_channel(user['user_id'], self.channel_name)
 
 		# create game locality mode.
 		if params.get('local'):
@@ -230,7 +213,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 		else:
 			self.tournament_id = tournament_id = self.room_name
 			self._game_mode = game_mode = QuickGameMode(
-				self.channel_layer, 
+				self.channel_layer,
 				game_locality)
 		await self.channel_layer.group_add(
 			self.room_name, self.channel_name)
@@ -243,13 +226,11 @@ class GameConsumer(AsyncWebsocketConsumer):
 			game_mode,
 			self.state_callback)
 
-	# todo: notify the game loop to pause the game
 	async def disconnect(self, close_code):
-		# await delete_user_channel(self.user['user_id'], self.channel_name)
 		if not self.game_room:
 			return
 		await self._game_locality.disconnect(
-			self.channel_name, 
+			self.channel_name,
 			self.channel_layer, self._game_mode)
 
 	async def broadcast_participants(self):
@@ -261,7 +242,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 					'values': await self._game_mode.get_participants(
 						self.user,
 						self.game_room)}})
-	
+
 	async def broadcast_room_players(self):
 		players = await self._game_mode.get_room_players(
 						self.user,

@@ -18,7 +18,7 @@ from common.db_utils import (
 
 class QuickGameMode(object):
 	def __init__(
-			self, 
+			self,
 			channel_layer: BaseChannelLayer,
 			game_locality) -> None:
 		self.channel_layer = channel_layer
@@ -26,10 +26,10 @@ class QuickGameMode(object):
 		self.game_locality = game_locality
 		self.tournament = None
 
-	async def ready(self, 
-				 session: GameSession, 
-				 room_name: str, 
-				 game_room: GameRoom, 
+	async def ready(self,
+				 session: GameSession,
+				 room_name: str,
+				 game_room: GameRoom,
 				 state_callback) -> None:
 		await self.channel_layer.group_send(
 		room_name, {
@@ -51,7 +51,7 @@ class QuickGameMode(object):
 			for consumer in consumers:
 				await consumer.cleanup_data()
 		return data
-	
+
 	async def cleanup_data(self, consumers, room_name, players):
 		for consumer in consumers:
 			await consumer.cleanup_data()

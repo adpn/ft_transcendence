@@ -18,14 +18,14 @@ class CustomGrid {
 	generateColumn(value) {
 		if (this.spacing) {
 			return `
-				<div class="col col-md-${this.col_size} ${this.spacing} justify-content-center">
+				<div class="col col-md-${this.col_size} ${this.spacing}">
 					<div class="justify-content-center flex-column w-100 h-100">
 						${value}
 					</div>
 				</div>`;
 			}
 		return `
-			<div class="col col-md-${this.col_size} justify-content-center">
+			<div class="col col-md-${this.col_size}">
 				<div class="justify-content-center flex-column w-100 h-100">
 					${value}
 				</div>
@@ -55,9 +55,7 @@ class PlayersGrid {
 	generatePlayer(player) {
 		return `
 		<div class="card text-center text-light player-card bg-dark">
-			<div class="card-body pt-2">
-				<h5 class="card-title text-light">${player.player_name}</h5>
-			</div>
+			<h5 class="card-title text-light">${player.player_name}</h5>
 		</div>`;
 	}
 
