@@ -84,13 +84,11 @@ class ParticipantFormState {
 
 	async addTournamentPlayers() {
 		const inputs = document.querySelectorAll('.player-tag');
-		console.log("NUM PLAYERS", inputs.length);
 
 		// Create the tournament first
 		try {
 			await this.localTournamentState.createTournament(this.num_players);
 		} catch (error) {
-			console.log("couldn't create tournament:", error);
 			this.localTournamentState.execute();
 			return ;
 		}
@@ -101,7 +99,6 @@ class ParticipantFormState {
 			try {
 				// Wait for the player to be added before moving to the next one
 				const result = await this.localTournamentState.addTournamentPlayer(playerTag);
-				console.log(`Player ${playerTag} added:`, result);
 			} catch (error) {
 				console.error(`Error for player ${playerTag}:`, error);
 				this.localTournamentState.execute();
@@ -175,7 +172,6 @@ class LocalTournamentGameState {
 		});
 
 		if (!response.ok) {
-			console.log("GAME ERROR", await response.json());
 			throw new Error(`Error ${response.status}: Failed to create game`);
 		};
 		return await response.json();
@@ -196,7 +192,6 @@ class LocalTournamentGameState {
 			})
 		});
 		if (!response.ok) {
-			console.log(await response.json());
 			throw new Error(`Error ${response.status}: Failed to create tournament`);
 		}
 		this.tournament = await response.json();
@@ -269,10 +264,8 @@ class LocalTournamentGameState {
 				// stop when there no more rooms.
 				return;
 			}
-			console.log("ERROR", await response.json());
 			throw new Error(`Error ${response.status}: Failed to start tournament`);
 		} catch (error) {
-			console.log("couldn't create tournament game:", error);
 		}
 	}
 
@@ -308,7 +301,6 @@ class LocalTournamentGameState {
 			}
 		}
 		else if (data.type == "tournament.players") {
-			console.log(data);
 			this.context.players.addPlayers(data.values);
 			return;
 		}
