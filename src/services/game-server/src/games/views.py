@@ -60,12 +60,6 @@ def check_request(func):
 			local = False
 			if 'mode' in json_request:
 				local = json_request['mode'] == 'local'
-			if local:
-				if 'guest_name' not in json_request:
-					return JsonResponse({
-						'status': 0,
-						'message': "missing required field: {} for local mode".format('guest_name')
-					}, status=400)
 			return func(request, user_data, game, json_request, local)
 		except json.decoder.JSONDecodeError:
 			return JsonResponse({
@@ -112,6 +106,11 @@ def create_game(request: HttpRequest, user_data: dict, game: Game, game_request,
 				}, status=200)
 
 	if local:
+		if 'guest_name' not in game_request:
+			return JsonResponse({
+				'status': 0,
+				'message': "missing required field: {} for local mode".format('guest_name')
+			}, status=400)
 		player, created = Player.objects.get_or_create(
 			player_name=game_request['guest_name'],
 			user_id=int(user_data['user_id']),
@@ -281,17 +280,18 @@ def _create_tournament(player: Player, game:Game, max_participants=MAX_TOURNAMEN
 	tgame_room.save()
 	return tournament, game_room
 
-def create_or_join_tournament(player: Player, game:Game, max_participants=MAX_TOURNAMENT_PARTICIPANTS) -> JsonResponse:
+def create_or_join_tournament(player: Player, game:Game, max_participants=MAX_TOURNAMENT_PARTICIPANTS, local=False) -> JsonResponse:
 	# if the player is not a participant,
 	# try to join the oldest tournament that isn't full.
 	tournament = Tournament.objects.filter(
 		game__game_name=game.game_name,
 		closed=False,
-		participants__lt=max_participants).order_by('created_at').first()
+		participants__lt=max_participants, 
+		local=local).order_by('created_at').first()
 
 	# if there is no tournament, create a new one and a new game room.
 	if not tournament:
-		tournament, game_room = _create_tournament(player, game)
+		tournament, game_room = _create_tournament(player, game, local)
 		return tournament_response(player, game_room, tournament, 'created', 201)
 	print("NEW PARTICIPANT JOIN", tournament.tournament_id , flush=True)
 	return _join_tournament(game, player, tournament)
@@ -299,10 +299,14 @@ def create_or_join_tournament(player: Player, game:Game, max_participants=MAX_TO
 @check_request
 def create_tournament_view(request: HttpRequest, user_data: dict, game:Game, json_request, local) -> JsonResponse:
 	'''
-	TODO:
-	this creates a tournament and returns the tournament id.
 	NOTE: if it is a named tournament, it becomes public.
 	'''
+	if not local:
+		return JsonResponse({
+			'status': 0,
+			'message': f"Can only create local tournaments"
+			},
+			status=400)
 	if not 'max_players' in json_request:
 		print("REQUEST", json_request, flush=True)
 		return JsonResponse({
@@ -406,7 +410,7 @@ def	find_tournament_view(request: HttpRequest, user_data: dict, game: Game, json
 					'status': 0,
 					'message': f"Cannot join tournament reason: {participant.status}"},
 					status=400)
-			return create_or_join_tournament(player, game)
+			return create_or_join_tournament(player, game, local=local)
 		elif participant.status == "PLAYING":
 			return _join_tournament(game, player, participant.tournament, participant)
 	# join tournament if provided
@@ -419,7 +423,7 @@ def	find_tournament_view(request: HttpRequest, user_data: dict, game: Game, json
 			status=400)
 		return _join_tournament(game, player, tournament)
 	# creates a random tournament and puts player in it.
-	return create_or_join_tournament(player, game)
+	return create_or_join_tournament(player, game, local=local)
 
 @csrf_exempt
 def game_stats(request: HttpRequest, user_id : int) -> JsonResponse:

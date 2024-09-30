@@ -70,7 +70,7 @@ class GameSession(object):
 		if game_room:
 			await delete_game_room(game_room)
 		if self.error:
-			print("FROM ERROR 1?", flush=True)
+			print("ERROR", flush=True)
 			await self._game_mode.cleanup_data(
 				self._consumers, self._session_id, self._players)
 		self._game_server.remove_session(self._session_id)
@@ -111,7 +111,7 @@ class GameSession(object):
 							data, self._consumers, self._game_result)
 					except Exception as e:
 						self.error = True
-						print("FROM ERROR 2 ?", e, flush=True)
+						print(e, flush=True)
 						return
 				for consumer in self._consumers:
 					await consumer.flush_game_session(data)

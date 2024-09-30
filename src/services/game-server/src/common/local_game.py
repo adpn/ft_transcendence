@@ -138,7 +138,6 @@ class LocalMode(object):
 	
 	async def cleanup_data(self, room_closed=False, tournament=None):
 		if tournament:
-			print("DELETE TOURNAMENT", flush=True)
 			await delete_guest_players_in_tournament(self._host_user_id, tournament)
 			return
 		await delete_guest_players_in_room(self._host_user_id, self.room_name, room_closed)

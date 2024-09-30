@@ -190,7 +190,8 @@ class LocalTournamentGameState {
 			credentials: "include",
 			body: JSON.stringify({
 				"game": this.game.name,
-				"max_players": max_players
+				"max_players": max_players,
+				"mode": "local"
 			})
 		});
 		if (!response.ok) {

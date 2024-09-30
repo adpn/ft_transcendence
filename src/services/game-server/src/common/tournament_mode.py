@@ -96,7 +96,6 @@ class TournamentMode(object):
 		await eliminate_player(game_result.loser, tournament)
 		remaining_players = await get_remaining_participants(tournament)
 		if remaining_players == 1:
-			print("FROM HEHE???", flush=True)
 			for consumer in consumers:
 				await consumer.cleanup_data(tournament=tournament)
 			await delete_tournament(tournament)

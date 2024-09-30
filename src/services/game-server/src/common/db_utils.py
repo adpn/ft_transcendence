@@ -207,7 +207,6 @@ def delete_guest_players_in_tournament(user_id: int, tournament: Tournament) -> 
 	tournament_rooms = TournamentGameRoom.objects.filter(tournament=tournament).values_list('game_room', flat=True)
 	rooms = PlayerRoom.objects.filter(game_room__in=tournament_rooms).values_list('player_id', flat=True)
 	deleted, _ = Player.objects.filter(is_guest=True, user_id=user_id, id__in=rooms).delete()
-	print("DELETED GUESTS", deleted, flush=True)
 
 @database_sync_to_async
 def close_game_room(game_room: GameRoom) -> None:
