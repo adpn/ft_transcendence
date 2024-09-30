@@ -84,4 +84,4 @@ class QuickGameMode(object):
 		return result
 
 	async def get_room_players(self, user, game_room):
-		await self.get_participants(user, game_room)
+		return await self.get_participants(user, game_room)

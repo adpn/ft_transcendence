@@ -6,6 +6,7 @@ from django.http import JsonResponse, HttpRequest
 from django.db.utils import IntegrityError
 import datetime
 from django.db.models import Subquery
+from django.db.utils import DatabaseError
 
 from .models import (
 	GameRoom,
@@ -111,6 +112,17 @@ def create_game(request: HttpRequest, user_data: dict, game: Game, game_request,
 				'status': 0,
 				'message': "missing required field: {} for local mode".format('guest_name')
 			}, status=400)
+		# delete all guest tournaments
+		guest_tournaments = Tournament.objects.filter(
+		tournament_id__in=TournamentParticipant.objects.filter(
+			player__is_guest=True, 
+			player__user_id=user_data['user_id']).values('tournament_id'))
+		guest_tournaments.delete()
+		guest_players = Player.objects.filter(user_id=user_data['user_id'], is_guest=True)
+		if guest_players.count() >= 2:
+			# delete players in other rooms
+			Player.objects.filter(is_guest=True, user_id=user_data['user_id']).delete()
+			guest_players.delete()
 		player, created = Player.objects.get_or_create(
 			player_name=game_request['guest_name'],
 			user_id=int(user_data['user_id']),
@@ -307,6 +319,15 @@ def create_tournament_view(request: HttpRequest, user_data: dict, game:Game, jso
 			'message': f"Can only create local tournaments"
 			},
 			status=400)
+	
+	# delete all guest players and guest tournaments
+	guest_tournaments = Tournament.objects.filter(
+		tournament_id__in=TournamentParticipant.objects.filter(
+			player__is_guest=True, 
+			player__user_id=user_data['user_id']).values('tournament_id'))
+	guest_tournaments.delete()
+	# delete all previous users
+	Player.objects.filter(is_guest=True, user_id=user_data['user_id']).delete()
 	if not 'max_players' in json_request:
 		print("REQUEST", json_request, flush=True)
 		return JsonResponse({
@@ -361,6 +382,10 @@ def get_tournament_room(request: HttpRequest, user_data: dict, game:Game, json_r
 			tournament=tournament.tournament_id,
 			game_room__closed=False).order_by('game_room__created_at').first()
 		if not earliest_room:
+			try:
+				tournament.delete()
+			except Exception as e:
+				pass
 			return JsonResponse({
 			'status': 0,
 			'message': f"No more rooms for current round"},
@@ -371,6 +396,15 @@ def get_tournament_room(request: HttpRequest, user_data: dict, game:Game, json_r
 			'status': 0,
 			'message': f"room is empty"},
 			status=400)
+		if len(players) < 2:
+			try:
+				tournament.delete()
+			except Exception as e:
+				pass
+			return JsonResponse({
+			'status': 0,
+			'message': f"No more rooms for current round"},
+			status=404)
 		print("EARLIEST ROOM", earliest_room.tournament_round, flush=True)
 		return JsonResponse({
 			'ip_address': os.environ.get('IP_ADDRESS'),

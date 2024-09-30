@@ -263,6 +263,9 @@ class GameConsumer(AsyncWebsocketConsumer):
 						self.game_room)}})
 	
 	async def broadcast_room_players(self):
+		players = await self._game_mode.get_room_players(
+						self.user,
+						self.game_room)
 		await self.channel_layer.group_send(
 			self.room_name, {
 				'type': 'game_state',

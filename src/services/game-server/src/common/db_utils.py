@@ -41,7 +41,7 @@ def get_player_room(user_id: str, game_room: str, player_name="host") -> PlayerR
 
 @database_sync_to_async
 def leave_game_room(player: Player, game_room: GameRoom):
-	PlayerRoom.objects.filter(player=player, game_room=game_room).first().delete()
+	PlayerRoom.objects.filter(player=player, game_room=game_room).delete()
 	game_room.num_players -= 1
 	game_room.save(update_fields=['num_players'])
 
@@ -110,7 +110,8 @@ def get_min_players(game_room):
 
 @database_sync_to_async
 def delete_game_room(game_room):
-	game_room.delete()
+	if game_room:
+		game_room.delete()
 
 @database_sync_to_async
 def store_game_result(game_result):
