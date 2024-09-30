@@ -21,8 +21,8 @@ User = get_user_model()
 
 SECRET = os.environ.get('JWT_SECRET_KEY').encode('utf-8')
 
-MIN_USERNAME_LENGTH = 1
-MIN_PASSWORD_LENGTH = 1
+MIN_USERNAME_LENGTH = 5
+MIN_PASSWORD_LENGTH = 5
 
 def create_jwt(username):
 	header = {
@@ -299,6 +299,7 @@ def authenticate_42API(request) -> tuple:
 	response = connection.getresponse()
 	data = response.read().decode()
 	connection.close()
+	print(data, flush=True)
 
 	if response.status != 200:
 		return None, 'Failed to authenticate'

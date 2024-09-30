@@ -184,7 +184,6 @@ export var Snake = {
 		if (!ctx) {
 			ctx = canvas.getContext("2d", { alpha: false });
 			if (!ctx) {
-				console.log("ERROR: pong.js: Couldn't create 2D drawing context");
 				return ;
 			}
 		}

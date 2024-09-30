@@ -26,8 +26,6 @@ class LocalQuickGameState {
 			return;
 		}
 		else if (data.type == "room.players") {
-			console.log(data);
-
 			opponent1.innerHTML = data.values.filter(player => player.player_position === 0)[0].player_name;
 			opponent2.innerHTML = data.values.filter(player => player.player_position === 1)[0].player_name;
 
@@ -108,13 +106,7 @@ class LocalQuickGameState {
 			});
 		}
 		catch (error) {
-			// stop game_menu animations display error in menu.
-			// todo: display error message in the loading window
-			// todo: display error message in the loading window
-			// then go back game menu.
 			this.cancel();
-			// resizeCanvas();
-			console.log(error); // maybe display the error message in the window
 		}
 	}
 

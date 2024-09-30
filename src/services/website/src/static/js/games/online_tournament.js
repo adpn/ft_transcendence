@@ -88,12 +88,10 @@ class OnlineTournamentGameState {
 			}
 		}
 		else if (data.type == "tournament.players") {
-			console.log("TOURNAMENT PLAYERS", data.values);
 			this.context.players.addPlayers(data.values);
 			return;
 		}
 		else if (data.type == "room.players") {
-			console.log("ROOM PLAYERS", data.values);
 			if (data.values.length == 2) {
 				opponent1.innerHTML = data.values[0].player_name;
 				opponent2.innerHTML = data.values[1].player_name;
@@ -145,12 +143,7 @@ class OnlineTournamentGameState {
 			});
 		})
 		.catch((error) => {
-			// stop game_menu animations display error in menu.
-			// todo: display error message in the loading window
-			// todo: display error message in the loading window
-			// then go back game menu.
 			this.cancel();
-			console.log(error); // maybe display the error message in the window
 		});
 	}
 }

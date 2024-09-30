@@ -320,7 +320,6 @@ export var Pong3d = {
 		canvas.addEventListener("focus", () => { is_focus = true; });
 		canvas.addEventListener("blur", () => { is_focus = false; });
 		if (loadThreejs() == -1) {
-			console.log("ERROR: pong3d.js: Couldn't create 3D drawing context");
 			return ;
 		}
 		is_playing = true;
