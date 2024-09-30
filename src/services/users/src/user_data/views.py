@@ -20,7 +20,7 @@ def create_user(request : HttpRequest):
     try:
         user = User.objects.get(id=user_id)  # Retrieve the User instance using the user_id
     except User.DoesNotExist:
-        return HttpResponse(status=500)
+        return HttpResponse(status=400)
 
     if len(body["profile_picture"]) > 0:
         image_url: str = body["profile_picture"]
@@ -122,7 +122,7 @@ def get_profile(request: HttpRequest, username: str) -> JsonResponse:
             result.pop("opponent_id")
 
     if not UserProfile.objects.filter(user=request.user).exists():
-        return JsonResponse({'status': 0, 'message': 'Could not get user info'}, status=500)
+        return JsonResponse({'status': 0, 'message': 'Could not get user info'}, status=400)
     request_user_profile = UserProfile.objects.get(user=request.user)
 
     # different possibilities of current friendship status: yourself, not friend, friend, pending request, request received
