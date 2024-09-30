@@ -200,7 +200,7 @@ class OnlineMode(object):
 					channel_name,
 					channel_layer,
 					self.room_name,
-					session.get_player(self.player_position))
+					session.get_player_by_id(self._user['user_id']))
 			await self.channel_layer.group_discard(self.room_name, self.consumer.channel_name)
 			self._disconnected = True
 			# delete game room if it is not in session.

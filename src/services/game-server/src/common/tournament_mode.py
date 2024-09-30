@@ -114,11 +114,6 @@ class TournamentMode(object):
 		if not tournament:
 			return
 		if not await tournament_is_closed(tournament):
-			game_room = await get_game_room(room_name)
-			if game_room and player:
-				await leave_game_room(player, game_room)
-				if await get_room_num_players(game_room) <= 0:
-					await delete_game_room(game_room)
 			tournament.participants -= 1
 			if player:
 				await remove_participant(tournament, player)
@@ -126,6 +121,11 @@ class TournamentMode(object):
 				await delete_tournament(tournament)
 			else:
 				await update_tournament(tournament, ['participants'])
+			game_room = await get_game_room(room_name)
+			if game_room and player:
+				await leave_game_room(player, game_room)
+				if await get_room_num_players(game_room) <= 0:
+					await delete_game_room(game_room)
 		await channel_layer.group_discard(
 			self._tournament_id,
 			channel_name)
