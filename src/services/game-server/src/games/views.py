@@ -3,7 +3,6 @@ import json
 import os
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse, HttpRequest
-from django.db.utils import IntegrityError
 import datetime
 from django.db.models import Subquery
 
@@ -244,7 +243,7 @@ def _join_tournament(
 	if not participant:
 		add_participant(player, tournament)
 
-	# get the oldest game_room in the tournament that isn't full 
+	# get the oldest game_room in the tournament that isn't full
 	game_room = GameRoom.objects.filter(
 		room_name__in=game_rooms_in_tournament,
 		num_players__lt=game.min_players
@@ -286,7 +285,7 @@ def create_or_join_tournament(player: Player, game:Game, max_participants=MAX_TO
 	tournament = Tournament.objects.filter(
 		game__game_name=game.game_name,
 		closed=False,
-		participants__lt=max_participants, 
+		participants__lt=max_participants,
 		local=local).order_by('created_at').first()
 
 	# if there is no tournament, create a new one and a new game room.

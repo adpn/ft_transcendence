@@ -1,5 +1,4 @@
 import time
-import asyncio
 from random import randrange
 
 GRID_WIDTH = 20		 # play area

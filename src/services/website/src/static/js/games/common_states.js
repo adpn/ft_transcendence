@@ -1,6 +1,5 @@
 class GameEndedState {
 	constructor(game, context, prevState, gameModeState) {
-		/* todo: give up buttons bellow the canvas.*/
 		this.prevState = prevState;
 		this.gameModeState = gameModeState;
 		this.context = context;
@@ -19,7 +18,7 @@ class GameEndedState {
 	}
 
 	execute() {
-		this.game.clear(); // clear what the game uses to display on the canvas
+		this.game.clear();
 		this.context.gameUI.style.display = 'flex'
 		this.context.gameMenu.style.display = 'flex';
 		this.context.gameMenuHeader.textContent = 'Game Over';
@@ -40,8 +39,6 @@ class GameEndedState {
 
 class PlayingState {
 	constructor(game, context, gameMode, gameEndState) {
-		// todo: add player profile on the side of the canvas.
-		// need give up button above nicely in the middle between player names, the canvas.
 		this.gameMode = gameMode;
 		this.socket = null;
 		this.gameStatus = "playing"

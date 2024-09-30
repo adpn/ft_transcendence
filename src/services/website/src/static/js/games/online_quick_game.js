@@ -54,7 +54,7 @@ class OnlineQuickGameState {
 			this.context.state.execute();
 			return;
 		}
-		else if (data.type == "participants") {
+		else if (data.type == "room.players") {
 			console.log(data.values);
 
 			if (data.values.length == 2) {

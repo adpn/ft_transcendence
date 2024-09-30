@@ -32,7 +32,6 @@ ALLOWED_HOSTS = [str(os.environ.get('IP_ADDRESS'))]
 
 # Application definition
 INSTALLED_APPS = [
-	'games',
 	'website',
     'django.contrib.admin',
     'django.contrib.auth',

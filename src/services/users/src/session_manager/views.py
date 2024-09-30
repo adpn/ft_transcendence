@@ -1,22 +1,14 @@
-from django.shortcuts import render
-
-# Create your views here.
-
 from django.http import JsonResponse
 from django.views import View
-from django.middleware.csrf import get_token
 import uuid
 import json
-
 from common import session_store
-
-# In-memory store for simplicity, use a database like Redis or SQL in production
 
 class SessionView(View):
 	def post(self, request):
 		# Create a new session
 		session_id = str(uuid.uuid4())
-		# SESSION_STORE[session_id] = 
+		# SESSION_STORE[session_id] =
 		session_store.add(session_id)
 		return JsonResponse({'session_id': session_id})
 

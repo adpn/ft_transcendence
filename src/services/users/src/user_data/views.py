@@ -1,5 +1,5 @@
 from django.views.decorators.csrf import csrf_exempt
-from user_data.models import UserProfile, Game
+from user_data.models import UserProfile
 from django.http import HttpResponse, JsonResponse, FileResponse, HttpRequest
 import json
 from django.core.files.base import ContentFile

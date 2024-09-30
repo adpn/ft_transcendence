@@ -4,12 +4,11 @@ RUN			apk update && apk upgrade && apk add \
 			openssl \
 			nginx
 
-# todo: key creation should be in a script (to retrieve the environment variables)
 RUN			rm -f /etc/nginx/nginx.conf && \
 			mkdir /etc/nginx/ssl && \
 			openssl req -x509 -nodes \
 			-out /etc/nginx/ssl/ft_transcendence.crt \
-			-keyout /etc/nginx/ssl/ft_transcendence.key \ 
+			-keyout /etc/nginx/ssl/ft_transcendence.key \
 			-subj "/C=BE/ST=IDF/L=Bruxelles/O=42/OU=42/CN=ft_transcendence.fr/UID=login"
 
 COPY		conf/nginx.conf /etc/nginx/nginx.conf

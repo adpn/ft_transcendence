@@ -1,4 +1,3 @@
-from django.shortcuts import render
 from django.http import JsonResponse, HttpRequest
 from user_data.models import UserProfile
 from .models import Relation

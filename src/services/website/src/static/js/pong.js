@@ -5,15 +5,6 @@ const STOP = false;
 const LEFT = false;
 const RIGHT = true;
 
-const NOT_JOINED = 0;
-const CONNECTING = 1;
-const PLAYING = 2;
-const WON = 3;
-const LOST = 4;
-const DISCONNECTED = 6;
-const ERROR = 7;
-const NOT_LOGGED = 8;
-
 // this stuff is relative to a canvas of 1000,1000
 var game_data = {
 	ball_pos: [500, 500],
@@ -23,57 +14,12 @@ var game_data = {
 	score: [0, 0]
 };
 
+var is_playing = false;
 var socket;
 var canvas;
 var ctx = null;
 var is_focus = false;
-var game_status = NOT_JOINED;
 var bytes_array = new Uint8Array(4);
-
-
-// function disconnected() {
-// 	if (game_status <= PLAYING)
-// 		game_status = DISCONNECTED;
-// 	resizeCanvas();
-// 	changeButton();
-// }
-
-function changeButton() {
-	switch (game_status) {
-		// case NOT_JOINED:
-		// case WON:
-		// case LOST:
-		// case DISCONNECTED:
-		// 	var title = "find game";
-		// 	var btn_class = "success";
-		// 	break ;
-		// case CONNECTING:
-		// 	var title = "cancel";
-		// 	var btn_class = "danger";
-		// 	break ;
-		case PLAYING:
-			var title = "give up";
-			var btn_class = "warning";
-	}
-// 	document.getElementById("game-button-container").innerHTML = `
-// 		<button class="btn btn-${btn_class} me-2" id="game-button" type="button">${title}</button>
-// `;
-	// var button = document.getElementById("game-button");
-	// switch (game_status) {
-	// 	// case NOT_JOINED:
-	// 	// case WON:
-	// 	// case LOST:
-	// 	// case DISCONNECTED:
-	// 	// 	button.addEventListener("click", connectGameRoom);
-	// 	// 	break ;
-	// 	// case CONNECTING:
-	// 	// 	// todo: put a spinning animation
-	// 	// 	button.addEventListener("click", cancel);
-	// 	// 	break ;
-	// 	case PLAYING:
-	// 		button.addEventListener("click", GiveUp);
-	// }
-}
 
 function takeInputDown(e) {
 	if (!is_focus || e.defaultPrevented) {
@@ -121,33 +67,7 @@ function resizeCanvas() {
 	canvas.width = canvas.scrollWidth;
 	canvas.height = canvas.scrollHeight;
 	clearCanvas(canvas, ctx);
-	switch (game_status) {
-	// 	case NOT_JOINED:
-	// 		drawMessage("Welcome", canvas, ctx);
-	// 		break ;
-	// 	case CONNECTING:
-	// 		drawMessage("Connecting...", canvas, ctx);
-	// 		break ;
-	case PLAYING:
-		drawFrame(canvas, ctx, game_data);
-		break ;
-	// 	case WON:
-	// 		drawMessage("Victory", canvas, ctx);
-	// 		drawScore(canvas, game_data);
-	// 		break ;
-	// 	case LOST:
-	// 		drawMessage("Defeat", canvas, ctx);
-	// 		drawScore(canvas, game_data);
-	// 		break ;
-	// 	case DISCONNECTED:
-	// 		drawMessage("Disconnected", canvas, ctx);
-	// 		break ;
-	// 	case NOT_LOGGED:
-	// 		drawMessage("You are not logged in", canvas, ctx);
-	// 		break ;
-	// 	case ERROR:
-	// 		drawMessage("Something went wrong", canvas, ctx);
-	}
+	drawFrame(canvas, ctx, game_data);
 }
 
 function makeXCord(number, canvas) {
@@ -155,24 +75,6 @@ function makeXCord(number, canvas) {
 }
 function makeYCord(number, canvas) {
 	return number * (canvas.height / 1000);
-}
-
-// function gameStart(sockt) {
-// 	socket = sockt;
-// 	sockt.addEventListener("message", updatePong);
-// 	game_status = PLAYING;
-// 	changeButton();
-// 	resizeCanvas();
-// 	canvas.focus();
-// }
-
-function gameOver(gameStatus) {
-	if (gameStatus == 'win')
-		game_status = WON
-	else
-		game_status = LOST
-	socket.close();
-	resizeCanvas();
 }
 
 function gameTick(canvas, ctx, game_data) {
@@ -242,28 +144,27 @@ export var Pong = {
 			}
 		}
 		window.addEventListener("resize", resizeCanvas, false);
-		game_status = PLAYING;
-		changeButton();
+		is_playing = true;
 		resizeCanvas();
 		canvas.focus();
 	},
 	start(sockt) {
 		socket = sockt;
-		game_status = PLAYING;
-		changeButton();
+		is_playing = true;
 		resizeCanvas();
 		canvas.focus();
 		window.addEventListener("keydown", takeInputDown, true);
 		window.addEventListener("keyup", takeInputUp, true);
 	},
 	clear() {
+		is_playing = false;
 		window.removeEventListener("keydown", takeInputDown, true);
 		window.removeEventListener("keyup", takeInputUp, true);
 		window.removeEventListener("resize", resizeCanvas, false);
 		ctx = null;
 	},
 	update(data) {
-		if (game_status != PLAYING)
+		if (is_playing != true)
 			return ;
 		if (data.type == "tick") {
 			game_data.ball_pos = data.b;
@@ -279,10 +180,6 @@ export var Pong = {
 			game_data.ball_size = data.ball_size;
 			game_data.racket_size = data.racket_size;
 			game_data.score = data.score;
-			return ;
-		}
-		if (data.type == "end") {		// this is never called i think, the gameModesStates don't pass it along
-			gameOver(data.status);
 			return ;
 		}
 	},

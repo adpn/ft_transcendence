@@ -30,12 +30,6 @@ URL_PATTERNS = [
 	path("game/snake/<str:room_name>/", GameConsumer.as_asgi(game_server=SNAKE_SERVER))
 ]
 
-#     'websocket': AuthMiddlewareStack(
-#         URLRouter(
-#             URL_PATTERNS
-#         )
-#     ),
-
 application = ProtocolTypeRouter({
 	'http': get_asgi_application(),
 	'websocket': URLRouter(URL_PATTERNS)

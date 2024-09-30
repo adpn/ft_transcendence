@@ -252,7 +252,7 @@ class LocalTournamentGameState {
 				const room = await response.json();
 				const opponent1 = document.getElementById("opponent1");
 				const opponent2 = document.getElementById("opponent2");
-				if (!opponent1 || !opponent2) {
+				if (opponent1 && opponent2) {
 					opponent1.innerHTML = room.player1;
 					opponent2.innerHTML = room.player2;
 					if (this.game.name === "snake")
@@ -281,7 +281,7 @@ class LocalTournamentGameState {
 
 			const opponent1 = document.getElementById("opponent1");
 			const opponent2 = document.getElementById("opponent2");
-			if (!opponent1 || !opponent2) {
+			if (opponent1 && opponent2) {
 				opponent1.innerHTML = "";
 				opponent2.innerHTML = "";
 			}

@@ -108,8 +108,6 @@ const Games = async () => {
 	`;
 }
 
-// todo: need a container that displays the participants. (a list ?)
-
 const Settings = async () => {
 	const token = localStorage.getItem('auth_token');
 	const response = await fetch('/auth/is_authenticated/', {

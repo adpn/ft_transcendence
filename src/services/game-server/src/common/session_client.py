@@ -1,5 +1,4 @@
 from django.contrib.sessions.backends.base import SessionBase, CreateError
-from django.conf import settings
 
 from http import client
 from os import environ

@@ -2,8 +2,6 @@ import os
 import django
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
-# from asgiref.sync import sync_to_async
-# from authentication.models import User
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'src.settings')
 django.setup()
