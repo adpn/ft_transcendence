@@ -76,10 +76,6 @@ class GameConsumer(AsyncWebsocketConsumer):
 					'message': data
 				}
 			)
-	'''
-	TODO: BUG when the same player joins the game from two windows it still works
-	(the same player gets in the session twice) !!!
-	'''
 
 	async def connect(self):
 
@@ -137,15 +133,6 @@ class GameConsumer(AsyncWebsocketConsumer):
 				self._game_server, user,
 				room_name, self.channel_layer,
 				self)
-		'''
-		TODO:
-		check if the game room is in local mode if so, the game should start right away.
-		the opponent should already be present in the game room (after calling the api)
-		the connection request should contain the two guest players.
-
-		TODO:
-		in local mode need to retreive the rooms of the two guest players.
-		'''
 
 		if not await game_locality.validate_player():
 			await self.accept()

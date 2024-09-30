@@ -40,7 +40,6 @@ class LocalQuickGameState {
 
 	handleEvent(event) {
 		if (JSON.parse(event.data).status == "ready") {
-			// TODO: check if game already started.
 			this.context.canvas.style.display = "";
 			this.context.loadingOverlay.style.display = 'none';
 			this.context.gameUI.style.display = 'none';
@@ -94,7 +93,6 @@ class LocalQuickGameState {
 			// make a single connection for both players.
 			this.socket = new WebSocket(`wss://${data.ip_address}/ws/game/${this.game.name}/${data.game_room_id}/?csrf_token=${getCookie("csrftoken")}&token=${localStorage.getItem("auth_token")}&local=true&player1=${player1}&player2=${player2}`);
 			if (this.socket.readyState > this.socket.OPEN) {
-				// todo: display error message in the loading window.
 				this.cancel();
 				throw new Error("WebSocket error: " + this.socket.readyState);
 			}

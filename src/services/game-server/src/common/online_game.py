@@ -194,7 +194,6 @@ class OnlineMode(object):
 			session.remove_consumer(self.player_position, self)
 			if session.current_players == 1:
 				session.pause()
-			# todo: send a message to clients when a player disconnects.
 			if game_mode:
 				await game_mode.handle_disconnection(
 					channel_name,
@@ -203,4 +202,3 @@ class OnlineMode(object):
 					session.get_player_by_id(self._user['user_id']))
 			await self.channel_layer.group_discard(self.room_name, self.consumer.channel_name)
 			self._disconnected = True
-			# delete game room if it is not in session.

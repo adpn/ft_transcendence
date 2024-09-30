@@ -36,7 +36,6 @@ class OnlineQuickGameState {
 	};
 
 	update(data) {
-		// todo: move to result state
 		const opponent1 = document.getElementById("opponent1");
 		const opponent2 = document.getElementById("opponent2");
 
@@ -65,7 +64,6 @@ class OnlineQuickGameState {
 				else
 					opponent2.className = "text-dark";
 			}
-			//new participant joined. -> update view... (fetch user data of the new participant)
 			return;
 		}
 		this.game.update(data);
@@ -74,7 +72,6 @@ class OnlineQuickGameState {
 	handleEvent(event) {
 		if (JSON.parse(event.data).type == "websocket.close")
 		{
-			//todo: maybe display an error message.
 			this.cancel();
 			return;
 		}
@@ -114,7 +111,6 @@ class OnlineQuickGameState {
 		.then(data => {
 			this.socket = new WebSocket(`wss://${data.ip_address}/ws/game/${this.game.name}/${data.game_room_id}/?csrf_token=${getCookie("csrftoken")}&token=${localStorage.getItem("auth_token")}`);
 			if (this.socket.readyState > this.socket.OPEN) {
-				// todo: display error message in the loading window.
 				this.cancel();
 				throw new Error("WebSocket error: " + this.socket.readyState);
 			}

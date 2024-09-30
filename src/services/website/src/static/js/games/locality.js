@@ -1,4 +1,3 @@
-// TODO: from quick game we either select LOCAL or ONLINE -> LocalQuickGameState
 class GameLocality {
 	constructor(context, game, prevState, localGame, onlineGame) {
 		this.prevState = prevState;

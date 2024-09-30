@@ -10,7 +10,7 @@ class GameRoomAuthMiddleware(BaseMiddleware):
 		close_old_connections()
 
 		game_room = self.scope['url_route']['kwargs']['room_name']
-		
+
 		query_string = scope.get('query_string').decode('utf-8')
 		params = dict(param.split('=') for param in query_string.split('&') if '=' in param)
 		token = params.get('token')
@@ -24,7 +24,6 @@ class GameRoomAuthMiddleware(BaseMiddleware):
 			})
 			raise DenyConnection("Tokens is missing.")
 
-		# todo: might need to specify csrf ?
 		user = auth.get_user_with_token(token, csrf)
 
 		if not user:
@@ -45,6 +44,6 @@ class GameRoomAuthMiddleware(BaseMiddleware):
 				"reason": "Invalid game room."
 			})
 			raise DenyConnection("Invalid game room.")
-		
+
 		# Call the next middleware or the consumer
 		return await super().__call__(scope, receive, send)

@@ -135,7 +135,7 @@ class LocalMode(object):
 
 	async def connection_lost(self, game_mode, session: GameSession):
 		await self.cleanup_data(tournament=game_mode.tournament)
-	
+
 	async def cleanup_data(self, room_closed=False, tournament=None):
 		if tournament:
 			await delete_guest_players_in_tournament(self._host_user_id, tournament)
@@ -149,7 +149,6 @@ class LocalMode(object):
 			game_room = await get_game_room(self.room_name)
 			if game_room:
 				session = server.get_game_session(game_room, game_mode)
-				# todo: if both players disconnected, end the game
 				session.remove_consumer(0, self)
 				server.remove_session(session._session_id)
 				await delete_game_room(game_room)

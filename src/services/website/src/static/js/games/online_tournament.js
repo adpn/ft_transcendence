@@ -24,7 +24,6 @@ class OnlineTournamentGameState {
 		this.context.state.execute();
 	}
 	execute() {
-		//todo launch loading screen and animations.
 		// Clear the game menu content
 		this.context.gameUI.style.display = 'flex';
 		this.context.gameMenu.style.display = 'none';
@@ -36,10 +35,6 @@ class OnlineTournamentGameState {
 
 	handleEvent(event) {
 		if (JSON.parse(event.data).status == "ready") {
-			// todo: if a player was found, display his profile and move to PlayingState.
-			// move to playing state.
-			// todo: wait for players to be ready. (click on button?)
-			// this.loadingModal.hide();
 			this.context.canvas.style.display = "";
 			this.context.loadingOverlay.style.display = 'none';
 			this.context.gameUI.style.display = 'none';
@@ -131,7 +126,6 @@ class OnlineTournamentGameState {
 		.then(data => {
 			this.socket = new WebSocket(`wss://${data.ip_address}/ws/game/${this.game.name}/${data.game_room_id}/?csrf_token=${getCookie("csrftoken")}&token=${localStorage.getItem("auth_token")}`);
 			if (this.socket.readyState > this.socket.OPEN) {
-				// todo: display error message in the loading window.
 				this.cancel();
 				throw new Error("WebSocket error: " + this.socket.readyState);
 			}

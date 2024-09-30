@@ -145,7 +145,6 @@ class TournamentMode(object):
 			tournament=self.tournament).values_list('game_room', flat=True)
 		async for participant in participants:
 			player = await get_participant_player(participant)
-			# look for the player room. TODO: need a better query for this.
 			player_room = await get_tournament_player_room(player, rooms)
 			if not player_room:
 				continue
@@ -157,7 +156,7 @@ class TournamentMode(object):
 				'player_status': participant.status.lower(),
 				'game_mode': 'tournament'})
 		return result
-	
+
 	async def get_room_players(self, user, game_room):
 		# returns players in a given game room.
 		rooms = PlayerRoom.objects.filter(game_room=game_room)
@@ -174,4 +173,3 @@ class TournamentMode(object):
 				}
 			)
 		return result
-	

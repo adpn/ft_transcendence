@@ -67,7 +67,6 @@ def validate_jwt(token):
 	if not token:
 		raise ValueError("No token")
 	payload = jwt.verify_jwt(token, SECRET)
-	# todo: check for expiration date.
 	exp = payload.get("exp")
 	if exp is None:
 		raise ValueError("Token has no expiration time")
@@ -118,7 +117,6 @@ def login_view(request : HttpRequest) -> JsonResponse:
 		return JsonResponse({'status': 0, 'message': 'Couldn\'t read input'}, status=500)
 	username = data["username"]
 	password = data["password"]
-	# todo: need to implement this...
 	return custom_login(request, username, password)
 
 def logout_view(request : HttpRequest) -> JsonResponse:
@@ -211,7 +209,6 @@ def sign_up_view(request : HttpRequest) -> JsonResponse:
 	except Exception:
 		return JsonResponse({'status': 0, 'message': 'An unexpected error occurred'}, status=500)
 
-	#todo: check if the fields are present
 	user.is_active = True
 	user.save()
 
@@ -243,7 +240,6 @@ def is_authenticated_view(request : HttpRequest) -> JsonResponse:
 		return JsonResponse({'status': 0, 'message': 'User not connected'}, status=200)
 
 def check_token(request : HttpRequest) -> JsonResponse:
-	# todo: if the user has logged-out this should
 	if check_jwt(request):
 		return HttpResponse(status=200)
 	return HttpResponse(status=401)

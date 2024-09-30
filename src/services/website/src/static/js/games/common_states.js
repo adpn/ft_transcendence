@@ -59,7 +59,6 @@ class PlayingState {
 	update(event) {
 		var received_data = JSON.parse(event.data);
 		if (received_data.type == "end") {
-			// TODO: handle disconnections etc.
 			this.gameMode.update(received_data)
 			return;
 		}

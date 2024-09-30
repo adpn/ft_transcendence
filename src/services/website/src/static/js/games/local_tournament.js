@@ -46,7 +46,6 @@ class ParticipantFormState {
 		for (let i = 0; i < number; i++) {
 			formsContainer.innerHTML += this.generateForm(i);
 		}
-		// TODO: add function to fetch once the player has been added
 		this.addInputListeners();  // Re-add listeners to the input fields
 	}
 
@@ -199,7 +198,6 @@ class LocalTournamentGameState {
 
 	handleEvent(event) {
 		if (JSON.parse(event.data).status == "ready") {
-			// TODO: check if game already started.
 			this.context.canvas.style.display = "";
 			this.context.loadingOverlay.style.display = 'none';
 			this.context.gameUI.style.display = 'none';
@@ -211,8 +209,6 @@ class LocalTournamentGameState {
 	startGame(data) {
 		this.socket = new WebSocket(`wss://${data.ip_address}/ws/game/${this.game.name}/${data.game_room_id}/?csrf_token=${getCookie("csrftoken")}&token=${localStorage.getItem("auth_token")}&local=true&player1=${data.player1}&player2=${data.player2}`);
 		if (this.socket.readyState > this.socket.OPEN) {
-			// todo: display error message in the loading window.
-			// this.cancel();
 			throw new Error("WebSocket error: " + this.socket.readyState);
 		}
 		this.socket.addEventListener("open", () => {
