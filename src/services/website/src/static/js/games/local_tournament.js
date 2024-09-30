@@ -314,7 +314,7 @@ class LocalTournamentGameState {
 			// data.values.forEach(player => {
 			// 	playersList.innerHTML += `<li class="text-dark">${player.player_name}</li>`;
 			// });
-			data.values.forEach(player => this.context.players.addPlayer(player));
+			this.context.players.addPlayers(data.values);
 			//new participant joined. -> update view... (fetch user data of the new participant)
 			return;
 		}

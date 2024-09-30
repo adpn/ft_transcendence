@@ -47,8 +47,9 @@ class PlayersGrid {
 	}
 
 	clear() {
-		const body = document.getElementById("playerContainerBody");
+		const body = document.getElementById("playersContainerBody");
 		body.innerHTML = '';
+		this.grid.render(body);
 	}
 
 	generatePlayer(player) {
@@ -58,6 +59,11 @@ class PlayersGrid {
 				<h5 class="card-title text-light">${player.player_name}</h5>
 			</div>
 		</div>`;
+	}
+
+	addPlayers(players) {
+		this.clear();
+		players.forEach(player => this.addPlayer(player));
 	}
 
 	addPlayer(player) {

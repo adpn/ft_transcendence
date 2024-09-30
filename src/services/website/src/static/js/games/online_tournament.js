@@ -102,6 +102,7 @@ class OnlineTournamentGameState {
 			// });
 			// console.log("WHERE AM I SUPPOSED TO CATCH MY OPPONENT?? HERE? IT IS NOT THE CASE IN LOCAL TOURNAMENT !!!");
 			//new participant joined. -> update view... (fetch user data of the new participant)
+			this.context.players.addPlayers(data.values);
 			return;
 		}
 		else if (data.type == "room.players") {
