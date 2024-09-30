@@ -325,14 +325,15 @@ form {
 }
 
 .players-container {
-	max-height: 350px;
+	max-height: 200px;
 	overflow-y: auto;
-	padding-top: 10px;
+	padding-top: 5px;
 	padding-bottom: 5px;
 }
 
 .player-card {
-	height: 100px;
+	height: 80%;
+	width: auto;
 	outline: 1px solid #f8f9fa;
 	border-radius: 5px;
 }

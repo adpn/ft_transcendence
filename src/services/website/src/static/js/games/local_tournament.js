@@ -117,6 +117,7 @@ class ParticipantFormState {
 class WaitScreen {
 	constructor(context, gameState, room) {
 		this.context = context;
+		this.context.state = this;
 		this.gameState = gameState;
 		this.room = room;
 	};
