@@ -92,7 +92,6 @@ class GameConsumer(AsyncWebsocketConsumer):
 		csrf = html.escape(csrf)
 
 		if not token and not csrf:
-			print("NOT TOKEN!!!", flush=True)
 			await self.accept()
 			await self.send_json({
 				"type": "websocket.close",
@@ -104,7 +103,6 @@ class GameConsumer(AsyncWebsocketConsumer):
 
 		self.user = user = auth.get_user_with_token(token, csrf)
 		if not user:
-			print("NOT USER!!!", flush=True)
 			await self.accept()
 			await self.send_json({
 				"type": "websocket.close",
@@ -119,7 +117,6 @@ class GameConsumer(AsyncWebsocketConsumer):
 			player1 = params.get('player1', [''])[0]
 			player2 = params.get('player2', [''])[0]
 			if player1 == player2:
-				print("NOT LOCAL!!!", flush=True)
 				await self.accept()
 				await self.send_json({
 					"type": "websocket.close",
@@ -151,7 +148,6 @@ class GameConsumer(AsyncWebsocketConsumer):
 		'''
 
 		if not await game_locality.validate_player():
-			print("INVALID PLAYER!!!", flush=True)
 			await self.accept()
 			await self.send_json({
 				"type": "websocket.close",

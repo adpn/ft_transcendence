@@ -5,7 +5,7 @@ RUN			apk update && apk upgrade && apk add \
 			build-base \
 			jpeg-dev \
 			zlib-dev \
-			py3-django 
+			py3-django
 
 COPY		src /home/service
 COPY		tools/run_service.sh /bin/run_service.sh

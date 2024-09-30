@@ -16,10 +16,8 @@ def set_player_online_status(user, status : bool):
 
 class OnlineStatusConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        print(f"WebSocket connection attempt from {self.scope['client']}", flush=True)
         if self.scope["user"].is_authenticated:
             self.user = self.scope["user"]
-            print("Connecting user: ", self.user.id, flush=True)
             await set_player_online_status(self.user, True)
             await self.accept()
             await self.channel_layer.group_add(f"user_{self.user.id}", self.channel_name)
@@ -28,11 +26,8 @@ class OnlineStatusConsumer(AsyncWebsocketConsumer):
 
     async def disconnect(self, close_code):
         if self.scope["user"].is_authenticated:
-            print("Disconnecting user: ", self.user.id, flush=True)
-            print("Close code: ", close_code, flush=True)
             await set_player_online_status(self.user, False)
             await self.channel_layer.group_discard(f"user_{self.user.id}", self.channel_name)
 
     async def user_logout(self, event):
-        print(f"Logging out user {self.user.id} via channels", flush=True)
         await self.close()

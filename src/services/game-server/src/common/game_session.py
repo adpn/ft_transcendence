@@ -70,7 +70,6 @@ class GameSession(object):
 		if game_room:
 			await delete_game_room(game_room)
 		if self.error:
-			print("ERROR", flush=True)
 			await self._game_mode.cleanup_data(
 				self._consumers, self._session_id, self._players)
 		self._game_server.remove_session(self._session_id)
@@ -111,7 +110,6 @@ class GameSession(object):
 							data, self._consumers, self._game_result)
 					except Exception as e:
 						self.error = True
-						print(e, flush=True)
 						return
 				for consumer in self._consumers:
 					await consumer.flush_game_session(data)
@@ -122,13 +120,13 @@ class GameSession(object):
 
 	def on_session_end(self, callback):
 		self._end_callbacks.append(callback)
-	
+
 	def add_consumer(self, position, consumer):
 		if self.consumers_per_player[position] == 0:
 			self.current_players += 1
 		self.consumers_per_player[position] += 1
 		self._consumers.append(consumer)
-	
+
 	def remove_consumer(self, position, consumer):
 		if self.consumers_per_player[position] > 0:
 			self.consumers_per_player[position] -= 1

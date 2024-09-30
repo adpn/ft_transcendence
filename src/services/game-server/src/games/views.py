@@ -237,7 +237,6 @@ def _join_tournament(
 
 	# if player is already in a room return it (reconnecting him to the room)
 	if player_room:
-		print("RECONNECTION", player_room, player_room.player.user_id, flush=True)
 		return tournament_response(player, player_room.game_room, tournament, 'playing', 200)
 
 	if not participant:
@@ -251,7 +250,6 @@ def _join_tournament(
 
 	if not game_room:
 		game_room = create_game_room(player, game)
-		print("NEW GAME ROOM", game_room.room_name, flush=True)
 		if tournament:
 			# map game room to tournament.
 			tgame_room = TournamentGameRoom(tournament=tournament, game_room=game_room)
@@ -268,7 +266,6 @@ def _create_tournament(player: Player, game:Game, max_participants=MAX_TOURNAMEN
 		tournament_id=str(uuid.uuid4()),
 		max_participants=max_participants,
 		local=local)
-	print("NEW TOURNAMENT", tournament.tournament_id, flush=True)
 	game_room = create_game_room(player, game)
 	# don't add the player if it is in local mode, it will be added as a guest after.
 	add_participant(player, tournament, True)
@@ -292,7 +289,6 @@ def create_or_join_tournament(player: Player, game:Game, max_participants=MAX_TO
 	if not tournament:
 		tournament, game_room = _create_tournament(player, game)
 		return tournament_response(player, game_room, tournament, 'created', 201)
-	print("NEW PARTICIPANT JOIN", tournament.tournament_id , flush=True)
 	return _join_tournament(game, player, tournament)
 
 @check_request
@@ -307,7 +303,6 @@ def create_tournament_view(request: HttpRequest, user_data: dict, game:Game, jso
 			},
 			status=400)
 	if not 'max_players' in json_request:
-		print("REQUEST", json_request, flush=True)
 		return JsonResponse({
 				'status': 0,
 				'message': f"Missing required field: max_players"
@@ -370,7 +365,6 @@ def get_tournament_room(request: HttpRequest, user_data: dict, game:Game, json_r
 			'status': 0,
 			'message': f"room is empty"},
 			status=400)
-		print("EARLIEST ROOM", earliest_room.tournament_round, flush=True)
 		return JsonResponse({
 			'ip_address': os.environ.get('IP_ADDRESS'),
 			'game_room_id': earliest_room.game_room.room_name,
@@ -382,7 +376,6 @@ def get_tournament_room(request: HttpRequest, user_data: dict, game:Game, json_r
 			'round': earliest_room.tournament_round
 		})
 	except ValueError as e:
-		print("ERROR", e, flush=True)
 		return JsonResponse({
 			'status': 0,
 			'message': f"round is not an integer"},

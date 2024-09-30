@@ -161,8 +161,6 @@ class OnlineMode(object):
 				await self.channel_layer.group_discard(
 					self.room_name, self.consumer.channel_name)
 		except RuntimeError as e:
-			# ugly fix
-			print(e, flush=True)
 			pass
 
 	async def connection_lost(

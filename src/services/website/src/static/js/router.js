@@ -144,7 +144,7 @@ const Settings = async () => {
 				<br>
 				<input type="file" id="profile-picture-input" name="profile_picture" accept="image/*" required>
 				<br>
-				<button type="submit" class="btn btn-primary mt-2">Upload</button>
+				<button type="submit" class="btn btn-outline-success mt-2">Upload</button>
 			</form>
 		</div>
 
@@ -154,7 +154,7 @@ const Settings = async () => {
 			<form id="username-change-form">
 				<input type="text" id="new-username" name="username" value="${username}" placeholder="New Username" required>
 				<br>
-				<button type="submit" class="btn btn-primary mt-2">Change Username</button>
+				<button type="submit" class="btn btn-outline-success mt-2">Change Username</button>
 			</form>
 		</div>
 
@@ -168,7 +168,7 @@ const Settings = async () => {
 				<br>
 				<input type="password" id="confirm-new-password" name="confirm_new_password" placeholder="Confirm New Password" required>
 				<br>
-				<button type="submit" class="btn btn-primary mt-2">Change Password</button>
+				<button type="submit" class="btn btn-outline-success mt-2">Change Password</button>
 			</form>
 		</div>
 	</div>
