@@ -291,7 +291,7 @@ def create_or_join_tournament(player: Player, game:Game, max_participants=MAX_TO
 
 	# if there is no tournament, create a new one and a new game room.
 	if not tournament:
-		tournament, game_room = _create_tournament(player, game, local)
+		tournament, game_room = _create_tournament(player, game)
 		return tournament_response(player, game_room, tournament, 'created', 201)
 	print("NEW PARTICIPANT JOIN", tournament.tournament_id , flush=True)
 	return _join_tournament(game, player, tournament)
@@ -410,7 +410,7 @@ def	find_tournament_view(request: HttpRequest, user_data: dict, game: Game, json
 					'status': 0,
 					'message': f"Cannot join tournament reason: {participant.status}"},
 					status=400)
-			return create_or_join_tournament(player, game, local=local)
+			return create_or_join_tournament(player, game)
 		elif participant.status == "PLAYING":
 			return _join_tournament(game, player, participant.tournament, participant)
 	# join tournament if provided
@@ -423,7 +423,7 @@ def	find_tournament_view(request: HttpRequest, user_data: dict, game: Game, json
 			status=400)
 		return _join_tournament(game, player, tournament)
 	# creates a random tournament and puts player in it.
-	return create_or_join_tournament(player, game, local=local)
+	return create_or_join_tournament(player, game)
 
 @csrf_exempt
 def game_stats(request: HttpRequest, user_id : int) -> JsonResponse:
