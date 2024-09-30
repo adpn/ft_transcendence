@@ -51,8 +51,9 @@ class GameSession(object):
 	
 	def get_player_by_id(self, user_id):
 		for player in self._players:
-			if player.user_id == user_id:
-				return player
+			if player:
+				if player.user_id == user_id:
+					return player
 		return
 
 	async def update(self, data, player):

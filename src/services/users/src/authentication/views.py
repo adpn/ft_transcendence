@@ -115,7 +115,7 @@ def login_view(request : HttpRequest) -> JsonResponse:
 	try:
 		data = json.loads(request.body)
 	except json.decoder.JSONDecodeError:
-		return JsonResponse({'status': 0, 'message': 'Couldn\'t read input'}, status=500)
+		return JsonResponse({'status': 0, 'message': 'Couldn\'t read input'}, status=400)
 	username = data["username"]
 	password = data["password"]
 	# todo: need to implement this...
@@ -151,16 +151,16 @@ def profile_mini(request : HttpRequest, jwt_existing: bool) -> JsonResponse:
 		if response.status != 200:
 			return JsonResponse({'status': 0, 'message': 'Failed to retrieve profile picture'}, status=response.status)
 		if not raw_data:
-			return JsonResponse({'status': 0, 'message': 'Empty response from users service'}, status=500)
+			return JsonResponse({'status': 0, 'message': 'Empty response from users service'}, status=400)
 
 		profile_picture = json.loads(raw_data).get('profile_picture')
 		if not profile_picture:
 			return JsonResponse({'status': 0, 'message': 'Profile picture not found'}, status=404)
 
 	except json.JSONDecodeError:
-		return JsonResponse({'status': 0, 'message': 'Invalid JSON response from users service'}, status=500)
+		return JsonResponse({'status': 0, 'message': 'Invalid JSON response from users service'}, status=400)
 	except Exception as e:
-		return JsonResponse({'status': 0, 'message': f'An error occurred: {str(e)}'}, status=500)
+		return JsonResponse({'status': 0, 'message': f'An error occurred: {str(e)}'}, status=400)
 	finally:
 		connection.close()
 
@@ -193,7 +193,7 @@ def sign_up_view(request : HttpRequest) -> JsonResponse:
 	try:
 		data: dict = json.loads(request.body)
 	except json.decoder.JSONDecodeError:
-		return JsonResponse({'status': 0, 'message': 'Couldn\'t read input'}, status=500)
+		return JsonResponse({'status': 0, 'message': 'Couldn\'t read input'}, status=400)
 	if (data["password"] != data["confirm_password"]):
 		return JsonResponse({'status': 0, 'message' : 'Passwords do not match'}, status=400)
 
@@ -209,7 +209,7 @@ def sign_up_view(request : HttpRequest) -> JsonResponse:
 	except DataError:
 		return JsonResponse({'status': 0, 'message': "Username too long"}, status=400)
 	except Exception:
-		return JsonResponse({'status': 0, 'message': 'An unexpected error occurred'}, status=500)
+		return JsonResponse({'status': 0, 'message': 'An unexpected error occurred'}, status=400)
 
 	#todo: check if the fields are present
 	user.is_active = True
@@ -221,7 +221,7 @@ def sign_up_view(request : HttpRequest) -> JsonResponse:
 	response = connection.getresponse()
 	connection.close()
 	if response.status != 201:
-		return JsonResponse({'status': 0, 'message': 'User creation failed'}, status=500)
+		return JsonResponse({'status': 0, 'message': 'User creation failed'}, status=400)
 
 	login(request, user)
 	return profile_mini(request, False)
@@ -367,7 +367,7 @@ def change_username_view(request : HttpRequest) -> JsonResponse:
 	try:
 		data: dict = json.loads(request.body)
 	except json.decoder.JSONDecodeError:
-		return JsonResponse({'status': 0, 'message': 'Couldn\'t read input'}, status=500)
+		return JsonResponse({'status': 0, 'message': 'Couldn\'t read input'}, status=400)
 	if (len(data["username"]) < MIN_USERNAME_LENGTH):
 		return JsonResponse({'status': 0, 'message' : 'Username too short'}, status=400)
 	if User.objects.filter(username=data["username"]).exists():
@@ -388,7 +388,7 @@ def change_password_view(request : HttpRequest) -> JsonResponse:
 	try:
 		data: dict = json.loads(request.body)
 	except json.decoder.JSONDecodeError:
-		return JsonResponse({'status': 0, 'message': 'Couldn\'t read input'}, status=500)
+		return JsonResponse({'status': 0, 'message': 'Couldn\'t read input'}, status=400)
 	if (data["new_password"] != data["confirm_new_password"]):
 		return JsonResponse({'status': 0, 'message' : 'Passwords do not match'}, status=400)
 	if (len(data["new_password"]) < MIN_PASSWORD_LENGTH):

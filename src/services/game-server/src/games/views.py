@@ -39,6 +39,11 @@ def check_request(func):
 			Game.objects.get_or_create(game_name='snake', min_players=2)
 			INITIALIZED = True
 		user_data = auth.get_user(request)
+		if request.method != 'POST':
+			return JsonResponse({
+				'status': 0,
+				'message': 'Only POST requests are allowed'
+				}, status=405)
 		if not user_data:
 			return JsonResponse({
 				'status': 0,
@@ -59,8 +64,19 @@ def check_request(func):
 					}, status=404)
 			local = False
 			if 'mode' in json_request:
+				if json_request['mode'] != 'local':
+					return JsonResponse({
+					'status': 0,
+					'message': 'Insupported mode'
+					}, status=400)
 				local = json_request['mode'] == 'local'
-			return func(request, user_data, game, json_request, local)
+			try:
+				return func(request, user_data, game, json_request, local)
+			except DatabaseError:
+				return JsonResponse({
+					'status': 0,
+					'message': 'Invalid request'
+					}, status=400)
 		except json.decoder.JSONDecodeError:
 			return JsonResponse({
 				'status': 0,
